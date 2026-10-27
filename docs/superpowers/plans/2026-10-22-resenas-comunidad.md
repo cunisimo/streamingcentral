@@ -932,10 +932,12 @@ rollback;
   porque la envoltura CORS admite un método por ruta. La comparación de
   `/api/title` en ejecución queda pendiente (sin TMDB en local); la fija un
   barrido de fuente. Informe: `docs/medidas/2026-10-26-informe-claude-e5a.md`.
-  **Corrección A1** (auditoría `docs/medidas/2026-10-26-auditoria-e5a-b7ba962.md`),
-  pendiente de auditoría focalizada: la lista refleja también el voto
-  confirmado por la reconciliación (`sin_cambios`, `sin_efecto`). Informe:
-  `docs/medidas/2026-10-26-informe-claude-e5a-a1.md`.
+  **Corrección A1** (auditoría `docs/medidas/2026-10-26-auditoria-e5a-b7ba962.md`):
+  la lista refleja también el voto confirmado por la reconciliación
+  (`sin_cambios`, `sin_efecto`). Informe:
+  `docs/medidas/2026-10-26-informe-claude-e5a-a1.md`. **Cerrada como entrega
+  local el 26/10** (`docs/medidas/2026-10-26-auditoria-e5a-a1-367cf25.md`);
+  sigue pendiente la comparación de `/api/title` en ejecución.
 
 ### E5b — Utilidad y "Más útiles"
 
@@ -964,6 +966,15 @@ rollback;
 - **Criterio de cierre:** mediciones registradas y pruebas verdes.
 - **Evidencia para Codex:** mediciones, `EXPLAIN (ANALYZE, BUFFERS)` de la
   página, diff.
+- **Estado (26/10):** implementada en local por Claude, **pendiente de
+  auditoría focalizada**:
+  - `pruebas-utiles` 14/14 y up/down/up 5/5; baterías anteriores verdes;
+  - página con cursor constante en N (10.000 medidas);
+  - generar el orden: 2,07 s con 10.000;
+  - la purga de E8 no se decidió.
+
+  Informe: `docs/medidas/2026-10-26-informe-claude-e5b.md`; mediciones:
+  `docs/medidas/2026-10-26-e5b-mediciones.md`.
 
 ### E6 — Perfiles y nombre comunitario
 

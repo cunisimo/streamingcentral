@@ -763,7 +763,7 @@ AAB tiene que ser `5` o mayor.
        `/admin/mfa`, Producción.
      Informe: `docs/medidas/2026-10-25-informe-claude-e4.md`; salidas:
      `docs/medidas/2026-10-25-e4-salidas.txt`.
-     - **Corrección A1/A2 (25/10, Claude; pendiente de auditoría focalizada):**
+     - **Corrección A1/A2 (25/10, Claude; cerrada por Codex el 26/10, ver arriba):**
        - A1, restaurar desde el panel:
          - la base suma dos lecturas, sólo para admin con MFA:
            `comunidad_admin_retiradas` (retiradas vigentes de reseñas vivas,
@@ -815,8 +815,13 @@ AAB tiene que ser `5` o mayor.
      dueño; sólo `supabase start`, la app local y datos ficticios;
      interruptores, publicación y muestreo apagados al terminar).** Auditada
      por Codex sobre `b7ba962` (`docs/medidas/2026-10-26-auditoria-e5a-b7ba962.md`):
-     un P2, A1. **Corrección A1 hecha por Claude el 26/10, PENDIENTE DE
-     AUDITORÍA FOCALIZADA** (detalle al final de este bloque).
+     un P2, A1, corregida por Claude el 26/10 (detalle al final de este
+     bloque). **E5a CERRADA COMO ENTREGA LOCAL por Codex el 26/10**
+     (`docs/medidas/2026-10-26-auditoria-e5a-a1-367cf25.md`): A1 cerrada, sin
+     hallazgos nuevos; sin publicación. **Sigue pendiente de integración la
+     comparación de `/api/title` en ejecución** (un barrido de fuente no la
+     reemplaza; puede hacerse con fixtures locales de TMDB, sin servicio real
+     ni credenciales de Producción).
      - entorno: Docker Desktop estaba detenido tras el reinicio (la distro
        WSL `docker-desktop` parada). Lo inicié; el motor respondió en 25 s y
        los contenedores volvieron solos. No borré volúmenes ni recreé nada;
@@ -877,7 +882,7 @@ AAB tiene que ser `5` o mayor.
      Informe: `docs/medidas/2026-10-26-informe-claude-e5a.md`; salidas:
      `docs/medidas/2026-10-26-e5a-salidas.txt`; capturas:
      `docs/medidas/2026-10-26-e5a-recorrido/`.
-     - **Corrección A1 (26/10, Claude; pendiente de auditoría focalizada):**
+     - **Corrección A1 (26/10, Claude; cerrada por Codex el 26/10):**
        - el problema: la lista ignoraba los resultados idempotentes del voto
          recuperado (`sin_cambios`, `sin_efecto`). La base quedaba bien, pero
          la pantalla no, y el siguiente toque volvía a votar;
@@ -904,6 +909,75 @@ AAB tiene que ser `5` o mayor.
        Informe: `docs/medidas/2026-10-26-informe-claude-e5a-a1.md`; salidas:
        `docs/medidas/2026-10-26-e5a-a1-salidas.txt`; capturas:
        `docs/medidas/2026-10-26-e5a-a1-recorrido/`.
+   - **E5b local: orden "Más útiles" (26/10, Claude, autorizada por el
+     dueño; sólo `supabase start`, la app local y datos ficticios).
+     PENDIENTE DE AUDITORÍA FOCALIZADA de Codex.**
+     - **Qué entró:**
+       - `018_comunidad_utilidad.sql` + down;
+       - Wilson al 95 % (z = 1,96), con 0 positivos o sin votos = 0, y
+         desempate por primera publicación desc → id desc. La copia
+         `lib/comunidad/wilson.ts` coincide **bit a bit** con la base en
+         1.890 pares;
+       - **orden congelado compartido por título** (`ordenes_utiles` y
+         `ordenes_utiles_tramos`):
+         - filas de 100 ids;
+         - un generador por título con lock consultivo y doble búsqueda;
+         - reutilización de 10 min y vigencia de 2 h;
+         - **sin datos de quien lee**;
+       - cada página revalida como máximo 50 posiciones y devuelve hasta 5;
+         con muchas ocultas, menos, y el cursor avanza;
+       - un orden vencido responde `orden_actualizado`;
+       - `comunidad_resenas` pasa a `volatile` con `lock_timeout = 5s`;
+       - interfaz:
+         - "Más útiles" es el orden por defecto, sin perder "Recientes";
+         - cinco iniciales y "Cargar más";
+         - "Orden actualizado" con UN solo reinicio, sin duplicar;
+         - votar actualiza el conteo y no reordena.
+     - **Corregido en el camino:** Wilson de 0/n en SQL daba ~1e-17 en vez
+       de 0 y salteaba el desempate por fecha. Lo detectó la batería.
+     - **Pruebas reales:**
+       - `pruebas-utiles` 14/14: 20 lectores concurrentes → 1 orden;
+         recorrido de 237 sin duplicar ni saltear; cambios entre páginas con
+         funciones reales; muchas ocultas con ≤ 50 posiciones; vencimiento
+         y reinicio con el núcleo real; permisos y privacidad;
+       - up/down/up de 018 5/5;
+       - **repetidas porque 018 redefine `comunidad_resenas`:** lectura
+         11/11 y permisos 29/29 (las dos con la batería actualizada por los
+         cambios de contrato intencionales), voto-lista 11/11, escritura
+         43/43, moderación 46/46 y admin 38/38;
+       - `npm test` 2480 pasan, 0 fallan, 16 omitidas; `tsc` 0.
+     - **Mediciones** (100, 1.000 y 10.000 reseñas sintéticas):
+       - generar el orden: 92,6 / 274,2 / 2.073,2 ms;
+       - página con cursor: ~10–17 ms y 312–635 buffers, que **no crece
+         con el total**;
+       - primera página: 15,3 / 34,1 / 139,5 ms, porque el contador visible
+         crece con N, igual que en "Recientes";
+       - TOAST 0 B, 864 B por fila de 100 ids;
+       - más de unas 25.000 reseñas por título podrían superar el
+         `lock_timeout` al generar (extrapolación, **no medida**);
+       - la purga de E8: sin datos reales para decidir; no programé nada.
+     - **Simulado:** el paso del tiempo, las reseñas sintéticas, "muchas
+       ocultas" por SQL, y la respuesta perdida y el error de red en el
+       navegador.
+     - **Navegador local, escritorio y 375 px, 13 capturas:**
+       - los dos órdenes y "Cargar más";
+       - falla de tanda y reintento;
+       - voto perdido → `sin_cambios`, sin reordenar;
+       - vencimiento → reinicio sin repetir; un segundo vencimiento sin otro
+         reinicio.
+     - **Limpieza:**
+       - 6 participantes, 2 versiones, 42 cuentas y 2 suspensiones ajenas;
+       - 0 órdenes y 0 locks;
+       - interruptores, publicación y muestreo apagados; `SELECT` de
+         `profiles` revocado;
+       - borré 2 órdenes que había dejado mi primera corrida de lectura.
+     - **Sigue pendiente:**
+       - `/api/title` en ejecución (de E5a);
+       - teléfono, Android, tema claro, lector de pantalla y Producción.
+     Informe: `docs/medidas/2026-10-26-informe-claude-e5b.md`; mediciones:
+     `docs/medidas/2026-10-26-e5b-mediciones.md`; salidas:
+     `docs/medidas/2026-10-26-e5b-salidas.txt`; capturas:
+     `docs/medidas/2026-10-26-e5b-recorrido/`.
    - decidir si el CHECK de 011 sigue prohibiendo U+200D (ZWJ), que
      bloquea los emojis compuestos. Es una restricción de E2a que no se
      reabrió;

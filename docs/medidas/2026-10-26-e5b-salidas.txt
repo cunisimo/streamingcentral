@@ -1,0 +1,1481 @@
+E5b local — orden «Más útiles». Salidas reales contra Supabase local (supabase_db_streamingcentral), 26/10/2026.
+Sobre 367cf25, en feat/resenas-reglas (worktree wt-resenas-comunidad). Datos ficticios; credenciales y tokens no se imprimen.
+Se omiten los avisos MODULE_TYPELESS_PACKAGE_JSON de Node (iguales en todas las corridas).
+
+===== 1. pruebas-utiles, PRIMERA corrida (falló: Wilson 0/n en la base daba ~1e-17, no 0; ver informe) =====
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321
+
+— Preparación —
+✔ preparación: lector, otro lector y un admin con dos TOTP reales
+
+— Wilson y desempates —
+✔ Wilson en la base = valores calculados aparte (Python) en 18 casos, |error| < 1e-12; sin votos, 0
+✔ orden real con votos REALES: 9/10, 1/1, 2/4, empate 1/2 ×3 (fecha desc y, con la misma fecha, id desc), 0/3 y 0/0 (fecha desc)
+
+— Un orden por título —
+     20 lectores → 1 orden (2)
+✔ 20 lectores CONCURRENTES (sesiones reales, PostgREST) piden la primera página de un título sin orden → UN solo orden generado, el mismo para los 20
+✔ reutilización y vigencia (tiempo simulado): < 10 min se reutiliza; > 10 min se genera otro y el anterior sigue valiendo hasta vencer; al generar se borran los VENCIDOS del título
+
+— Recorrido y revalidación —
+✖ conjunto estable de 237 reseñas: el recorrido de a 5 sigue EXACTAMENTE el orden (Wilson + desempates), sin duplicar ni saltear; filas de 100 ids
+    Expected values to be strictly deep-equal:
+✖ cambios ENTRE páginas (funciones reales): retiro, suspensión, bloqueo, borrado y edición. Lo oculto no reaparece, lo editado sale una vez, nada visible se saltea
+    Expected values to be strictly equal:
+     tandas [5,0,0,5,5,5,5,5] · avances del cursor [5,50,50,25,5,5,5]
+✔ página con MUCHAS ocultas (fixture: 120 versiones pasadas a oculta después de generar el orden): devuelve menos o ninguna, el cursor avanza exactamente 50 y nunca revisa más de 50
+
+— Vencimiento —
+✖ vencimiento a mitad de lectura (tiempo simulado): `orden_actualizado` sin reseñas; UN reinicio con el núcleo real agrega sin repetir y llega al final; un segundo vencimiento ya no ofrece otro
+    {"invalido":"titulo"}
+✖ un cursor de OTRO título o de un orden borrado responde orden_actualizado, nunca mezcla; un cursor de «Más útiles» en «Recientes» es inválido
+    {"invalido":"titulo"}
+
+— Votos dentro del orden congelado —
+✔ votar dentro del orden congelado cambia el CONTEO que se lee, no el lugar; el orden siguiente (> 10 min, simulado) sí lo refleja
+
+— Permisos y privacidad —
+✖ las tablas del orden: sin grants, RLS sin policies, sin columnas del lector; wilson y orden_utiles sin EXECUTE; anon y service_role no leen «Más útiles»
+    404 {"code":"PGRST202","details":"Searched for the function public.comunidad_resenas with parameters p_c
+✖ «Recientes» no cambió: el mismo título recorre por fecha, sin tocar el orden congelado
+    ERROR:  column "undefined" does not exist
+
+— Limpieza (base compartida): sólo lo de esta corrida —
+   cuentas: 45; restos (cuentas|participantes|reseñas|órdenes|decisiones|locks|interruptores): 0|0|0|0|0|0|false
+
+7 de 13 pasaron.
+Fallaron:
+ - conjunto estable de 237 reseñas: el recorrido de a 5 sigue EXACTAMENTE el orden (Wilson + desempates), sin duplicar ni saltear; filas de 100 ids
+ - cambios ENTRE páginas (funciones reales): retiro, suspensión, bloqueo, borrado y edición. Lo oculto no reaparece, lo editado sale una vez, nada visible se saltea
+ - vencimiento a mitad de lectura (tiempo simulado): `orden_actualizado` sin reseñas; UN reinicio con el núcleo real agrega sin repetir y llega al final; un segundo vencimiento ya no ofrece otro
+ - un cursor de OTRO título o de un orden borrado responde orden_actualizado, nunca mezcla; un cursor de «Más útiles» en «Recientes» es inválido
+ - las tablas del orden: sin grants, RLS sin policies, sin columnas del lector; wilson y orden_utiles sin EXECUTE; anon y service_role no leen «Más útiles»
+ - «Recientes» no cambió: el mismo título recorre por fecha, sin tocar el orden congelado
+
+===== 2. pruebas-utiles, SEGUNDA corrida (Wilson corregido; falló la edición: la retenía el motor de reglas, la batería ahora edita con decisión «publicar») =====
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321
+
+— Preparación —
+✔ preparación: lector, otro lector y un admin con dos TOTP reales
+
+— Wilson y desempates —
+✔ Wilson en la base = valores calculados aparte (Python) en 18 casos, |error| < 1e-12; sin votos, 0
+✔ Wilson de la base = lib/comunidad/wilson.ts BIT A BIT en los 1890 pares con total ≤ 60; con 0 positivos, exactamente 0 (antes de la corrección, 0/1 daba ~4.6e-17)
+✔ orden real con votos REALES: 9/10, 1/1, 2/4, empate 1/2 ×3 (fecha desc y, con la misma fecha, id desc), 0/3 y 0/0 (fecha desc)
+
+— Un orden por título —
+     20 lectores → 1 orden (11)
+✔ 20 lectores CONCURRENTES (sesiones reales, PostgREST) piden la primera página de un título sin orden → UN solo orden generado, el mismo para los 20
+✔ reutilización y vigencia (tiempo simulado): < 10 min se reutiliza; > 10 min se genera otro y el anterior sigue valiendo hasta vencer; al generar se borran los VENCIDOS del título
+
+— Recorrido y revalidación —
+✔ conjunto estable de 237 reseñas: el recorrido de a 5 sigue EXACTAMENTE el orden (Wilson + desempates), sin duplicar ni saltear; filas de 100 ids
+✖ cambios ENTRE páginas (funciones reales): retiro, suspensión, bloqueo, borrado y edición. Lo oculto no reaparece, lo editado sale una vez, nada visible se saltea
+    Expected values to be strictly equal:
+     tandas [5,0,0,5,5,5,5,5] · avances del cursor [5,50,50,25,5,5,5]
+✔ página con MUCHAS ocultas (fixture: 120 versiones pasadas a oculta después de generar el orden): devuelve menos o ninguna, el cursor avanza exactamente 50 y nunca revisa más de 50
+
+— Vencimiento —
+✔ vencimiento a mitad de lectura (tiempo simulado): `orden_actualizado` sin reseñas; UN reinicio con el núcleo real agrega sin repetir y llega al final; un segundo vencimiento ya no ofrece otro
+✔ un cursor de OTRO título o de un orden borrado responde orden_actualizado, nunca mezcla; un cursor de «Más útiles» en «Recientes» es inválido
+
+— Votos dentro del orden congelado —
+✔ votar dentro del orden congelado cambia el CONTEO que se lee, no el lugar; el orden siguiente (> 10 min, simulado) sí lo refleja
+
+— Permisos y privacidad —
+✔ las tablas del orden: sin grants, RLS sin policies, sin columnas del lector; wilson y orden_utiles sin EXECUTE; anon y service_role no leen «Más útiles»
+✔ «Recientes» no cambió: el mismo título recorre por fecha, sin tocar el orden congelado
+
+— Limpieza (base compartida): sólo lo de esta corrida —
+   cuentas: 45; restos (cuentas|participantes|reseñas|órdenes|decisiones|locks|interruptores): 0|0|0|0|0|0|false
+
+13 de 14 pasaron.
+Fallaron:
+ - cambios ENTRE páginas (funciones reales): retiro, suspensión, bloqueo, borrado y edición. Lo oculto no reaparece, lo editado sale una vez, nada visible se saltea
+
+===== 3. pruebas-utiles, corrida final =====
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321
+
+— Preparación —
+✔ preparación: lector, otro lector y un admin con dos TOTP reales
+
+— Wilson y desempates —
+✔ Wilson en la base = valores calculados aparte (Python) en 18 casos, |error| < 1e-12; sin votos, 0
+✔ Wilson de la base = lib/comunidad/wilson.ts BIT A BIT en los 1890 pares con total ≤ 60; con 0 positivos, exactamente 0 (antes de la corrección, 0/1 daba ~4.6e-17)
+✔ orden real con votos REALES: 9/10, 1/1, 2/4, empate 1/2 ×3 (fecha desc y, con la misma fecha, id desc), 0/3 y 0/0 (fecha desc)
+
+— Un orden por título —
+     20 lectores → 1 orden (2)
+✔ 20 lectores CONCURRENTES (sesiones reales, PostgREST) piden la primera página de un título sin orden → UN solo orden generado, el mismo para los 20
+✔ reutilización y vigencia (tiempo simulado): < 10 min se reutiliza; > 10 min se genera otro y el anterior sigue valiendo hasta vencer; al generar se borran los VENCIDOS del título
+
+— Recorrido y revalidación —
+✔ conjunto estable de 237 reseñas: el recorrido de a 5 sigue EXACTAMENTE el orden (Wilson + desempates), sin duplicar ni saltear; filas de 100 ids
+✔ cambios ENTRE páginas (funciones reales): retiro, suspensión, bloqueo, borrado y edición. Lo oculto no reaparece, lo editado sale una vez, nada visible se saltea
+     tandas [5,0,0,5,5,5,5,5] · avances del cursor [5,50,50,25,5,5,5]
+✔ página con MUCHAS ocultas (fixture: 120 versiones pasadas a oculta después de generar el orden): devuelve menos o ninguna, el cursor avanza exactamente 50 y nunca revisa más de 50
+
+— Vencimiento —
+✔ vencimiento a mitad de lectura (tiempo simulado): `orden_actualizado` sin reseñas; UN reinicio con el núcleo real agrega sin repetir y llega al final; un segundo vencimiento ya no ofrece otro
+✔ un cursor de OTRO título o de un orden borrado responde orden_actualizado, nunca mezcla; un cursor de «Más útiles» en «Recientes» es inválido
+
+— Votos dentro del orden congelado —
+✔ votar dentro del orden congelado cambia el CONTEO que se lee, no el lugar; el orden siguiente (> 10 min, simulado) sí lo refleja
+
+— Permisos y privacidad —
+✔ las tablas del orden: sin grants, RLS sin policies, sin columnas del lector; wilson y orden_utiles sin EXECUTE; anon y service_role no leen «Más útiles»
+✔ «Recientes» no cambió: el mismo título recorre por fecha, sin tocar el orden congelado
+
+— Limpieza (base compartida): sólo lo de esta corrida —
+   cuentas: 47; restos (cuentas|participantes|reseñas|órdenes|decisiones|locks|interruptores): 0|0|0|0|0|0|false
+
+14 de 14 pasaron.
+
+===== 4. up/down/up de 018 =====
+base: supabase_db_streamingcentral
+
+   volcado 1-con-018: 15304 líneas, sha256 2ee8b0fad3812354…
+✔ 018 aplicada, sin órdenes congelados que la bajada perdería
+   volcado 2-sin-018: 15065 líneas, sha256 cd7bc0e2639e1b18…
+✔ 018_down: quita todo lo de 018 y sólo restaura la lectura de 017 (con sus permisos)
+   volcado 3-sin-018-otra-vez: 15065 líneas, sha256 cd7bc0e2639e1b18…
+✔ 018_down repetida: inocua
+   volcado 4-con-018: 15304 líneas, sha256 2ee8b0fad3812354…
+   volcado 5-con-018-repetida: 15304 líneas, sha256 2ee8b0fad3812354…
+✔ 018 up: vuelve exactamente al volcado con 018; repetida, inocua
+   volcado 6-sin-018: 15065 líneas, sha256 cd7bc0e2639e1b18…
+   volcado 7-con-018: 15304 líneas, sha256 2ee8b0fad3812354…
+✔ segunda vuelta down → up: mismos volcados; datos ajenos intactos
+
+5 de 5 pasaron.
+
+===== 5. Baterías anteriores (dependen de comunidad_resenas, que 018 redefine) =====
+--- 5.a lectura, primera corrida: 3 fallos por los cambios de contrato INTENCIONALES (lock_timeout en el catálogo; «utiles» ya no es inválido).
+    Esta corrida dejó 2 órdenes congeladas (título de la batería y id=1 por la ruta), borradas en la limpieza final (sección 9). ---
+docker: desktop-linux (config.json) → npipe:////./pipe/dockerDesktopLinuxEngine
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321 · app http://localhost:3100
+
+— Preparación —
+✔ preparación: un título con 213 visibles + 6 que no deben verse; lector, otro lector, admin con dos TOTP
+
+— Permisos: sin sesión nada; con sesión, sólo como uno mismo —
+✔ RPC directo: anon y service_role → 401/403 con 42501/permission denied; un JWT real → 200; no hay parámetro para leer como otro
+✖ catálogo: comunidad_resenas security definer, search_path vacío, EXECUTE sólo authenticated; modulo_activo sólo service_role; comunidad_leer_titulo ya no existe
+    Expected values to be strictly equal:
+
+— Recientes: recorrido completo —
+     214 reseñas en 43 páginas; empate en las posiciones 107–118
+✔ más de 200 reseñas: el lector recorre las 214 visibles de a 5, en el orden (primera publicación desc, id desc), sin repetir ni saltear, con un empate de 12 cruzando páginas
+✔ el mismo recorrido por el ADAPTADOR de la ruta (cursor opaco) y con tandas de 20: mismo conjunto y orden
+✔ bloqueo personal: la reseña bloqueada no la ve quien bloqueó, SÍ la ve otro lector; el suspendido no lo ve nadie
+
+— Cambios entre páginas (funciones reales) —
+     recorrido con cambios: 210 reseñas, 0 repetidas, 0 salteadas
+✔ entre páginas: retiro, borrado, edición, bloqueo y suspensión. Nada oculto reaparece por el cursor, nada se repite, nada visible se saltea
+✔ levantar la suspensión vuelve a mostrar sus reseñas; desbloquear también
+
+— Contrato de la función —
+✖ pedidos inválidos: «utiles» (E5b), cursor mal formado y título inválido → 22023 sin datos; el límite se acota a 1–20
+    Expected values to be strictly equal:
+✔ un título sin reseñas: lista vacía, total 0, sin cursor; con el módulo APAGADO, {activo:false} y nada más
+
+— La ruta /api/comunidad/resenas/lista (servidor local) —
+✖ ruta: sin token o con uno inválido 401 con SÓLO {resultado, activo}; con sesión 200 privado y sin caché; inválido 400; el cursor de la ruta recorre lo mismo
+    tipo=movie&id=1&orden=utiles
+
+— Limpieza (base compartida): sólo lo de esta corrida —
+   cuentas: 222; restos (cuentas|participantes|decisiones|locks|interruptores): 0|0|0|0|false
+
+8 de 11 pasaron.
+Fallaron:
+ - catálogo: comunidad_resenas security definer, search_path vacío, EXECUTE sólo authenticated; modulo_activo sólo service_role; comunidad_leer_titulo ya no existe
+ - pedidos inválidos: «utiles» (E5b), cursor mal formado y título inválido → 22023 sin datos; el límite se acota a 1–20
+ - ruta: sin token o con uno inválido 401 con SÓLO {resultado, activo}; con sesión 200 privado y sin caché; inválido 400; el cursor de la ruta recorre lo mismo
+--- 5.b lectura, tras actualizar la batería ---
+docker: desktop-linux (config.json) → npipe:////./pipe/dockerDesktopLinuxEngine
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321 · app http://localhost:3100
+
+— Preparación —
+✔ preparación: un título con 213 visibles + 6 que no deben verse; lector, otro lector, admin con dos TOTP
+
+— Permisos: sin sesión nada; con sesión, sólo como uno mismo —
+✔ RPC directo: anon y service_role → 401/403 con 42501/permission denied; un JWT real → 200; no hay parámetro para leer como otro
+✔ catálogo: comunidad_resenas security definer, search_path vacío, EXECUTE sólo authenticated; modulo_activo sólo service_role; comunidad_leer_titulo ya no existe
+
+— Recientes: recorrido completo —
+     214 reseñas en 43 páginas; empate en las posiciones 107–118
+✔ más de 200 reseñas: el lector recorre las 214 visibles de a 5, en el orden (primera publicación desc, id desc), sin repetir ni saltear, con un empate de 12 cruzando páginas
+✔ el mismo recorrido por el ADAPTADOR de la ruta (cursor opaco) y con tandas de 20: mismo conjunto y orden
+✔ bloqueo personal: la reseña bloqueada no la ve quien bloqueó, SÍ la ve otro lector; el suspendido no lo ve nadie
+
+— Cambios entre páginas (funciones reales) —
+     recorrido con cambios: 210 reseñas, 0 repetidas, 0 salteadas
+✔ entre páginas: retiro, borrado, edición, bloqueo y suspensión. Nada oculto reaparece por el cursor, nada se repite, nada visible se saltea
+✔ levantar la suspensión vuelve a mostrar sus reseñas; desbloquear también
+
+— Contrato de la función —
+✔ pedidos inválidos: orden desconocido, cursor del otro orden, cursor mal formado y título inválido → 22023 sin datos; el límite se acota a 1–20
+✔ un título sin reseñas: lista vacía, total 0, sin cursor; con el módulo APAGADO, {activo:false} y nada más
+
+— La ruta /api/comunidad/resenas/lista (servidor local) —
+✔ ruta: sin token o con uno inválido 401 con SÓLO {resultado, activo}; con sesión 200 privado y sin caché; inválido 400; el cursor de la ruta recorre lo mismo
+
+— Limpieza (base compartida): sólo lo de esta corrida —
+   cuentas: 222; restos (cuentas|participantes|decisiones|locks|interruptores): 0|0|0|0|false
+
+11 de 11 pasaron.
+--- 5.c voto en la lista (E5a A1) ---
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321 · núcleo: lib/comunidad/lista-nucleo.ts
+
+✔ preparación: 7 reseñas reales (dos páginas: 5 + 2), un lector con sesión real y otra cuenta que ya votó dos
+✔ positivo SIN pérdida: voto_registrado; pantalla = base; el siguiente toque RETIRA
+✔ positivo con la PRIMERA respuesta perdida: la reconciliación confirma sin_cambios; pantalla = base (util, sin contar dos veces); el siguiente toque RETIRA
+✔ negativo SIN pérdida: voto_registrado; pantalla = base; el siguiente toque del mismo pulgar RETIRA
+✔ negativo con la primera respuesta perdida (reseña con un voto ajeno negativo): sin_cambios; pantalla = base
+✔ CAMBIO de voto (útil → no útil) con la primera respuesta perdida: sin_cambios; útiles −1, total igual; pantalla = base
+✔ RETIRO con la primera respuesta perdida: la reconciliación confirma sin_efecto; pantalla = base (sin voto); el siguiente toque VOTA
+✔ retiro SIN pérdida (voto_retirado) sobre una reseña con voto ajeno: pantalla = base
+✔ pérdida de AMBAS respuestas: sin_confirmar, la pantalla NO cambia y avisa la incertidumbre; el reintento posterior confirma sin_cambios y la pantalla queda = base
+✔ pérdida de AMBAS respuestas al retirar: sin_confirmar sin cambio visible; el reintento confirma sin_efecto y la pantalla queda sin voto = base
+     respuestas perdidas simuladas: 8
+✔ al final: TODA la lista (las dos páginas) coincide con la base, reseña por reseña
+
+— Limpieza (base compartida): sólo lo de esta corrida —
+   cuentas: 9; restos (cuentas|participantes|interruptores): 0|0|false
+
+11 de 11 pasaron.
+--- 5.d permisos, primera corrida: 1 fallo por el inventario (lock_timeout=5s en comunidad_resenas) ---
+base: supabase_db_streamingcentral · API: http://127.0.0.1:54321
+
+— 1. SQL (SET ROLE) —
+✔ el esquema tiene exactamente las diecinueve tablas previstas (11 de E2a + intentos de E3a + 3 de E3b + 2 de E4 + 2 de E5b)
+✔ catálogo: ningún privilegio de tabla para PUBLIC, anon, authenticated ni service_role
+✔ catálogo: ningún privilegio de columna para esos roles
+✔ catálogo: el esquema niega USAGE y CREATE; secuencias y funciones cerradas
+✔ control: una función nueva en el esquema SIN su revoke queda ejecutable por PUBLIC (default de PostgreSQL); la frena sólo el esquema
+✔ catálogo: RLS activada en las quince y ninguna policy
+✔ control positivo: el dueño (postgres) sí lee las quince tablas
+✔ control positivo: SET ROLE cambia de verdad el rol (current_user = anon)
+✔ 1a · esquema: 285 intentos reales → 42501
+✔ 1b · grants de tabla (USAGE concedido y revertido): 285 intentos → 42501
+✔ 1c · RLS sin policies (grants concedidos y revertidos, con fixtures): anon y authenticated no ven ni tocan nada
+✔ 1c · service_role tiene BYPASSRLS: con grants vería todo (por eso su cierre son 1a y 1b)
+✔ 1c · después de revertir, los grants de prueba no quedaron
+
+— Usuarios del Auth local —
+✔ crear autor, ajeno, suspendido y admin; participantes, reseña y suspensión puestas por el dueño
+✔ is_admin_mfa(): admin AAL1 → false
+✔ is_admin_mfa(): admin AAL2 con UN factor verificado → false
+✔ is_admin_mfa(): admin AAL2 con DOS factores TOTP verificados → true
+✔ is_admin_mfa(): el mismo admin con dos factores pero sesión nueva AAL1 → false
+✔ is_admin_mfa(): usuario común (sin is_admin) → false
+
+— 2. REST —
+✔ REST: 7 credenciales × 19 tablas × 4 métodos × 2 perfiles → nunca 2xx; 404 PGRST205 / 406 PGRST106
+✔ REST: el OpenAPI no menciona ninguna tabla de comunidad; de las RPC (E2b, E3a y E3b), anon no ve ninguna y service_role ve exactamente las del inventario
+✔ GraphQL: pg_graphql no está habilitada en la base local; el endpoint lo informa y no expone nada
+
+— 3. RPC —
+✖ las únicas public.comunidad_* son las del inventario (E2b, E3a, E3b, E4 y E5a), security definer y search_path vacío
+    Expected values to be strictly deep-equal:
+✔ catálogo: EXECUTE sólo service_role en las de E2b–E3b, y sólo authenticated en las de moderación (E4) y en la lectura (E5a)
+✔ RPC real por REST: anon y cada JWT reciben 401/403 en todas; service_role ejecuta (uid inexistente: sin efectos)
+✔ RPC real por REST a la lectura (E5a): anon y service_role → 401/403 sin datos; cada JWT real (autor, ajeno, suspendido, admin AAL1 y AAL2) → 200 como sí mismo
+✔ RPC real por REST a las de moderación (E4): anon, autor, ajeno, suspendido, admin AAL1 y service_role → 401/403 con 42501; el admin AAL2 con dos factores → 200 (pedidos sin efecto); nada se registra
+✔ ninguna función del esquema comunidad es ejecutable por PUBLIC ni por los roles de la API
+✔ RPC por REST a una función del esquema: 406 PGRST106 con el perfil, 404 sin él, para cada credencial
+
+— Evidencia: ACL efectivas del esquema —
+bajas_en_curso: {postgres=arwdDxtm/postgres}
+bloqueos: {postgres=arwdDxtm/postgres}
+bloqueos_id_seq: {postgres=rwU/postgres}
+config: {postgres=arwdDxtm/postgres}
+contadores: {postgres=arwdDxtm/postgres}
+corroboraciones: {postgres=arwdDxtm/postgres}
+decisiones: {postgres=arwdDxtm/postgres}
+decisiones_id_seq: {postgres=rwU/postgres}
+denuncias: {postgres=arwdDxtm/postgres}
+denuncias_cerradas: {postgres=arwdDxtm/postgres}
+denuncias_cerradas_id_seq: {postgres=rwU/postgres}
+denuncias_excedentes: {postgres=arwdDxtm/postgres}
+denuncias_id_seq: {postgres=rwU/postgres}
+esquema comunidad: {postgres=UC/postgres}
+evaluaciones: {postgres=arwdDxtm/postgres}
+evaluaciones_id_seq: {postgres=rwU/postgres}
+huellas: {postgres=arwdDxtm/postgres}
+intentos: {postgres=arwdDxtm/postgres}
+ordenes_utiles: {postgres=arwdDxtm/postgres}
+ordenes_utiles_id_seq: {postgres=rwU/postgres}
+ordenes_utiles_tramos: {postgres=arwdDxtm/postgres}
+participantes: {postgres=arwdDxtm/postgres}
+resenas: {postgres=arwdDxtm/postgres}
+resenas_id_seq: {postgres=rwU/postgres}
+suspensiones: {postgres=arwdDxtm/postgres}
+suspensiones_id_seq: {postgres=rwU/postgres}
+tramos: {postgres=arwdDxtm/postgres}
+tramos_id_seq: {postgres=rwU/postgres}
+versiones: {postgres=arwdDxtm/postgres}
+versiones_id_seq: {postgres=rwU/postgres}
+
+— Limpieza (base compartida): sólo lo que creó esta corrida —
+   cuentas: 4; restos (cuentas|participantes): 0|0
+
+28 de 29 pasaron.
+Fallaron:
+ - las únicas public.comunidad_* son las del inventario (E2b, E3a, E3b, E4 y E5a), security definer y search_path vacío
+--- 5.e permisos, tras actualizar el inventario ---
+base: supabase_db_streamingcentral · API: http://127.0.0.1:54321
+
+— 1. SQL (SET ROLE) —
+✔ el esquema tiene exactamente las diecinueve tablas previstas (11 de E2a + intentos de E3a + 3 de E3b + 2 de E4 + 2 de E5b)
+✔ catálogo: ningún privilegio de tabla para PUBLIC, anon, authenticated ni service_role
+✔ catálogo: ningún privilegio de columna para esos roles
+✔ catálogo: el esquema niega USAGE y CREATE; secuencias y funciones cerradas
+✔ control: una función nueva en el esquema SIN su revoke queda ejecutable por PUBLIC (default de PostgreSQL); la frena sólo el esquema
+✔ catálogo: RLS activada en las quince y ninguna policy
+✔ control positivo: el dueño (postgres) sí lee las quince tablas
+✔ control positivo: SET ROLE cambia de verdad el rol (current_user = anon)
+✔ 1a · esquema: 285 intentos reales → 42501
+✔ 1b · grants de tabla (USAGE concedido y revertido): 285 intentos → 42501
+✔ 1c · RLS sin policies (grants concedidos y revertidos, con fixtures): anon y authenticated no ven ni tocan nada
+✔ 1c · service_role tiene BYPASSRLS: con grants vería todo (por eso su cierre son 1a y 1b)
+✔ 1c · después de revertir, los grants de prueba no quedaron
+
+— Usuarios del Auth local —
+✔ crear autor, ajeno, suspendido y admin; participantes, reseña y suspensión puestas por el dueño
+✔ is_admin_mfa(): admin AAL1 → false
+✔ is_admin_mfa(): admin AAL2 con UN factor verificado → false
+✔ is_admin_mfa(): admin AAL2 con DOS factores TOTP verificados → true
+✔ is_admin_mfa(): el mismo admin con dos factores pero sesión nueva AAL1 → false
+✔ is_admin_mfa(): usuario común (sin is_admin) → false
+
+— 2. REST —
+✔ REST: 7 credenciales × 19 tablas × 4 métodos × 2 perfiles → nunca 2xx; 404 PGRST205 / 406 PGRST106
+✔ REST: el OpenAPI no menciona ninguna tabla de comunidad; de las RPC (E2b, E3a y E3b), anon no ve ninguna y service_role ve exactamente las del inventario
+✔ GraphQL: pg_graphql no está habilitada en la base local; el endpoint lo informa y no expone nada
+
+— 3. RPC —
+✔ las únicas public.comunidad_* son las del inventario (E2b, E3a, E3b, E4, E5a y E5b), security definer y search_path vacío
+✔ catálogo: EXECUTE sólo service_role en las de E2b–E3b, y sólo authenticated en las de moderación (E4) y en la lectura (E5a)
+✔ RPC real por REST: anon y cada JWT reciben 401/403 en todas; service_role ejecuta (uid inexistente: sin efectos)
+✔ RPC real por REST a la lectura (E5a): anon y service_role → 401/403 sin datos; cada JWT real (autor, ajeno, suspendido, admin AAL1 y AAL2) → 200 como sí mismo
+✔ RPC real por REST a las de moderación (E4): anon, autor, ajeno, suspendido, admin AAL1 y service_role → 401/403 con 42501; el admin AAL2 con dos factores → 200 (pedidos sin efecto); nada se registra
+✔ ninguna función del esquema comunidad es ejecutable por PUBLIC ni por los roles de la API
+✔ RPC por REST a una función del esquema: 406 PGRST106 con el perfil, 404 sin él, para cada credencial
+
+— Evidencia: ACL efectivas del esquema —
+bajas_en_curso: {postgres=arwdDxtm/postgres}
+bloqueos: {postgres=arwdDxtm/postgres}
+bloqueos_id_seq: {postgres=rwU/postgres}
+config: {postgres=arwdDxtm/postgres}
+contadores: {postgres=arwdDxtm/postgres}
+corroboraciones: {postgres=arwdDxtm/postgres}
+decisiones: {postgres=arwdDxtm/postgres}
+decisiones_id_seq: {postgres=rwU/postgres}
+denuncias: {postgres=arwdDxtm/postgres}
+denuncias_cerradas: {postgres=arwdDxtm/postgres}
+denuncias_cerradas_id_seq: {postgres=rwU/postgres}
+denuncias_excedentes: {postgres=arwdDxtm/postgres}
+denuncias_id_seq: {postgres=rwU/postgres}
+esquema comunidad: {postgres=UC/postgres}
+evaluaciones: {postgres=arwdDxtm/postgres}
+evaluaciones_id_seq: {postgres=rwU/postgres}
+huellas: {postgres=arwdDxtm/postgres}
+intentos: {postgres=arwdDxtm/postgres}
+ordenes_utiles: {postgres=arwdDxtm/postgres}
+ordenes_utiles_id_seq: {postgres=rwU/postgres}
+ordenes_utiles_tramos: {postgres=arwdDxtm/postgres}
+participantes: {postgres=arwdDxtm/postgres}
+resenas: {postgres=arwdDxtm/postgres}
+resenas_id_seq: {postgres=rwU/postgres}
+suspensiones: {postgres=arwdDxtm/postgres}
+suspensiones_id_seq: {postgres=rwU/postgres}
+tramos: {postgres=arwdDxtm/postgres}
+tramos_id_seq: {postgres=rwU/postgres}
+versiones: {postgres=arwdDxtm/postgres}
+versiones_id_seq: {postgres=rwU/postgres}
+
+— Limpieza (base compartida): sólo lo que creó esta corrida —
+   cuentas: 4; restos (cuentas|participantes): 0|0
+
+29 de 29 pasaron.
+--- 5.f escritura (E3a) ---
+docker: desktop-linux (config.json) → npipe:////./pipe/dockerDesktopLinuxEngine
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321 · app http://localhost:3100
+
+— Matriz de autorización por operación (§2.1.2), con las funciones reales —
+✔ matriz · suspendido: A → rechazo 'suspendida' sin escribir nada; B (borrar, retirar) → permitidas
+✔ matriz · correo pendiente: A → rechazo 'correo_pendiente' sin escribir nada; B (borrar, retirar) → permitidas
+✔ matriz · términos nuevos: A → rechazo 'terminos_pendientes' sin escribir nada; B (borrar, retirar) → permitidas
+✔ matriz · publicación pausada: A → rechazo 'publicacion_pausada' sin escribir nada; B (borrar, retirar) → permitidas
+✔ matriz · módulo apagado: A → rechazo 'modulo_apagado' sin escribir nada; B (borrar, retirar) → permitidas
+✔ matriz · baja en curso: A y B rechazadas con CB001 (baja_en_curso); el paso 1 ya había borrado todo
+✔ matriz · sin términos aceptados: no hay identidad comunitaria y nada se crea
+✔ términos: una versión distinta de la vigente no se acepta
+✔ propiedad y reglas de la fila A: no se edita ni borra lo ajeno; no se evalúa la propia; una reseña viva por título
+
+— Revisión §3.4.1: qué se conserva en cada resultado de una edición —
+✔ §3.4.1 · texto idéntico tras normalizar → 'sin_cambios'; versión y votos intactos; no consume límite
+✔ §3.4.1 · rechazo de formato → anterior intacta y publicada, votos intactos, sin tocar la base
+✔ §3.4.1 · rechazo por regla de contenido → anterior intacta, votos intactos; consume UNA edición; no guarda el texto
+✔ §3.4.1 · versión esperada distinta de la vigente → 'conflicto' (version), intacta
+✔ §3.4.1 · fallo técnico en la base (texto que el CHECK rechaza, llamado directo) → error; anterior, votos y límite intactos
+   edición con la reseña retenida: error en 5118 ms
+✔ §3.4.1 · lock_timeout (otra transacción retiene la reseña > 5 s) → error; anterior y votos intactos
+✔ §3.4.1 · edición aceptada y publicada → anterior reemplazada, tramos cerrados, votos reiniciados UNA vez; la nueva en cero
+✔ §3.4.1 · edición aceptada y retenida → anterior reemplazada (deja de verse), votos reiniciados una vez, nueva 'retenida'
+✔ §3.4.1 · admisión cerrada (cola llena) → la anterior intacta, con sus votos, y 'admision_global' (E3b; el resto de la admisión, en pruebas-moderacion.mjs)
+
+— Idempotencia: respuesta perdida y mismo id_intento —
+✔ reintento tras confirmar (respuesta perdida): el mismo resultado, UNA versión y UN reinicio de votos
+✔ mismo id_intento con OTRO contenido → conflicto genérico, sin datos del primero; nada cambia
+✔ reintento de un rechazo de contenido: el mismo rechazo, sin consumir otra edición
+✔ el hash del intento es el del pedido normalizado (cliente y servidor firman lo mismo)
+
+— A1 · confirmación perdida entre el servidor y Supabase (auditoría E3a) —
+✔ A1 · publicar: la respuesta se pierde tras el commit → se reconcilia con el mismo id_intento: 'publicada', UNA reseña, UN cupo
+✔ A1 · editar con votos: la respuesta se pierde tras el commit → 'publicada' recuperada; votos reiniciados UNA vez, UNA edición
+✔ A1 · se pierden las DOS respuestas (red) → 'sin_confirmar' (nunca 'error'); el reintento normal con el mismo id_intento recupera sin duplicar
+✔ A1 · se pierden las DOS respuestas (502) → 'sin_confirmar' (nunca 'error'); el reintento normal con el mismo id_intento recupera sin duplicar
+✔ A1 · votar, retirar y borrar con la respuesta perdida tras el commit: se reconcilian sin duplicar
+✔ A1 · un rechazo CONFIRMADO de la base no se reintenta ni se presenta como incierto: 'error', versión, votos y cupo intactos
+
+— Límites por día con carreras —
+✔ límite de reseñas = 2 y 5 envíos simultáneos de la misma cuenta: exactamente 2 entran, nunca se supera
+✔ límite de evaluaciones = 1: 4 votos simultáneos a reseñas distintas → 1 entra
+
+— Gates de integración (§5.0) con las FUNCIONES REALES y sesiones concurrentes —
+✔ gate caso 1 · votar ‖ retirar del mismo evaluador: el segundo espera, relee y retira; igual al serial
+✔ gate caso 2a · la edición confirma primero: el voto a la versión vieja espera, relee y se rechaza (version_no_disponible)
+✔ gate caso 2b · el voto confirma primero: la edición espera y lo reinicia (votos_reiniciados = 1)
+✔ gate caso 3 · dos ediciones con la misma versión esperada: la segunda da conflicto; UNA versión nueva
+✔ gate caso 4 · el mismo id_intento en dos sesiones a la vez: UNA versión, UN reinicio; la segunda devuelve el mismo resultado
+✔ gate B3a · voto real de U en vuelo con K_CUENTA tomado: la baja de U espera y después lo borra y cierra su tramo
+✔ gate B3b · baja de U en vuelo: el voto real de U espera K_CUENTA, relee el marcador y se rechaza (CB001); nada escrito
+✔ gate actores cruzados · A evalúa la reseña de B y B la de A con las funciones reales: los dos confirman, sin deadlock
+✔ gate actores cruzados (carga) · 10 rondas de pares cruzados simultáneos sin coordinar: 20 votos, 0 errores
+
+— Rutas HTTP (servidor local) —
+✔ rutas · sin sesión → 401 en las cinco; con sesión y cuerpo inválido → 400; sin caché
+✔ rutas · publicar, rechazar, retener y editar de punta a punta con el JWT; el uid sale del token, no del cuerpo
+✔ rutas · votar y retirar por HTTP; con el módulo apagado la lectura responde { activo: false } y nada más
+✔ acceso directo · un JWT de usuario no lee ni escribe las tablas por REST ni ejecuta las funciones por RPC
+
+— Limpieza (base compartida) —
+   cuentas: 113; restos (cuentas|participantes|sesiones|locks|interruptores encendidos): 0|0|0|0|false
+
+43 de 43 pasaron.
+--- 5.g moderación (E3b) ---
+docker: desktop-linux (config.json) → npipe:////./pipe/dockerDesktopLinuxEngine
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321 · app http://localhost:3100
+
+— Duplicados (§3.3.1): huella HMAC, sin texto en claro —
+✔ duplicados · el mismo texto en otro título de la misma cuenta → 'retenida' (sin revelar la regla); otro texto → 'publicada'
+✔ duplicados · casi duplicado propio (una palabra cambiada, Jaccard ≥ 0,8) → retenida, también como edición de OTRA reseña; editar la MISMA reseña con un cambio chico → publicada
+✔ duplicados · el mismo texto en 3 cuentas → la 4.ª cuenta queda 'retenida' (duplicado_coordinado); las 3 primeras, publicadas
+✔ duplicados · CONCURRENCIA: 7 cuentas publican el mismo texto a la vez → exactamente 3 publicadas y 4 retenidas (lock por hash, nivel 8)
+✔ duplicados · la tabla de huellas NO contiene texto: sólo hex (64 y 16); ninguna palabra del texto aparece; un shingle en claro lo rechaza el CHECK
+✔ duplicados · borrar la reseña borra sus huellas; volver a publicar el mismo texto ya no es duplicado
+✔ duplicados · sin secreto HMAC la escritura responde 'error' y no toca la base (una regla que no corre nunca aprueba)
+
+— Admisión a la cola de retenidos (§3.3) —
+✔ admisión · por autor: con 2 retenidos, el 3.º que sería retenido NO se guarda ('admision_autor', sin cupo); lo limpio se publica
+✔ admisión · por autor: editar uno de SUS 2 retenidos con otro texto retenido se admite (la vigente reemplazada sale de la cola)
+✔ admisión · por autor, CONCURRENCIA: 5 envíos retenibles simultáneos de la misma cuenta → exactamente 2 retenidos y 3 'admision_autor'
+✔ admisión · global, CONCURRENCIA (ataque que llena la cola): tope = cola + 3; 10 cuentas envían spam a la vez → exactamente 3 entran y 7 reciben 'admision_global'; lo limpio se sigue publicando
+✔ admisión · lo retenido NO se publica por vencimiento: no hay job que lo haga (pg_cron no programa nada sobre comunidad)
+
+— Pedir revisión de un rechazo por contenido (§3.3.3, §3.4.1) —
+✔ revisión · publicar con teléfono → rechazo_contenido (nada guardado); pedir revisión (id nuevo) → 'revision_solicitada', invisible para otros, cuenta para el límite
+✔ revisión · si las reglas vigentes ya no rechazan el texto, es un envío normal ('publicada')
+✔ revisión · edición: sin confirmar → 'requiere_confirmacion' sin tocar nada; confirmada → la publicada se reemplaza (deja de verse), votos reiniciados UNA vez
+✔ revisión · pasa por la admisión: con 2 retenidos propios → 'admision_autor' y nada guardado
+✔ revisión · idempotencia: respuesta perdida tras el commit → el reintento con el mismo id devuelve lo guardado (UNA versión); el mismo id sin revisión → conflicto
+
+— Denuncias (§3.3.2) —
+✔ denuncia · se registra, la reseña SIGUE VISIBLE; repetirla da el mismo resultado sin otra fila ni otro cupo; quien denuncia la ve marcada
+✔ denuncia · no la propia ('propia'); no lo invisible (retenida → 'version_no_disponible'); motivo fuera del diseño → 'invalido' sin tocar la base
+✔ denuncia · ATAQUE: 8 cuentas denuncian como grave una reseña legítima → sigue publicada y visible, y queda PRIMERA en la cola (la cantidad ordena, no oculta)
+✔ denuncia · cota por versión, CONCURRENCIA: tope 3 filas; 7 denuncias simultáneas → 3 filas + excedente 4, todas 'denuncia_registrada'; sigue publicada
+✔ denuncia · tope global por hora, CONCURRENCIA: tope = ingreso + 4; 9 cuentas denuncian a la vez → exactamente 4 recibidas y 5 'cola_denuncias_llena'; con bloquear, el bloqueo se hace igual
+✔ denuncia · límite diario propio (tope 2): la 3.ª → 'limite_diario'
+✔ denuncia · CORROBORACIÓN: una versión publicada con reglas viejas que las vigentes retendrían pasa a 'retenida' POR LA REGLA; una legítima denunciada, no
+✔ denuncia · 'No me sirvió' masivo (12 cuentas) → ningún efecto de moderación: publicada, sin denuncias, fuera de la cola
+✔ denuncia · respuesta perdida tras el commit → se reconcilia: 'denuncia_registrada' repetida, UNA fila, UN cupo; perdidas las dos → 'sin_confirmar' y el reintento no duplica
+
+— Bloqueos (§3.3.4) —
+✔ bloqueo · oculta TODAS las reseñas del autor sólo para quien bloquea; los demás las siguen viendo; su estado no cambia
+✔ bloqueo · idempotente; no a sí mismo ('propio'); límite diario (tope 1 → el 2.º 'limite_diario'); se puede denunciar después de bloquear
+✔ desbloqueo · por id: vuelve a verse; el bloqueo de OTRA cuenta no se toca ('sin_efecto', la fila sigue); repetirlo es 'sin_efecto'
+✔ bloqueo y desbloqueo · respuesta perdida tras el commit → reconciliados sin duplicar ni fallar
+
+— Matriz filas C (denunciar) y D (bloquear, desbloquear) (§2.1.2) —
+✔ matriz · suspendido: C → 'denuncia_registrada'; D → permitidas
+✔ matriz · correo pendiente: C → 'correo_pendiente'; D → permitidas
+✔ matriz · términos sin aceptar: C → 'denuncia_registrada'; D → permitidas
+✔ matriz · publicación pausada: C → 'denuncia_registrada'; D → permitidas
+✔ matriz · módulo apagado: C → 'modulo_apagado'; D → permitidas
+✔ matriz · cola de retenidos llena: C → 'denuncia_registrada'; D → permitidas
+✔ matriz · cola de denuncias llena: C → 'cola_denuncias_llena'; D → permitidas
+✔ matriz · baja en curso: C → 'baja_en_curso'; D → 'baja_en_curso'
+
+— Protocolo: niveles 8 (huella) y 9 (cola) —
+✔ protocolo · fuera de orden → CB002: cola antes que huella, huella o cola después de la marca, cola repetida; saltear la huella vale
+
+— Compuertas con sesiones psql: el segundo ESPERA el lock del nivel 8/9 y relee —
+✔ compuerta · admisión global: X entra a la cola (tope = cola + 1) y retiene; Y espera el lock 7304, relee y recibe 'admision_global'
+✔ compuerta · denuncias por hora: X recibe la última (tope = ingreso + 1) y retiene; Y espera el lock 7304, relee y recibe 'cola_denuncias_llena'
+✔ compuerta · duplicado entre cuentas: con el texto en 2 cuentas, X (3.ª) publica y retiene el hash; Y (4.ª) espera el lock 7303, relee y queda 'retenida'
+
+— Acceso directo —
+✔ acceso directo · un JWT de usuario (y anon) no lee ni escribe las tablas nuevas ni ejecuta las funciones de E3b
+
+— Rutas HTTP (servidor local) —
+✔ rutas · sin sesión → 401; cuerpo inválido → 400; sin caché
+✔ rutas · denunciar + bloquear en un paso por HTTP: la respuesta no trae el texto; la reseña desaparece para quien bloquea; listar y desbloquear por HTTP
+✔ rutas · pedir revisión por HTTP: edición sin confirmar → 'requiere_confirmacion'; publicar → 'revision_solicitada'
+
+— Limpieza (base compartida) —
+   cuentas: 147; restos (cuentas|participantes|locks|interruptores encendidos|límites): 0|0|0|false|{"limite_resenas":5,"limite_ediciones":10,"limite_evaluaciones":100,"limite_denuncias":10,"limite_bloqueos":50,"admision_por_autor":2,"admision_global":50,"denuncias_filas_por_version":50,"denuncias_por_hora":100}
+
+46 de 46 pasaron.
+--- 5.h admin (E4) ---
+docker: desktop-linux (config.json) → npipe:////./pipe/dockerDesktopLinuxEngine
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321 · app http://localhost:3100
+
+— Cuentas y sesiones reales —
+✔ admin con DOS factores TOTP reales (aal2), el mismo admin en aal1 y un usuario común
+
+— Permisos: catálogo y RPC directo —
+✔ catálogo: las 13 funciones del admin son security definer, search_path vacío, lock_timeout en las que escriben, EXECUTE SÓLO para authenticated
+✔ RPC directo por REST: anon, usuario común, admin AAL1 y service_role → 401/403 con 42501 en las 13; admin AAL2 → 200; nada cambia
+✔ adaptador de la ruta con la sesión AAL1 del admin y con un usuario común → `no_autorizado`; con AAL2 lee el resumen
+
+— Decisiones atadas a versión —
+✔ publicar un retenido: visible para otros, primera publicación fijada, sin votos ni tramos inventados, registrado con admin, motivo y versión
+✔ rechazar un retenido: el autor lo ve rechazado y PUEDE corregirlo (rechazada → reemplazada); una edición limpia se publica
+✔ revisión pedida (rechazo de contenido enviado a revisión): prioridad 1 en la cola; publicarla queda como falso positivo
+✔ retirar una publicada con votos: oculta, tramos cerrados, votos intactos, denuncias resueltas; restaurar: los MISMOS votos vuelven y los tramos se reabren con su mes original, sin duplicar
+✔ A1 · retirar → sale de las dos colas → la encuentran Retiradas y la situación del Registro (votos que vuelven) → restaurar desde ahí: mismos votos, mes original, sin duplicar; ya no figura
+✔ A1 · Retiradas pagina por cursor sin repetir; con AAL1 o usuario común, Retiradas y la situación son `no_autorizado`
+✔ A1 · retirada y después REEMPLAZADA, BORRADA o de una cuenta en BAJA: no figura en Retiradas, la situación lo dice y restaurar no resucita nada
+✔ decisión sobre una versión VIEJA: el autor editó → publicar la anterior es conflicto y la nueva no se toca
+✔ reseña BORRADA por el autor: publicar su retenido es conflicto; la reseña sigue borrada (no resucita)
+✔ cuenta en BAJA: la decisión tardía no encuentra nada (no_disponible) y la baja queda intacta
+✔ decisiones SIMULTÁNEAS sobre la misma versión (publicar y rechazar, intentos distintos): una se aplica, la otra es conflicto; un solo registro
+✔ reintento con el MISMO intento: devuelve lo registrado (repetido) sin otra fila; el mismo intento sobre OTRA versión es conflicto
+✔ respuesta PERDIDA después del commit: el adaptador repite UNA vez con el mismo intento y recupera `aplicada`; un solo registro
+✔ descartar: la reseña sigue visible, las denuncias quedan descartadas y la próxima denuncia de esas cuentas pesa la mitad
+✔ cerrar: con la reseña visible es conflicto (hay que decidir); borrada por el autor, el caso se archiva como resuelto
+✔ ataque de denuncias graves sobre una reseña legítima: sigue visible, sube a la cabeza de la cola; 'No me sirvió' masivo no cambia nada
+
+— Suspensión —
+✔ suspender: no publica ni vota; SÍ borra, denuncia, bloquea y retira votos (filas B–D). Levantar: vuelve a votar. Dos registros
+✔ suspender a una cuenta dada de baja: no_disponible (cuenta eliminada), nada se escribe
+✔ caso 5a · la suspensión (real) confirma primero: el voto (real) espera la fila del evaluador, relee y se rechaza (suspendida)
+✔ caso 5b · el voto (real) confirma primero: la suspensión (real) espera y su `desde` es POSTERIOR a la marca del voto
+✔ decisión del admin y edición del autor en paralelo (sesiones): la edición espera la reseña; al confirmar la decisión, la edición reemplaza la versión ya decidida
+
+— Baja: cancelación (B10, B14), denuncias recibidas y concurrencia —
+✔ B10 · quitar el marcador (real): nada se restaura; el participante viejo sigue huérfano; la próxima identidad nace nueva y publica
+✔ B14 · suspendida → baja → quitar el marcador con la sanción vigente: nace suspendida; no publica ni vota; sí bloquea, borra y vuelve a pedir la baja (reactiva)
+✔ levantar una sanción CON plazo (copiada por B14 con fin futuro): se acorta a ahora; nunca se reescribe el pasado
+✔ denuncias RECIBIDAS en la baja del autor: se cierran en el historial mínimo (sin texto, sin comentario, sin el autor); el peso de quien denunció se conserva; su propia baja las borra
+     historial de b (dado de baja): 0; de c (activa): otro:cerrada_por_baja; resultado y: {"cuenta":"existe","origen":"app","marcador":"nuevo","participante":true,"sancion_hasta":null,"tramos_cerrados":0,"resenas_borradas":1,"bloqueos_borrados":0,"denuncias_borradas":0,"contadores_borrados":1,"evaluaciones_borradas":0,"denuncias_recibidas_cerradas":1}
+✔ A2 · bajas simultáneas, confirma primero quien DENUNCIÓ (secuencia de la auditoría): su historial no reaparece; la denuncia de una cuenta activa queda en el historial
+     historial de b (dado de baja): 0; de c (activa): otro:cerrada_por_baja; resultado y: {"cuenta":"existe","origen":"app","marcador":"nuevo","participante":true,"sancion_hasta":null,"tramos_cerrados":0,"resenas_borradas":0,"bloqueos_borrados":0,"denuncias_borradas":0,"contadores_borrados":1,"evaluaciones_borradas":0,"denuncias_recibidas_cerradas":0}
+✔ A2 · bajas simultáneas, confirma primero el AUTOR: la baja de quien denunció espera, relee y borra el historial recién creado; la de la cuenta activa queda
+✔ A2 · denuncias CRUZADAS (cada uno denunció al otro) y bajas simultáneas: sin deadlock, la segunda espera y ningún historial de los dos queda
+✔ quitar el marcador mientras la baja de esa cuenta confirma (sesiones): espera su K_CUENTA y después cancela el marcador recién creado
+
+— Publicación (T4) —
+✔ pausar: nadie publica ni edita; leer, borrar, denunciar y bloquear siguen; reanudar: se publica. Registrado; repetir es sin efecto
+
+— Lecturas del panel —
+✔ cola de retenidos por prioridad (corroborada, revisión, retenida) y paginación por cursor sin repetir ni saltear
+✔ cola de denuncias y registro paginados sin repetir; cuentas lista suspensiones y bajas pendientes
+✔ muestreo: APAGADO devuelve nada; encendido sólo durante la prueba, como mucho 5 publicadas; vuelve a apagado
+
+— La ruta /api/admin/moderacion (servidor local) —
+✔ ruta: sin token 401; usuario común y admin AAL1 403; admin AAL2 200 con `private, no-store`; cuerpo inválido 400; decide con la sesión del admin
+
+— Limpieza (base compartida): sólo lo de esta corrida —
+   SELECT de profiles para authenticated (local): concedido para la corrida y revocado
+   cuentas: 72; restos (cuentas|participantes|decisiones|denuncias_cerradas|locks|interruptores): 0|0|0|0|0|false
+
+38 de 38 pasaron.
+
+===== 6. Mediciones (medicion-utiles.mjs; resumen en 2026-10-26-e5b-mediciones.md) =====
+base: supabase_db_streamingcentral · 2026-10-26T23:52:06.854Z
+
+N=100: preparado en 1961 ms (514 votos); generar 92.6 ms; página medio 15.576 ms sin instrumentar
+N=1000: preparado en 6941 ms (5896 votos); generar 274.2 ms; página medio 13.482 ms sin instrumentar
+N=10000: preparado en 50927 ms (59906 votos); generar 2073.2 ms; página medio 15.646 ms sin instrumentar
+
+===== RESULTADOS (JSON) =====
+{
+  "corrida": "med-1793058729087-b2a177",
+  "lector": "uid aleatorio, role authenticated",
+  "tamanos": [
+    100,
+    1000,
+    10000
+  ],
+  "votantes": 300,
+  "resultados": [
+    {
+      "n": 100,
+      "votos": 514,
+      "preparar_ms": 1961,
+      "generar_ms_mediana": 92.621,
+      "generar_ms_todas": [
+        80.5,
+        158.7,
+        81.3,
+        118,
+        92.6
+      ],
+      "generar_plan_buffers": {
+        "hit": 500,
+        "read": 0,
+        "dirtied": 0,
+        "linea": "Buffers: shared hit=500"
+      },
+      "pagina": {
+        "principio": {
+          "consulta_ms_con_auto_explain": 21.149,
+          "llamada_ms_con_auto_explain": 95.604,
+          "llamada_ms_sin_instrumentar": 16.696,
+          "buffers": {
+            "hit": 312,
+            "read": 0,
+            "dirtied": 0,
+            "linea": "Buffers: shared hit=312"
+          },
+          "buffers_hit_todas": [
+            308,
+            308,
+            308,
+            312,
+            312
+          ]
+        },
+        "medio": {
+          "consulta_ms_con_auto_explain": 29.138,
+          "llamada_ms_con_auto_explain": 126.035,
+          "llamada_ms_sin_instrumentar": 15.576,
+          "buffers": {
+            "hit": 312,
+            "read": 0,
+            "dirtied": 0,
+            "linea": "Buffers: shared hit=312"
+          },
+          "buffers_hit_todas": [
+            312,
+            312,
+            312,
+            312,
+            312
+          ]
+        },
+        "final": {
+          "consulta_ms_con_auto_explain": 22.708,
+          "llamada_ms_con_auto_explain": 101.456,
+          "llamada_ms_sin_instrumentar": 16.262,
+          "buffers": {
+            "hit": 303,
+            "read": 0,
+            "dirtied": 0,
+            "linea": "Buffers: shared hit=303"
+          },
+          "buffers_hit_todas": [
+            303,
+            303,
+            303,
+            303,
+            303
+          ]
+        }
+      },
+      "primera": {
+        "llamada_ms_con_auto_explain": 123.865,
+        "cabecera_ms_con_auto_explain": 1.112,
+        "cabecera_buffers": {
+          "hit": 10,
+          "read": 0,
+          "dirtied": 0,
+          "linea": "Buffers: shared hit=10"
+        },
+        "llamada_ms_sin_instrumentar": 15.262
+      },
+      "orden": {
+        "filas_de_ids": 1,
+        "bytes_filas": 864,
+        "bytes_ids_min": 824,
+        "bytes_ids_max": 824
+      }
+    },
+    {
+      "n": 1000,
+      "votos": 5896,
+      "preparar_ms": 6941,
+      "generar_ms_mediana": 274.221,
+      "generar_ms_todas": [
+        315.3,
+        274.2,
+        275,
+        245.5,
+        187.1
+      ],
+      "generar_plan_buffers": {
+        "hit": 3358,
+        "read": 0,
+        "dirtied": 1,
+        "linea": "Buffers: shared hit=3358 dirtied=1 written=1"
+      },
+      "pagina": {
+        "principio": {
+          "consulta_ms_con_auto_explain": 17.927,
+          "llamada_ms_con_auto_explain": 100.367,
+          "llamada_ms_sin_instrumentar": 12.957,
+          "buffers": {
+            "hit": 615,
+            "read": 0,
+            "dirtied": 0,
+            "linea": "Buffers: shared hit=615"
+          },
+          "buffers_hit_todas": [
+            615,
+            615,
+            615,
+            615,
+            615
+          ]
+        },
+        "medio": {
+          "consulta_ms_con_auto_explain": 20.542,
+          "llamada_ms_con_auto_explain": 83.313,
+          "llamada_ms_sin_instrumentar": 13.482,
+          "buffers": {
+            "hit": 615,
+            "read": 0,
+            "dirtied": 0,
+            "linea": "Buffers: shared hit=615"
+          },
+          "buffers_hit_todas": [
+            615,
+            615,
+            615,
+            615,
+            615
+          ]
+        },
+        "final": {
+          "consulta_ms_con_auto_explain": 22.569,
+          "llamada_ms_con_auto_explain": 110.473,
+          "llamada_ms_sin_instrumentar": 10.57,
+          "buffers": {
+            "hit": 341,
+            "read": 0,
+            "dirtied": 0,
+            "linea": "Buffers: shared hit=341"
+          },
+          "buffers_hit_todas": [
+            341,
+            341,
+            341,
+            341,
+            341
+          ]
+        }
+      },
+      "primera": {
+        "llamada_ms_con_auto_explain": 109.427,
+        "cabecera_ms_con_auto_explain": 8.418,
+        "cabecera_buffers": {
+          "hit": 60,
+          "read": 0,
+          "dirtied": 0,
+          "linea": "Buffers: shared hit=60"
+        },
+        "llamada_ms_sin_instrumentar": 34.138
+      },
+      "orden": {
+        "filas_de_ids": 10,
+        "bytes_filas": 8640,
+        "bytes_ids_min": 824,
+        "bytes_ids_max": 824
+      }
+    },
+    {
+      "n": 10000,
+      "votos": 59906,
+      "preparar_ms": 50927,
+      "generar_ms_mediana": 2073.219,
+      "generar_ms_todas": [
+        2845.9,
+        2007.1,
+        2073.2,
+        1848.7,
+        2502.9
+      ],
+      "generar_plan_buffers": {
+        "hit": 31022,
+        "read": 0,
+        "dirtied": 11,
+        "linea": "Buffers: shared hit=31022 dirtied=11 written=11"
+      },
+      "pagina": {
+        "principio": {
+          "consulta_ms_con_auto_explain": 23.104,
+          "llamada_ms_con_auto_explain": 127.618,
+          "llamada_ms_sin_instrumentar": 17.222,
+          "buffers": {
+            "hit": 638,
+            "read": 0,
+            "dirtied": 0,
+            "linea": "Buffers: shared hit=638"
+          },
+          "buffers_hit_todas": [
+            638,
+            638,
+            638,
+            638,
+            638
+          ]
+        },
+        "medio": {
+          "consulta_ms_con_auto_explain": 21.894,
+          "llamada_ms_con_auto_explain": 83.808,
+          "llamada_ms_sin_instrumentar": 15.646,
+          "buffers": {
+            "hit": 635,
+            "read": 0,
+            "dirtied": 0,
+            "linea": "Buffers: shared hit=635"
+          },
+          "buffers_hit_todas": [
+            635,
+            635,
+            635,
+            635,
+            635
+          ]
+        },
+        "final": {
+          "consulta_ms_con_auto_explain": 20.789,
+          "llamada_ms_con_auto_explain": 78.364,
+          "llamada_ms_sin_instrumentar": 15.036,
+          "buffers": {
+            "hit": 350,
+            "read": 0,
+            "dirtied": 0,
+            "linea": "Buffers: shared hit=350"
+          },
+          "buffers_hit_todas": [
+            350,
+            350,
+            350,
+            350,
+            350
+          ]
+        }
+      },
+      "primera": {
+        "llamada_ms_con_auto_explain": 228.916,
+        "cabecera_ms_con_auto_explain": 124.215,
+        "cabecera_buffers": {
+          "hit": 561,
+          "read": 0,
+          "dirtied": 0,
+          "linea": "Buffers: shared hit=561"
+        },
+        "llamada_ms_sin_instrumentar": 139.549
+      },
+      "orden": {
+        "filas_de_ids": 100,
+        "bytes_filas": 86400,
+        "bytes_ids_min": 824,
+        "bytes_ids_max": 824
+      }
+    }
+  ],
+  "tablas": [
+    {
+      "tabla": "ordenes_utiles",
+      "heap": 8192,
+      "indices": 32768,
+      "toast": 0,
+      "toast_indice": 8192,
+      "total": 81920
+    },
+    {
+      "tabla": "ordenes_utiles_tramos",
+      "heap": 376832,
+      "indices": 65536,
+      "toast": 0,
+      "toast_indice": 8192,
+      "total": 483328
+    }
+  ],
+  "ordenes_en_tabla": {
+    "ordenes": 3,
+    "ids": 11100
+  },
+  "filas_mayores_a_2000_bytes": 0,
+  "tuplas_muertas_y_vivas_antes_de_vacuum": "7|114",
+  "tablas_tras_vacuum": [
+    "ordenes_utiles|8192|32768|81920",
+    "ordenes_utiles_tramos|376832|65536|483328"
+  ]
+}
+
+===== PLANES (auto_explain: EXPLAIN ANALYZE, BUFFERS de la función real) =====
+
+--- N=100 · generar (la sentencia que arma las filas de 100 ids) ---
+LOG:  duration: 157.673 ms  plan:
+Query Text: with lista as (
+    select r.id,
+           row_number() over (order by comunidad.wilson(u.positivos, u.total) desc,
+                                       r.primera_publicacion_en desc, r.id desc) - 1 as pos
+      from comunidad.resenas r
+      join comunidad.versiones v on v.id = r.version_vigente_id
+      cross join lateral (
+        select count(*) filter (where e.util) as positivos, count(*) as total
+          from comunidad.evaluaciones e
+         where e.version_id = v.id and e.retirada_en is null) u
+     where r.tipo = p_tipo and r.tmdb_id = p_tmdb_id
+       and r.borrada_en is null and r.primera_publicacion_en is not null
+       and v.estado = 'publicada'
+  )
+  insert into comunidad.ordenes_utiles_tramos (orden_id, tramo_no, ids)
+  select v_id, (pos / 100)::integer, array_agg(id order by pos)
+    from lista group by pos / 100
+Insert on ordenes_utiles_tramos  (cost=1301.25..1305.00 rows=0 width=0) (actual time=156.077..156.090 rows=0 loops=1)
+  Buffers: shared hit=500
+  ->  Subquery Scan on "*SELECT*"  (cost=1301.25..1305.00 rows=100 width=44) (actual time=155.208..155.223 rows=1 loops=1)
+        Buffers: shared hit=471
+        ->  GroupAggregate  (cost=1301.25..1304.00 rows=100 width=52) (actual time=155.205..155.217 rows=1 loops=1)
+              Group Key: ((lista.pos / 100))
+              Buffers: shared hit=471
+              ->  Sort  (cost=1301.25..1301.50 rows=100 width=24) (actual time=155.112..155.140 rows=100 loops=1)
+                    Sort Key: ((lista.pos / 100)), lista.pos
+                    Sort Method: quicksort  Memory: 28kB
+                    Buffers: shared hit=471
+                    ->  Subquery Scan on lista  (cost=1269.20..1297.93 rows=100 width=24) (actual time=154.621..154.830 rows=100 loops=1)
+                          Buffers: shared hit=468
+                          ->  WindowAgg  (cost=1269.20..1296.68 rows=100 width=32) (actual time=154.617..154.774 rows=100 loops=1)
+                                Buffers: shared hit=468
+                                ->  Sort  (cost=1269.18..1269.43 rows=100 width=24) (actual time=154.605..154.636 rows=100 loops=1)
+                                      Sort Key: (comunidad.wilson((count(*) FILTER (WHERE e.util)), (count(*)))) DESC, r.primera_publicacion_en DESC, r.id DESC
+                                      Sort Method: quicksort  Memory: 28kB
+                                      Buffers: shared hit=468
+                                      ->  Nested Loop  (cost=17.84..1265.85 rows=100 width=24) (actual time=26.094..143.866 rows=100 loops=1)
+                                            Buffers: shared hit=465
+                                            ->  Hash Join  (cost=5.55..10.35 rows=100 width=24) (actual time=10.470..11.522 rows=100 loops=1)
+                                                  Hash Cond: (r.version_vigente_id = v.id)
+                                                  Buffers: shared hit=6
+                                                  ->  Seq Scan on resenas r  (cost=0.00..4.53 rows=100 width=24) (actual time=0.073..0.744 rows=100 loops=1)
+                                                        Filter: ((borrada_en IS NULL) AND (primera_publicacion_en IS NOT NULL) AND (tipo = 'movie'::text) AND (tmdb_id = 9873100))
+                                                        Rows Removed by Filter: 2
+                                                        Buffers: shared hit=3
+                                                  ->  Hash  (cost=4.28..4.28 rows=102 width=8) (actual time=0.324..0.326 rows=102 loops=1)
+                                                        Buckets: 1024  Batches: 1  Memory Usage: 12kB
+                                                        Buffers: shared hit=3
+                                                        ->  Seq Scan on versiones v  (cost=0.00..4.28 rows=102 width=8) (actual time=0.064..0.181 rows=102 loops=1)
+                                                              Filter: (estado = 'publicada'::text)
+                                                              Buffers: shared hit=3
+                                            ->  Aggregate  (cost=12.29..12.29 rows=1 width=16) (actual time=0.035..0.036 rows=1 loops=100)
+                                                  Buffers: shared hit=195
+                                                  ->  Index Scan using evaluaciones_por_version on evaluaciones e  (cost=0.15..12.26 rows=6 width=1) (actual time=0.019..0.026 rows=5 loops=100)
+                                                        Index Cond: (version_id = v.id)
+                                                        Filter: (retirada_en IS NULL)
+                                                        Buffers: shared hit=195
+
+--- N=100 · página con cursor (posición 50) ---
+LOG:  duration: 51.578 ms  plan:
+Query Text: with ventana as (
+      select t.tramo_no * 100 + (u.ord - 1)::integer as pos, u.rid
+        from comunidad.ordenes_utiles_tramos t
+        cross join lateral unnest(t.ids) with ordinality as u(rid, ord)
+       where t.orden_id = v_orden
+         and t.tramo_no between v_desde / 100 and (v_desde + 49) / 100
+    ), visibles as (
+      select w.pos, r, v
+        from ventana w
+        join comunidad.resenas r on r.id = w.rid
+        join comunidad.versiones v on v.id = r.version_vigente_id
+       where w.pos between v_desde and v_desde + 49
+         and r.tipo = p_tipo and r.tmdb_id = p_tmdb_id
+         and r.borrada_en is null and v.estado = 'publicada'
+         and r.autor_participante is distinct from v_part
+         and not exists (select 1 from comunidad.bloqueos b
+                          where b.bloqueador_participante = v_part and b.bloqueado_participante = r.autor_participante)
+         and not exists (select 1 from comunidad.suspensiones s
+                          where s.participante_id = r.autor_participante
+                            and s.desde <= now() and (s.hasta is null or s.hasta > now()))
+       order by w.pos
+       limit v_lim
+    )
+    select coalesce(jsonb_agg(comunidad.item_lectura(x.r, x.v, v_part) order by x.pos), '[]'::jsonb), count(*), max(x.pos)
+                                        from visibles x
+Aggregate  (cost=18.05..18.06 rows=1 width=44) (actual time=51.474..51.493 rows=1 loops=1)
+  Buffers: shared hit=312
+  ->  Limit  (cost=16.69..16.71 rows=5 width=354) (actual time=2.641..2.678 rows=5 loops=1)
+        Buffers: shared hit=11
+        ->  Sort  (cost=16.69..16.72 rows=11 width=354) (actual time=2.636..2.663 rows=5 loops=1)
+              Sort Key: (((t.tramo_no * 100) + ((u.ord - 1))::integer))
+              Sort Method: top-N heapsort  Memory: 29kB
+              Buffers: shared hit=11
+              ->  Nested Loop Anti Join  (cost=9.05..16.51 rows=11 width=354) (actual time=1.293..2.145 rows=50 loops=1)
+                    Join Filter: (s.participante_id = r.autor_participante)
+                    Rows Removed by Join Filter: 100
+                    Buffers: shared hit=8
+                    ->  Nested Loop Anti Join  (cost=9.05..15.19 rows=11 width=378) (actual time=1.205..1.869 rows=50 loops=1)
+                          Join Filter: false
+                          Buffers: shared hit=7
+                          ->  Nested Loop  (cost=9.05..15.08 rows=11 width=378) (actual time=1.199..1.770 rows=50 loops=1)
+                                Buffers: shared hit=7
+                                ->  Seq Scan on ordenes_utiles_tramos t  (cost=0.00..1.16 rows=1 width=828) (actual time=0.113..0.116 rows=1 loops=1)
+                                      Filter: ((tramo_no >= 0) AND (tramo_no <= 0) AND (orden_id = '69'::bigint))
+                                      Buffers: shared hit=1
+                                ->  Hash Join  (cost=9.05..13.82 rows=11 width=374) (actual time=1.075..1.601 rows=50 loops=1)
+                                      Hash Cond: (v.id = r.version_vigente_id)
+                                      Buffers: shared hit=6
+                                      ->  Seq Scan on versiones v  (cost=0.00..4.28 rows=102 width=268) (actual time=0.065..0.450 rows=102 loops=1)
+                                            Filter: (estado = 'publicada'::text)
+                                            Buffers: shared hit=3
+                                      ->  Hash  (cost=8.91..8.91 rows=11 width=122) (actual time=0.924..0.931 rows=50 loops=1)
+                                            Buckets: 1024  Batches: 1  Memory Usage: 16kB
+                                            Buffers: shared hit=3
+                                            ->  Hash Join  (cost=3.64..8.91 rows=11 width=122) (actual time=0.345..0.798 rows=50 loops=1)
+                                                  Hash Cond: (r.id = u.rid)
+                                                  Buffers: shared hit=3
+                                                  ->  Seq Scan on resenas r  (cost=0.00..4.79 rows=100 width=122) (actual time=0.069..0.426 rows=100 loops=1)
+                                                        Filter: ((borrada_en IS NULL) AND (autor_participante IS DISTINCT FROM NULL::uuid) AND (tipo = 'movie'::text) AND (tmdb_id = 9873100))
+                                                        Rows Removed by Filter: 2
+                                                        Buffers: shared hit=3
+                                                  ->  Hash  (cost=3.50..3.50 rows=11 width=16) (actual time=0.196..0.199 rows=50 loops=1)
+                                                        Buckets: 1024  Batches: 1  Memory Usage: 11kB
+                                                        ->  Function Scan on unnest u  (cost=0.00..3.50 rows=11 width=16) (actual time=0.100..0.153 rows=50 loops=1)
+                                                              Filter: ((((t.tramo_no * 100) + ((ord - 1))::integer) >= 50) AND (((t.tramo_no * 100) + ((ord - 1))::integer) <= 99))
+                                                              Rows Removed by Filter: 50
+                          ->  Result  (cost=0.00..0.00 rows=0 width=0) (actual time=0.001..0.001 rows=0 loops=50)
+                                One-Time Filter: false
+                    ->  Materialize  (cost=0.00..1.04 rows=1 width=16) (actual time=0.002..0.002 rows=2 loops=50)
+                          Buffers: shared hit=1
+                          ->  Seq Scan on suspensiones s  (cost=0.00..1.04 rows=1 width=16) (actual time=0.042..0.045 rows=2 loops=1)
+                                Filter: ((desde <= now()) AND ((hasta IS NULL) OR (hasta > now())))
+                                Buffers: shared hit=1
+
+--- N=1000 · generar (la sentencia que arma las filas de 100 ids) ---
+LOG:  duration: 941.300 ms  plan:
+Query Text: with lista as (
+    select r.id,
+           row_number() over (order by comunidad.wilson(u.positivos, u.total) desc,
+                                       r.primera_publicacion_en desc, r.id desc) - 1 as pos
+      from comunidad.resenas r
+      join comunidad.versiones v on v.id = r.version_vigente_id
+      cross join lateral (
+        select count(*) filter (where e.util) as positivos, count(*) as total
+          from comunidad.evaluaciones e
+         where e.version_id = v.id and e.retirada_en is null) u
+     where r.tipo = p_tipo and r.tmdb_id = p_tmdb_id
+       and r.borrada_en is null and r.primera_publicacion_en is not null
+       and v.estado = 'publicada'
+  )
+  insert into comunidad.ordenes_utiles_tramos (orden_id, tramo_no, ids)
+  select v_id, (pos / 100)::integer, array_agg(id order by pos)
+    from lista group by pos / 100
+Insert on ordenes_utiles_tramos  (cost=9177.37..9190.87 rows=0 width=0) (actual time=924.895..924.908 rows=0 loops=1)
+  Buffers: shared hit=3358 dirtied=1 written=1
+  ->  Subquery Scan on "*SELECT*"  (cost=9177.37..9190.87 rows=200 width=44) (actual time=922.768..923.608 rows=10 loops=1)
+        Buffers: shared hit=3309
+        ->  GroupAggregate  (cost=9177.37..9188.87 rows=200 width=52) (actual time=922.765..923.592 rows=10 loops=1)
+              Group Key: ((lista.pos / 100))
+              Buffers: shared hit=3309
+              ->  Sort  (cost=9177.37..9179.87 rows=1000 width=24) (actual time=911.963..912.178 rows=1000 loops=1)
+                    Sort Key: ((lista.pos / 100)), lista.pos
+                    Sort Method: quicksort  Memory: 64kB
+                    Buffers: shared hit=3309
+                    ->  Subquery Scan on lista  (cost=8840.07..9127.55 rows=1000 width=24) (actual time=909.108..911.016 rows=1000 loops=1)
+                          Buffers: shared hit=3306
+                          ->  WindowAgg  (cost=8840.07..9115.05 rows=1000 width=32) (actual time=909.105..910.578 rows=1000 loops=1)
+                                Buffers: shared hit=3306
+                                ->  Sort  (cost=8840.05..8842.55 rows=1000 width=24) (actual time=909.076..909.360 rows=1000 loops=1)
+                                      Sort Key: (comunidad.wilson((count(*) FILTER (WHERE e.util)), (count(*)))) DESC, r.primera_publicacion_en DESC, r.id DESC
+                                      Sort Method: quicksort  Memory: 64kB
+                                      Buffers: shared hit=3306
+                                      ->  Nested Loop  (cost=68.97..8790.22 rows=1000 width=24) (actual time=4.609..898.366 rows=1000 loops=1)
+                                            Buffers: shared hit=3303
+                                            ->  Hash Join  (cost=60.55..102.72 rows=1000 width=24) (actual time=1.453..18.475 rows=1000 loops=1)
+                                                  Hash Cond: (r.version_vigente_id = v.id)
+                                                  Buffers: shared hit=56
+                                                  ->  Seq Scan on resenas r  (cost=0.00..39.53 rows=1000 width=24) (actual time=0.186..11.316 rows=1000 loops=1)
+                                                        Filter: ((borrada_en IS NULL) AND (primera_publicacion_en IS NOT NULL) AND (tipo = 'movie'::text) AND (tmdb_id = 9874000))
+                                                        Rows Removed by Filter: 102
+                                                        Buffers: shared hit=23
+                                                  ->  Hash  (cost=46.77..46.77 rows=1102 width=8) (actual time=1.097..1.099 rows=1102 loops=1)
+                                                        Buckets: 2048  Batches: 1  Memory Usage: 60kB
+                                                        Buffers: shared hit=33
+                                                        ->  Seq Scan on versiones v  (cost=0.00..46.77 rows=1102 width=8) (actual time=0.020..0.566 rows=1102 loops=1)
+                                                              Filter: (estado = 'publicada'::text)
+                                                              Buffers: shared hit=33
+                                            ->  Aggregate  (cost=8.42..8.43 rows=1 width=16) (actual time=0.107..0.107 rows=1 loops=1000)
+                                                  Buffers: shared hit=2983
+                                                  ->  Index Scan using evaluaciones_por_version on evaluaciones e  (cost=0.28..8.39 rows=6 width=1) (actual time=0.056..0.090 rows=6 loops=1000)
+                                                        Index Cond: (version_id = v.id)
+                                                        Filter: (retirada_en IS NULL)
+                                                        Buffers: shared hit=2983
+
+--- N=1000 · página con cursor (posición 500) ---
+LOG:  duration: 26.772 ms  plan:
+Query Text: with ventana as (
+      select t.tramo_no * 100 + (u.ord - 1)::integer as pos, u.rid
+        from comunidad.ordenes_utiles_tramos t
+        cross join lateral unnest(t.ids) with ordinality as u(rid, ord)
+       where t.orden_id = v_orden
+         and t.tramo_no between v_desde / 100 and (v_desde + 49) / 100
+    ), visibles as (
+      select w.pos, r, v
+        from ventana w
+        join comunidad.resenas r on r.id = w.rid
+        join comunidad.versiones v on v.id = r.version_vigente_id
+       where w.pos between v_desde and v_desde + 49
+         and r.tipo = p_tipo and r.tmdb_id = p_tmdb_id
+         and r.borrada_en is null and v.estado = 'publicada'
+         and r.autor_participante is distinct from v_part
+         and not exists (select 1 from comunidad.bloqueos b
+                          where b.bloqueador_participante = v_part and b.bloqueado_participante = r.autor_participante)
+         and not exists (select 1 from comunidad.suspensiones s
+                          where s.participante_id = r.autor_participante
+                            and s.desde <= now() and (s.hasta is null or s.hasta > now()))
+       order by w.pos
+       limit v_lim
+    )
+    select coalesce(jsonb_agg(comunidad.item_lectura(x.r, x.v, v_part) order by x.pos), '[]'::jsonb), count(*), max(x.pos)
+                                        from visibles x
+Aggregate  (cost=60.07..60.08 rows=1 width=44) (actual time=26.722..26.737 rows=1 loops=1)
+  Buffers: shared hit=615
+  ->  Limit  (cost=58.72..58.73 rows=5 width=354) (actual time=10.098..10.129 rows=5 loops=1)
+        Buffers: shared hit=306
+        ->  Sort  (cost=58.72..58.74 rows=10 width=354) (actual time=10.093..10.114 rows=5 loops=1)
+              Sort Key: (((t.tramo_no * 100) + ((u.ord - 1))::integer))
+              Sort Method: top-N heapsort  Memory: 27kB
+              Buffers: shared hit=306
+              ->  Nested Loop Anti Join  (cost=0.70..58.55 rows=10 width=354) (actual time=7.144..9.671 rows=50 loops=1)
+                    Join Filter: (s.participante_id = r.autor_participante)
+                    Rows Removed by Join Filter: 100
+                    Buffers: shared hit=303
+                    ->  Nested Loop Anti Join  (cost=0.70..57.26 rows=10 width=378) (actual time=7.067..9.427 rows=50 loops=1)
+                          Join Filter: false
+                          Buffers: shared hit=302
+                          ->  Nested Loop  (cost=0.70..57.16 rows=10 width=378) (actual time=7.062..9.343 rows=50 loops=1)
+                                Buffers: shared hit=302
+                                ->  Nested Loop  (cost=0.42..50.30 rows=10 width=126) (actual time=6.937..8.100 rows=50 loops=1)
+                                      Buffers: shared hit=152
+                                      ->  Index Scan using ordenes_utiles_tramos_pkey on ordenes_utiles_tramos t  (cost=0.14..8.16 rows=1 width=828) (actual time=0.259..0.265 rows=1 loops=1)
+                                            Index Cond: ((orden_id = '75'::bigint) AND (tramo_no >= 5) AND (tramo_no <= 5))
+                                            Buffers: shared hit=2
+                                      ->  Nested Loop  (cost=0.28..42.04 rows=10 width=122) (actual time=6.670..7.791 rows=50 loops=1)
+                                            Buffers: shared hit=150
+                                            ->  Function Scan on unnest u  (cost=0.00..3.50 rows=11 width=16) (actual time=0.096..0.213 rows=50 loops=1)
+                                                  Filter: ((((t.tramo_no * 100) + ((ord - 1))::integer) >= 500) AND (((t.tramo_no * 100) + ((ord - 1))::integer) <= 549))
+                                                  Rows Removed by Filter: 50
+                                            ->  Index Scan using resenas_pkey on resenas r  (cost=0.28..3.50 rows=1 width=122) (actual time=0.149..0.149 rows=1 loops=50)
+                                                  Index Cond: (id = u.rid)
+                                                  Filter: ((borrada_en IS NULL) AND (autor_participante IS DISTINCT FROM NULL::uuid) AND (tipo = 'movie'::text) AND (tmdb_id = 9874000))
+                                                  Buffers: shared hit=150
+                                ->  Index Scan using versiones_pkey on versiones v  (cost=0.28..0.69 rows=1 width=268) (actual time=0.021..0.021 rows=1 loops=50)
+                                      Index Cond: (id = r.version_vigente_id)
+                                      Filter: (estado = 'publicada'::text)
+                                      Buffers: shared hit=150
+                          ->  Result  (cost=0.00..0.00 rows=0 width=0) (actual time=0.000..0.000 rows=0 loops=50)
+                                One-Time Filter: false
+                    ->  Materialize  (cost=0.00..1.04 rows=1 width=16) (actual time=0.002..0.002 rows=2 loops=50)
+                          Buffers: shared hit=1
+                          ->  Seq Scan on suspensiones s  (cost=0.00..1.04 rows=1 width=16) (actual time=0.043..0.047 rows=2 loops=1)
+                                Filter: ((desde <= now()) AND ((hasta IS NULL) OR (hasta > now())))
+                                Buffers: shared hit=1
+
+--- N=10000 · generar (la sentencia que arma las filas de 100 ids) ---
+LOG:  duration: 9353.798 ms  plan:
+Query Text: with lista as (
+    select r.id,
+           row_number() over (order by comunidad.wilson(u.positivos, u.total) desc,
+                                       r.primera_publicacion_en desc, r.id desc) - 1 as pos
+      from comunidad.resenas r
+      join comunidad.versiones v on v.id = r.version_vigente_id
+      cross join lateral (
+        select count(*) filter (where e.util) as positivos, count(*) as total
+          from comunidad.evaluaciones e
+         where e.version_id = v.id and e.retirada_en is null) u
+     where r.tipo = p_tipo and r.tmdb_id = p_tmdb_id
+       and r.borrada_en is null and r.primera_publicacion_en is not null
+       and v.estado = 'publicada'
+  )
+  insert into comunidad.ordenes_utiles_tramos (orden_id, tramo_no, ids)
+  select v_id, (pos / 100)::integer, array_agg(id order by pos)
+    from lista group by pos / 100
+Insert on ordenes_utiles_tramos  (cost=92431.11..92512.11 rows=0 width=0) (actual time=9298.616..9298.629 rows=0 loops=1)
+  Buffers: shared hit=31022 dirtied=11 written=11
+  ->  Subquery Scan on "*SELECT*"  (cost=92431.11..92512.11 rows=200 width=44) (actual time=9272.939..9287.646 rows=100 loops=1)
+        Buffers: shared hit=30673
+        ->  GroupAggregate  (cost=92431.11..92510.11 rows=200 width=52) (actual time=9272.936..9287.520 rows=100 loops=1)
+              Group Key: ((lista.pos / 100))
+              Buffers: shared hit=30673
+              ->  Sort  (cost=92431.11..92456.11 rows=10000 width=24) (actual time=9272.713..9276.355 rows=10000 loops=1)
+                    Sort Key: ((lista.pos / 100)), lista.pos
+                    Sort Method: quicksort  Memory: 775kB
+                    Buffers: shared hit=30673
+                    ->  Subquery Scan on lista  (cost=88891.75..91766.73 rows=10000 width=24) (actual time=9203.708..9248.828 rows=10000 loops=1)
+                          Buffers: shared hit=30670
+                          ->  WindowAgg  (cost=88891.75..91641.73 rows=10000 width=32) (actual time=9203.705..9237.491 rows=10000 loops=1)
+                                Buffers: shared hit=30670
+                                ->  Sort  (cost=88891.73..88916.73 rows=10000 width=24) (actual time=9203.677..9218.755 rows=10000 loops=1)
+                                      Sort Key: (comunidad.wilson((count(*) FILTER (WHERE e.util)), (count(*)))) DESC, r.primera_publicacion_en DESC, r.id DESC
+                                      Sort Method: quicksort  Memory: 775kB
+                                      Buffers: shared hit=30670
+                                      ->  Nested Loop  (cost=613.00..88227.34 rows=10000 width=24) (actual time=25.276..9088.065 rows=10000 loops=1)
+                                            Buffers: shared hit=30667
+                                            ->  Hash Join  (cost=604.55..1027.34 rows=10000 width=24) (actual time=20.926..297.927 rows=10000 loops=1)
+                                                  Hash Cond: (r.version_vigente_id = v.id)
+                                                  Buffers: shared hit=557
+                                                  ->  Seq Scan on resenas r  (cost=0.00..396.53 rows=10000 width=24) (actual time=1.359..143.268 rows=10000 loops=1)
+                                                        Filter: ((borrada_en IS NULL) AND (primera_publicacion_en IS NOT NULL) AND (tipo = 'movie'::text) AND (tmdb_id = 9883000))
+                                                        Rows Removed by Filter: 1102
+                                                        Buffers: shared hit=230
+                                                  ->  Hash  (cost=465.77..465.77 rows=11102 width=8) (actual time=19.073..19.076 rows=11102 loops=1)
+                                                        Buckets: 16384  Batches: 1  Memory Usage: 562kB
+                                                        Buffers: shared hit=327
+                                                        ->  Seq Scan on versiones v  (cost=0.00..465.77 rows=11102 width=8) (actual time=0.044..10.624 rows=11102 loops=1)
+                                                              Filter: (estado = 'publicada'::text)
+                                                              Buffers: shared hit=327
+                                            ->  Aggregate  (cost=8.45..8.46 rows=1 width=16) (actual time=0.091..0.092 rows=1 loops=10000)
+                                                  Buffers: shared hit=29846
+                                                  ->  Index Scan using evaluaciones_por_version on evaluaciones e  (cost=0.29..8.42 rows=7 width=1) (actual time=0.049..0.068 rows=6 loops=10000)
+                                                        Index Cond: (version_id = v.id)
+                                                        Filter: (retirada_en IS NULL)
+                                                        Buffers: shared hit=29846
+
+--- N=10000 · página con cursor (posición 5000) ---
+LOG:  duration: 13.228 ms  plan:
+Query Text: with ventana as (
+      select t.tramo_no * 100 + (u.ord - 1)::integer as pos, u.rid
+        from comunidad.ordenes_utiles_tramos t
+        cross join lateral unnest(t.ids) with ordinality as u(rid, ord)
+       where t.orden_id = v_orden
+         and t.tramo_no between v_desde / 100 and (v_desde + 49) / 100
+    ), visibles as (
+      select w.pos, r, v
+        from ventana w
+        join comunidad.resenas r on r.id = w.rid
+        join comunidad.versiones v on v.id = r.version_vigente_id
+       where w.pos between v_desde and v_desde + 49
+         and r.tipo = p_tipo and r.tmdb_id = p_tmdb_id
+         and r.borrada_en is null and v.estado = 'publicada'
+         and r.autor_participante is distinct from v_part
+         and not exists (select 1 from comunidad.bloqueos b
+                          where b.bloqueador_participante = v_part and b.bloqueado_participante = r.autor_participante)
+         and not exists (select 1 from comunidad.suspensiones s
+                          where s.participante_id = r.autor_participante
+                            and s.desde <= now() and (s.hasta is null or s.hasta > now()))
+       order by w.pos
+       limit v_lim
+    )
+    select coalesce(jsonb_agg(comunidad.item_lectura(x.r, x.v, v_part) order by x.pos), '[]'::jsonb), count(*), max(x.pos)
+                                        from visibles x
+Aggregate  (cost=84.43..84.44 rows=1 width=44) (actual time=13.192..13.208 rows=1 loops=1)
+  Buffers: shared hit=635
+  ->  Limit  (cost=83.08..83.09 rows=5 width=354) (actual time=2.309..2.346 rows=5 loops=1)
+        Buffers: shared hit=307
+        ->  Sort  (cost=83.08..83.11 rows=10 width=354) (actual time=2.306..2.333 rows=5 loops=1)
+              Sort Key: (((t.tramo_no * 100) + ((u.ord - 1))::integer))
+              Sort Method: top-N heapsort  Memory: 27kB
+              Buffers: shared hit=307
+              ->  Nested Loop Anti Join  (cost=0.85..82.92 rows=10 width=354) (actual time=0.502..2.168 rows=50 loops=1)
+                    Join Filter: (s.participante_id = r.autor_participante)
+                    Rows Removed by Join Filter: 100
+                    Buffers: shared hit=304
+                    ->  Nested Loop Anti Join  (cost=0.85..81.62 rows=10 width=378) (actual time=0.441..2.002 rows=50 loops=1)
+                          Join Filter: false
+                          Buffers: shared hit=303
+                          ->  Nested Loop  (cost=0.85..81.52 rows=10 width=378) (actual time=0.436..1.951 rows=50 loops=1)
+                                Buffers: shared hit=303
+                                ->  Nested Loop  (cost=0.56..76.91 rows=10 width=126) (actual time=0.256..0.955 rows=50 loops=1)
+                                      Buffers: shared hit=153
+                                      ->  Index Scan using ordenes_utiles_tramos_pkey on ordenes_utiles_tramos t  (cost=0.27..8.29 rows=1 width=828) (actual time=0.081..0.085 rows=1 loops=1)
+                                            Index Cond: ((orden_id = '81'::bigint) AND (tramo_no >= 50) AND (tramo_no <= 50))
+                                            Buffers: shared hit=3
+                                      ->  Nested Loop  (cost=0.29..68.51 rows=10 width=122) (actual time=0.170..0.838 rows=50 loops=1)
+                                            Buffers: shared hit=150
+                                            ->  Function Scan on unnest u  (cost=0.00..3.50 rows=11 width=16) (actual time=0.065..0.130 rows=50 loops=1)
+                                                  Filter: ((((t.tramo_no * 100) + ((ord - 1))::integer) >= 5000) AND (((t.tramo_no * 100) + ((ord - 1))::integer) <= 5049))
+                                                  Rows Removed by Filter: 50
+                                            ->  Index Scan using resenas_pkey on resenas r  (cost=0.29..5.91 rows=1 width=122) (actual time=0.013..0.013 rows=1 loops=50)
+                                                  Index Cond: (id = u.rid)
+                                                  Filter: ((borrada_en IS NULL) AND (autor_participante IS DISTINCT FROM NULL::uuid) AND (tipo = 'movie'::text) AND (tmdb_id = 9883000))
+                                                  Buffers: shared hit=150
+                                ->  Index Scan using versiones_pkey on versiones v  (cost=0.29..0.46 rows=1 width=268) (actual time=0.018..0.018 rows=1 loops=50)
+                                      Index Cond: (id = r.version_vigente_id)
+                                      Filter: (estado = 'publicada'::text)
+                                      Buffers: shared hit=150
+                          ->  Result  (cost=0.00..0.00 rows=0 width=0) (actual time=0.000..0.000 rows=0 loops=50)
+                                One-Time Filter: false
+                    ->  Materialize  (cost=0.00..1.04 rows=1 width=16) (actual time=0.001..0.002 rows=2 loops=50)
+                          Buffers: shared hit=1
+                          ->  Seq Scan on suspensiones s  (cost=0.00..1.04 rows=1 width=16) (actual time=0.037..0.039 rows=2 loops=1)
+                                Filter: ((desde <= now()) AND ((hasta IS NULL) OR (hasta > now())))
+                                Buffers: shared hit=1
+
+--- N=10000 · primera página: el bloque de cabecera con el contador visible ---
+LOG:  duration: 169.342 ms  plan:
+Query Text: v_res := v_res || jsonb_build_object(
+      'publicacion_activa', c.publicacion_activa,
+      'terminos', jsonb_build_object('vigente', c.terminos_version,
+                                     'aceptada', v_part is not null and v_terminos is not distinct from c.terminos_version),
+      'correo_confirmado', exists (select 1 from auth.users u where u.id = v_uid and u.email_confirmed_at is not null),
+      'baja_en_curso', exists (select 1 from comunidad.bajas_en_curso b where b.user_id = v_uid and b.cancelada_en is null),
+      'suspendida', v_part is not null and exists (select 1 from comunidad.suspensiones s where s.participante_id = v_part
+                      and s.desde <= now() and (s.hasta is null or s.hasta > now())),
+      'mia', (select jsonb_build_object('resena_id', r.id, 'version_id', v.id, 'texto', v.texto, 'estado', v.estado,
+                'utiles', (select count(*) from comunidad.evaluaciones e where e.version_id = v.id and e.retirada_en is null and e.util),
+                'total', (select count(*) from comunidad.evaluaciones e where e.version_id = v.id and e.retirada_en is null))
+                from comunidad.resenas r join comunidad.versiones v on v.id = r.version_vigente_id
+               where v_part is not null and r.autor_participante = v_part and r.tipo = p_tipo and r.tmdb_id = p_tmdb_id
+                 and r.borrada_en is null),
+      'total', (select count(*)
+                  from comunidad.resenas r join comunidad.versiones v on v.id = r.version_vigente_id
+                 where r.tipo = p_tipo and r.tmdb_id = p_tmdb_id
+                   and r.borrada_en is null and r.primera_publicacion_en is not null and v.estado = 'publicada'
+                   and r.autor_participante is distinct from v_part
+                   and not exists (select 1 from comunidad.bloqueos b
+                                    where b.bloqueador_participante = v_part and b.bloqueado_participante = r.autor_participante)
+                   and not exists (select 1 from comunidad.suspensiones s
+                                    where s.participante_id = r.autor_participante
+                                      and s.desde <= now() and (s.hasta is null or s.hasta > now()))))
+Result  (cost=1317.61..1317.63 rows=1 width=32) (actual time=169.307..169.325 rows=1 loops=1)
+  Buffers: shared hit=561
+  InitPlan 1
+    ->  Index Scan using users_pkey on users u  (cost=0.27..8.29 rows=1 width=0) (actual time=0.060..0.061 rows=0 loops=1)
+          Index Cond: (id = '78c79a39-eb90-4a39-8cee-2d4b8d9fe05d'::uuid)
+          Filter: (email_confirmed_at IS NOT NULL)
+          Buffers: shared hit=2
+  InitPlan 2
+    ->  Seq Scan on bajas_en_curso b  (cost=0.00..1.94 rows=1 width=0) (actual time=0.034..0.034 rows=0 loops=1)
+          Filter: ((cancelada_en IS NULL) AND (user_id = '78c79a39-eb90-4a39-8cee-2d4b8d9fe05d'::uuid))
+          Buffers: shared hit=1
+  InitPlan 5
+    ->  Result  (cost=0.00..0.00 rows=0 width=32) (actual time=0.002..0.005 rows=0 loops=1)
+          One-Time Filter: false
+          SubPlan 3
+            ->  Aggregate  (cost=8.43..8.44 rows=1 width=8) (never executed)
+                  ->  Index Scan using evaluaciones_por_version on evaluaciones e  (cost=0.29..8.42 rows=5 width=0) (never executed)
+                        Index Cond: (version_id = id)
+                        Filter: ((retirada_en IS NULL) AND util)
+          SubPlan 4
+            ->  Aggregate  (cost=8.43..8.44 rows=1 width=8) (never executed)
+                  ->  Index Scan using evaluaciones_por_version on evaluaciones e_1  (cost=0.29..8.42 rows=7 width=0) (never executed)
+                        Index Cond: (version_id = id)
+                        Filter: (retirada_en IS NULL)
+  InitPlan 6
+    ->  Aggregate  (cost=1307.37..1307.38 rows=1 width=8) (actual time=168.973..168.980 rows=1 loops=1)
+          Buffers: shared hit=558
+          ->  Nested Loop Anti Join  (cost=605.60..1282.38 rows=9999 width=0) (actual time=67.085..166.011 rows=10000 loops=1)
+                Join Filter: false
+                Buffers: shared hit=558
+                ->  Hash Join  (cost=605.60..1182.39 rows=9999 width=0) (actual time=67.077..144.917 rows=10000 loops=1)
+                      Hash Cond: (r.version_vigente_id = v.id)
+                      Buffers: shared hit=558
+                      ->  Hash Anti Join  (cost=1.05..551.58 rows=9999 width=8) (actual time=1.425..47.333 rows=10000 loops=1)
+                            Hash Cond: (r.autor_participante = s.participante_id)
+                            Buffers: shared hit=231
+                            ->  Seq Scan on resenas r  (cost=0.00..424.29 rows=10000 width=24) (actual time=1.321..35.235 rows=10000 loops=1)
+                                  Filter: ((borrada_en IS NULL) AND (primera_publicacion_en IS NOT NULL) AND (autor_participante IS DISTINCT FROM NULL::uuid) AND (tipo = 'movie'::text) AND (tmdb_id = 9883000))
+                                  Rows Removed by Filter: 1102
+                                  Buffers: shared hit=230
+                            ->  Hash  (cost=1.04..1.04 rows=1 width=16) (actual time=0.066..0.067 rows=2 loops=1)
+                                  Buckets: 1024  Batches: 1  Memory Usage: 9kB
+                                  Buffers: shared hit=1
+                                  ->  Seq Scan on suspensiones s  (cost=0.00..1.04 rows=1 width=16) (actual time=0.039..0.042 rows=2 loops=1)
+                                        Filter: ((desde <= now()) AND ((hasta IS NULL) OR (hasta > now())))
+                                        Buffers: shared hit=1
+                      ->  Hash  (cost=465.77..465.77 rows=11102 width=8) (actual time=65.319..65.319 rows=11102 loops=1)
+                            Buckets: 16384  Batches: 1  Memory Usage: 562kB
+                            Buffers: shared hit=327
+                            ->  Seq Scan on versiones v  (cost=0.00..465.77 rows=11102 width=8) (actual time=0.040..23.795 rows=11102 loops=1)
+                                  Filter: (estado = 'publicada'::text)
+                                  Buffers: shared hit=327
+                ->  Result  (cost=0.00..0.00 rows=0 width=0) (actual time=0.000..0.000 rows=0 loops=10000)
+                      One-Time Filter: false
+
+===== LIMPIEZA =====
+restos (participantes|reseñas|órdenes|interruptores): 0|0|0|false
+
+===== 7. Unitarias focalizadas (utiles, lectura, db-local), tsc y diff --check =====
+✔ lista: la primera página reemplaza; Cargar más avanza el cursor SÓLO con una tanda válida (9.8387ms)
+✔ lista: una respuesta vieja, de otra clave (cuenta, título u orden) o después de una recarga se descarta (1.3801ms)
+✔ lista: sin duplicados por reseña (una edición entre páginas trae otra versión de la misma reseña) (0.6359ms)
+✔ tanda válida: activo, el orden pedido, items bien formados y cursor exactamente cuando hay más (1.2356ms)
+✔ voto confirmado: se aplica a la reseña que se ve, sin recargar; sin confirmar o rechazado no cambia nada (1.408ms)
+✔ A1 (auditoría de E5a): los resultados IDEMPOTENTES de una confirmación recuperada también se reflejan, sin contar dos veces (1.109ms)
+✔ pedido de lectura: título válido, «recientes» y «utiles» (E5b) habilitados, cursor opaco de la forma del orden; el lector NUNCA sale de la consulta (3.5044ms)
+✔ adaptador: llama a comunidad_resenas con el pedido y codifica el cursor siguiente; 42501 y JWT vencido = sin_sesion (4.6054ms)
+✔ encabezado: sin sesión con el módulo encendido NO lleva número (no revela si hay); con sesión cuenta lo que ve; apagado, sólo Yump (0.9391ms)
+✔ barrido: la ruta de lectura usa la sesión del lector y nunca service_role; sin sesión sólo informa el interruptor (714.1564ms)
+✔ barrido: /api/title y la ficha del servidor no tocan nada comunitario (T1: la respuesta no cambia con el módulo) (6.4191ms)
+✔ barrido: la base de E5a (017). comunidad_resenas sólo para authenticated, lee al lector de auth.uid() (sin p_uid), filtra bloqueos y suspensiones; 017 rechazaba «utiles» (lo habilita 018, ver utiles.test.ts) (0.9287ms)
+✔ Wilson (z = 1,96): coincide con los valores calculados aparte; sin votos, 0 (5.1718ms)
+✔ desempates documentados: Wilson desc → primera publicación desc → id desc (4.3898ms)
+✔ tanda válida en «Más útiles»: puede traer menos de cinco o ninguna con más por delante; `orden_actualizado` es vacía y sin más (1.1356ms)
+✔ vencimiento: la lista queda, avisa y permite volver a empezar UNA vez; el reinicio agrega sin repetir; un segundo vencimiento ya no ofrece otro (1.8365ms)
+✔ reinicio que falla: lo visible queda y el reinicio todavía se puede reintentar; una respuesta de otro pedido no cuenta (0.8161ms)
+✔ respuestas tardías de otro orden, cuenta o título no se aplican (0.5634ms)
+✔ dentro del orden congelado votar cambia el CONTEO, no el lugar (1.0294ms)
+✔ barrido 018: filas de 100 ids, lock por título con doble búsqueda, 10 min / 2 h, 50 posiciones, sin datos del lector (2.7446ms)
+✔ projectIdDe lee el project_id del config.toml real del repo (6.5276ms)
+✔ elige exactamente supabase_db_<project_id>, aunque haya otros proyectos corriendo (0.9305ms)
+✔ falla si el contenedor del proyecto no está, y nombra los que sí están (2.0668ms)
+✔ falla si la selección no es inequívoca o falta el project_id (0.8222ms)
+✔ un prefijo parecido NO alcanza: 'streamingcentral2' no es 'streamingcentral' (1.0623ms)
+✔ las cargas del catálogo van en orden numérico y sólo si se pidieron (5.2277ms)
+✔ aplica 007 (is_admin_mfa) y las migraciones de reseñas, en orden y sin los rollbacks (1.2609ms)
+ℹ tests 27
+ℹ suites 0
+ℹ pass 27
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1267.3327
+tsc --noEmit --incremental false: exit 0. git diff --check: sin errores.
+
+===== 8. npm test (resumen; corrida completa antes de renombrar dos títulos de lectura.test.ts, sin cambio de aserciones) =====
+ℹ tests 2496
+ℹ suites 0
+ℹ pass 2480
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 16
+ℹ todo 0
+ℹ duration_ms 108578.7011
+
+===== 9. Recorrido en navegador local (escritorio y 375 px) =====
+Simulado: respuesta perdida y error de red con un interceptor de fetch en la página; vencimiento del orden moviendo sus fechas (recorrido-e5b.mjs vencer).
+13 reseñas de 13 autores ficticios; votos reales de 6 votantes ficticios; lector ficticio.
+Escritorio (captura con zoom CSS 0,6 de la página, porque el panel del navegador recorta la vista):
+  «Más útiles» por defecto: 1 [6/6], 5 [4/4], 3 [5/6], 9 [2/2], 7 [3/6]; Cargar más → 11 [1/3], 13 [0 votos], 12, 10, 8.
+  Falla de tanda → «No pudimos cargar más reseñas. Las que ves siguen acá. Reintentar» → reintento desde el mismo cursor.
+  «Me sirvió» en 13 con la respuesta perdida → «No sabemos si se guardó…»; reintento → sin_cambios → «1 de 1», 13 NO se reordenó (sigue debajo de 11).
+  «Recientes»: 13, 12, 11, 10, 9; de vuelta a «Más útiles» reutiliza el mismo orden (< 10 min).
+  Vencimiento (simulado) → Cargar más → «Orden actualizado: … Volver a empezar»; reinicio: la primera página del orden nuevo (1, 5, 3, 9, 13; el voto ya sube a 13) estaba visible, nada se repite;
+  Cargar más hasta el final: 13 reseñas, 13 únicas, sin «Cargar más».
+375 px (iframe de 375 px de ancho en la vista de escritorio: las media queries ven 375; ancho del documento 375 = 375):
+  «Más útiles» por defecto y «Recientes»; falla de tanda + reintento (10 únicas);
+  «Me sirvió» en 7 con la respuesta perdida → incierto (la ruta había devuelto voto_registrado); reintento → sin_cambios → «4 de 7», lista de 10 sin reordenar;
+  vencimiento → aviso + «Volver a empezar» → 10 únicas; segundo vencimiento → aviso SIN otro reinicio («Ya volviste a empezar una vez…»), sin pedidos extra.
+Limpieza del recorrido: limpio (cuentas|participantes|interruptores): 0|0|false; sesión borrada del navegador; servidor detenido.
+
+===== 10. Estado final de la base =====
+Se borraron las 2 órdenes que dejó la primera corrida de lectura (5.a): ids 12 (título de la batería, 215 posiciones) y 13 (id=1, 0 posiciones), creadas a las 00:13 UTC durante esa corrida.
+6 participantes | 2 versiones | 42 cuentas | 2 suspensiones | 0 evaluaciones | 0 órdenes | 0 tramos | 0 locks | interruptores false | grant profiles false
