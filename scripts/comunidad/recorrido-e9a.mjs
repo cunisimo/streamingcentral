@@ -32,7 +32,9 @@
 //   filas que lo referencian; nunca por fecha, por participante sin cuenta ni
 //   por mes nuevo. Un ranking se borra sólo si todo lo que lo forma es propio.
 //   Guarda los objetivos en el archivo ANTES de borrar: un reintento usa esos
-//   y los del registro, nada más. Con cualquier discrepancia sale con 1 y
+//   y los del registro, nada más. Actividad ajena sobre lo propio (votos,
+//   denuncias, bloqueos, decisiones de otro admin), en cualquier mes, la
+//   detiene ANTES de borrar. Con cualquier discrepancia sale con 1 y
 //   conserva el archivo y el registro para reintentar; repetirla es seguro.
 //
 // RECORRIDO_E9A_CORTE=<paso> corta a propósito en ese paso (sólo pruebas de
@@ -45,7 +47,7 @@ import { createClient } from "@supabase/supabase-js";
 import { createHmac, randomBytes, randomUUID } from "node:crypto";
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { aplicarArchivo, sqlOk, urlLocal } from "./local.mjs";
-import { decidirMeses, evaluarVerificacion, sqlBorrarComunidad, sqlBorrarParticipantes, sqlMeses, sqlOrdenesMixtas, sqlResiduos, unirObjetivos } from "./recorrido-e9a-nucleo.mjs";
+import { decidirActividadAjena, decidirMeses, evaluarVerificacion, sqlBorrarComunidad, sqlBorrarParticipantes, sqlActividadAjena, sqlMeses, sqlOrdenesMixtas, sqlResiduos, unirObjetivos } from "./recorrido-e9a-nucleo.mjs";
 import { dependenciasEscritura, dependenciasNombre, operacionesComunidad } from "../../lib/comunidad/escritura-deps.ts";
 import { escribirResena } from "../../lib/comunidad/escritura-nucleo.ts";
 import { cambiarNombre } from "../../lib/comunidad/nombre-nucleo.ts";
@@ -269,12 +271,16 @@ if (accion === "preparar") {
     const meses = decidirMeses(JSON.parse(sqlOk(sqlMeses(objetivos))), e.meses);
     e.limpieza.mesesPropios = [...new Set([...(e.limpieza.mesesPropios ?? []), ...meses.borrar])];
     e.limpieza.discrepanciasMeses = meses.discrepancias; guardar();
-    // Un ranking con datos ajenos es una discrepancia: no se borra NADA (ni
-    // los tramos ajenos sobre reseñas propias) hasta que alguien la resuelva.
-    if (meses.discrepancias.length) {
-      e.limpieza.resultado = "discrepancia"; e.limpieza.problemas = meses.discrepancias; guardar();
+    // Un ranking con datos ajenos, o actividad ajena (votos, denuncias,
+    // bloqueos, decisiones) que el borrado de lo propio arrastraría en
+    // cualquier mes, consolidado o no, es una discrepancia: no se borra NADA
+    // hasta que alguien la resuelva.
+    const ajena = decidirActividadAjena(JSON.parse(sqlOk(sqlActividadAjena(objetivos))));
+    const detener = [...meses.discrepancias, ...ajena];
+    if (detener.length) {
+      e.limpieza.resultado = "discrepancia"; e.limpieza.problemas = detener; guardar();
       console.log("LIMPIEZA DETENIDA antes de borrar. Se conservan el archivo y el registro para reintentar:");
-      for (const p of meses.discrepancias) console.log(`  - ${p}`);
+      for (const p of detener) console.log(`  - ${p}`);
       process.exit(1);
     }
 

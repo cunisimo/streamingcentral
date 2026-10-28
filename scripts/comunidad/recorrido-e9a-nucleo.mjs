@@ -47,6 +47,32 @@ export function decidirMeses(meses, mesesAlPreparar = []) {
   return { borrar: borrar.sort(), conservar: conservar.sort(), discrepancias };
 }
 
+/**
+ * Actividad AJENA que el borrado de lo propio arrastraría, en cualquier mes,
+ * consolidado o no (auditoría E9a A1/A2, residual): votos (evaluaciones y
+ * tramos) y denuncias de participantes ajenos sobre reseñas propias,
+ * bloqueos ajenos a participantes propios y decisiones de un admin ajeno
+ * sobre objetos propios. Cualquiera detiene la limpieza antes de borrar.
+ * No mira `decidirMeses`: en un mes sin consolidar, los tramos entre ajenos
+ * no se borran y no tienen por qué frenar nada.
+ */
+export function decidirActividadAjena(c) {
+  const nombres = { evaluaciones: "voto(s)", tramos: "tramo(s) de votos", denuncias: "denuncia(s)", bloqueos: "bloqueo(s)", decisiones: "decisión(es) de un admin ajeno" };
+  return Object.entries(nombres).filter(([k]) => Number(c[k] ?? 0) > 0)
+    .map(([k, txt]) => `actividad ajena sobre lo propio: ${c[k]} ${txt}; borrar lo propio la eliminaría`);
+}
+
+export function sqlActividadAjena(o) {
+  const { P, U, V } = listas(o);
+  return `select json_build_object(
+    'evaluaciones', (select count(*) from comunidad.evaluaciones where autor_participante = any(${P}) and not (evaluador_participante = any(${P}))),
+    'tramos', (select count(*) from comunidad.tramos where autor_participante = any(${P}) and not (evaluador_participante = any(${P}))),
+    'denuncias', (select count(*) from comunidad.denuncias where autor_participante = any(${P}) and not (denunciante_participante = any(${P}))),
+    'bloqueos', (select count(*) from comunidad.bloqueos where bloqueado_participante = any(${P}) and not (bloqueador_participante = any(${P}))),
+    'decisiones', (select count(*) from comunidad.decisiones where admin_id is not null and not (admin_id = any(${U}))
+       and (participante_id = any(${P}) or version_id = any(${V}) or cuenta_id = any(${U}))))::text`;
+}
+
 const arr = (xs, tipo) => `'{${xs.join(",")}}'::${tipo}[]`;
 
 /** Listas SQL de los objetivos (validadas). */

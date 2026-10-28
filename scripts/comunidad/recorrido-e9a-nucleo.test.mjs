@@ -2,7 +2,7 @@
 //   node --test scripts/comunidad/recorrido-e9a-nucleo.test.mjs
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { decidirMeses, evaluarVerificacion, sqlBorrarComunidad, sqlBorrarParticipantes, sqlResiduos, unirObjetivos } from "./recorrido-e9a-nucleo.mjs";
+import { decidirActividadAjena, decidirMeses, evaluarVerificacion, sqlActividadAjena, sqlBorrarComunidad, sqlBorrarParticipantes, sqlResiduos, unirObjetivos } from "./recorrido-e9a-nucleo.mjs";
 
 const P1 = "11111111-1111-4111-8111-111111111111", P2 = "22222222-2222-4222-8222-222222222222";
 const U1 = "33333333-3333-4333-8333-333333333333";
@@ -67,4 +67,25 @@ test("verificación: cualquier resto o discrepancia impide informar éxito", () 
   assert.match(evaluarVerificacion({ ...ok, sinRegistrar: ["x@recorrido.test"] })[0], /SIN registrar: no se tocaron/);
   assert.deepEqual(evaluarVerificacion({ ...ok, discrepanciasMeses: ["2026-08-01: …"] }), ["2026-08-01: …"]);
   assert.equal(evaluarVerificacion({ ...ok, configIgual: false, purgaIgual: false, permisosPendientes: ["anon t select"], editorialRestante: true, relojPropio: true }).length, 5);
+});
+
+test("residual A1: un voto ajeno en un mes SIN consolidar no lo frena decidirMeses, pero sí la actividad ajena", () => {
+  // El caso puro de la auditoría sobre 092aceb.
+  const m = decidirMeses([{ mes: "2026-10-01", consolidado: false, tramosAjenos: 1, resultadosAjenos: 0 }], []);
+  assert.deepEqual(m, { borrar: [], conservar: [], discrepancias: [] }, "un mes sin consolidar no es un ranking que conservar");
+  assert.deepEqual(decidirActividadAjena({ evaluaciones: 1, tramos: 1, denuncias: 0, bloqueos: 0, decisiones: 0 }), [
+    "actividad ajena sobre lo propio: 1 voto(s); borrar lo propio la eliminaría",
+    "actividad ajena sobre lo propio: 1 tramo(s) de votos; borrar lo propio la eliminaría",
+  ]);
+  assert.equal(decidirActividadAjena({ evaluaciones: "0", tramos: "0", denuncias: "2", bloqueos: "1", decisiones: "1" }).length, 3);
+  assert.deepEqual(decidirActividadAjena({ evaluaciones: 0, tramos: 0, denuncias: 0, bloqueos: 0, decisiones: 0 }), []);
+});
+
+test("la consulta de actividad ajena mira sólo lo ajeno SOBRE lo propio, en cualquier mes", () => {
+  const sql = sqlActividadAjena({ cuentas: [U1], participantes: [P1], versiones: ["5"] });
+  assert.doesNotMatch(sql, /mes|consolid|creado_en|creada_en/, "sin filtro de mes ni de fecha");
+  assert.ok(sql.includes(`evaluaciones where autor_participante = any('{${P1}}'::uuid[]) and not (evaluador_participante = any('{${P1}}'::uuid[]))`));
+  assert.ok(sql.includes(`tramos where autor_participante = any('{${P1}}'::uuid[]) and not (evaluador_participante = any(`));
+  assert.ok(sql.includes(`bloqueos where bloqueado_participante = any('{${P1}}'::uuid[]) and not (bloqueador_participante = any(`));
+  assert.ok(sql.includes(`decisiones where admin_id is not null and not (admin_id = any('{${U1}}'::uuid[]))`));
 });

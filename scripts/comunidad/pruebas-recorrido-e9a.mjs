@@ -19,7 +19,11 @@
 //   - sin archivo de estado, `limpiar` no borra nada;
 //   - una discrepancia real (un voto ajeno dentro del mes propio, con el reloj
 //     de otra batería) detiene la limpieza antes de borrar nada, sale con 1 y
-//     conserva el archivo y el registro; resuelta, el reintento verifica.
+//     conserva el archivo y el registro; resuelta, el reintento verifica;
+//   - residual A1 (auditoría sobre 092aceb): votos ajenos en el mes CORRIENTE,
+//     sin consolidar, sobre reseñas del recorrido también detienen la
+//     limpieza antes de borrar cuentas, reseñas, evaluaciones ni tramos;
+//     retirada sólo esa fixture, el reintento limpia lo propio.
 // Al final borra sus propias fixtures ajenas (por id) y deja la base como la
 // encontró.
 import assert from "node:assert/strict";
@@ -42,6 +46,7 @@ const srv = createClient(URL_API, process.env.SUPABASE_SERVICE_ROLE_KEY, opc);
 const ops = operacionesComunidad(srv), deps = dependenciasEscritura(srv);
 const q = (s) => `'${String(s).replaceAll("'", "''")}'`;
 const n = (sql) => Number(sqlOk(sql));
+const lista = (sql) => JSON.parse(sqlOk(`select coalesce(json_agg(x), '[]')::text from (${sql}) t(x)`));
 const hayRegistro = () => n("select count(*) from pg_namespace where nspname = 'recorrido_e9a'") > 0;
 const leerArchivo = () => JSON.parse(readFileSync(ARCHIVO, "utf8"));
 
@@ -265,6 +270,55 @@ await prueba("resuelta la discrepancia (se quita el voto ajeno de prueba), el re
   assert.equal(n(`select count(*) from comunidad.top_meses where mes = '${SEPTIEMBRE}'`), 0);
   assert.equal(existsSync(ARCHIVO), false);
   assert.equal(hayRegistro(), false);
+});
+
+await prueba("residual A1: votos AJENOS en el mes corriente (sin consolidar) sobre reseñas propias detienen la limpieza ANTES de borrar", async () => {
+  assert.equal(recorrido("preparar").status, 0);
+  const versiones = lista(`select v.id from comunidad.versiones v where v.autor_participante in (select id from recorrido_e9a.participantes)
+    and v.estado = 'publicada' order by v.id limit 2`);
+  // Dos evaluadores ajenos, sin reloj (octubre de 2026, el mes corriente): un
+  // "me sirvió" (evaluación + tramo) y un "no me sirvió" (evaluación).
+  const pos = await cuenta("auditoria-e9a.test"), neg = await cuenta("auditoria-e9a.test");
+  v.ajenos.push(pos.part, neg.part); v.cuentasAjenas.push(pos.uid, neg.uid); v.votosAjenos = [pos.part, neg.part];
+  await ops.votar(pos.uid, Number(versiones[0]), true);
+  await ops.votar(neg.uid, Number(versiones[1]), false);
+  const mes = sqlOk(`select coalesce(string_agg(distinct mes_primera_positiva::text, ','), '') from comunidad.tramos where evaluador_participante = ${q(pos.part)}`);
+  assert.equal(mes, sqlOk("select date_trunc('month', now() at time zone 'America/Argentina/Buenos_Aires')::date::text"), "el tramo ajeno es del mes corriente");
+  assert.equal(n(`select count(*) from comunidad.top_meses where mes = ${q(mes)}`), 0, "mes sin consolidar");
+  const foto = () => sqlOk(`select json_build_object(
+    'cuentas_propias', (select count(*) from auth.users where id in (select user_id from recorrido_e9a.cuentas)),
+    'resenas_propias', (select count(*) from comunidad.resenas where autor_participante in (select id from recorrido_e9a.participantes)),
+    'evaluaciones', (select count(*) from comunidad.evaluaciones), 'tramos', (select count(*) from comunidad.tramos),
+    'evaluaciones_ajenas', (select count(*) from comunidad.evaluaciones where evaluador_participante in (${q(pos.part)}, ${q(neg.part)})),
+    'tramos_ajenos', (select count(*) from comunidad.tramos where evaluador_participante in (${q(pos.part)}, ${q(neg.part)})))::text`);
+  v.foto = foto();
+  console.log(`     antes: ${v.foto}`);
+  const r = recorrido("limpiar");
+  assert.equal(r.status, 1, r.salida);
+  assert.match(r.salida, /LIMPIEZA DETENIDA antes de borrar/);
+  assert.match(r.salida, /actividad ajena sobre lo propio: 2 voto\(s\)/);
+  assert.match(r.salida, /actividad ajena sobre lo propio: 1 tramo\(s\) de votos/);
+  assert.doesNotMatch(r.salida, /limpieza verificada/);
+  assert.equal(foto(), v.foto, "no borró cuentas, reseñas, evaluaciones ni tramos");
+  assert.match(v.foto, /"evaluaciones_ajenas" : 2, "tramos_ajenos" : 1/);
+  assert.equal(existsSync(ARCHIVO), true);
+  const e = leerArchivo();
+  assert.equal(e.limpieza.resultado, "discrepancia");
+  assert.equal(e.limpieza.objetivos.cuentas.length, 12, "información de recuperación guardada");
+  assert.equal(hayRegistro(), true);
+});
+
+await prueba("residual A1: retirada SÓLO la fixture ajena (por id), el reintento limpia lo propio", () => {
+  const ids = v.votosAjenos.map(q).join(", ");
+  sqlOk(`begin; delete from comunidad.tramos where evaluador_participante in (${ids});
+    delete from comunidad.evaluaciones where evaluador_participante in (${ids}); commit;`);
+  const r = recorrido("limpiar");
+  assert.equal(r.status, 0, r.salida);
+  assert.match(r.salida, /limpieza verificada \(intento 2\): 12 cuenta\(s\) y 11 participante\(s\) propios, sin restos/);
+  assert.equal(existsSync(ARCHIVO), false);
+  assert.equal(hayRegistro(), false);
+  assert.equal(n("select count(*) from auth.users where email like '%@recorrido.test'"), 0);
+  assert.equal(n(`select count(*) from comunidad.participantes where id in (${ids}) and user_id is not null`), 2, "los evaluadores ajenos siguen vivos");
 });
 
 await prueba("limpieza de las fixtures ajenas de esta prueba (por id) y base como al principio", async () => {
