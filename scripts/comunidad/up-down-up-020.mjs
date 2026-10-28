@@ -13,15 +13,21 @@
 //   - up → down → up dan los mismos volcados, y repetirlas es inocuo;
 //   - los datos ajenos a 020 (tramos, votos, suspensiones, participantes)
 //     quedan iguales.
-// Antes de bajar comprueba que no haya meses consolidados (la bajada los
-// borra; son derivados de los tramos). Deja la base con 020 aplicada.
+// Antes de la primera escritura exige que no haya 021 ni meses consolidados
+// (la bajada los borra). Deja la base con 020 aplicada.
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { aplicarArchivo, arnes, contenedor, docker, sqlOk, urlLocal } from "./local.mjs";
+import { exigirFreno, frenoUpDownUp020, objetosDe } from "./frenos-arneses.mjs";
 
 urlLocal(process.env.NEXT_PUBLIC_SUPABASE_URL);
 console.log(`base: ${contenedor()}\n`);
-const UP = "supabase/migrations/020_comunidad_top.sql";
+// Lo primero que hace es REAPLICAR 020, que pisaría las redefiniciones de 021
+// (conservación de rankings), y después la baja (borra lo consolidado). Antes
+// de esa primera escritura exige objetos de 011–020 y nada posterior, y ningún
+// mes consolidado (auditoría E9a, A2; ver frenos-arneses.mjs).
+exigirFreno("up-down-up-020.mjs", sqlOk, frenoUpDownUp020, objetosDe([11, 12, 13, 14, 15, 16, 17, 18, 19, 20]));
+const UP ="supabase/migrations/020_comunidad_top.sql";
 const DOWN = "supabase/migrations/020_comunidad_top_down.sql";
 
 function volcar(nombre) {

@@ -23,19 +23,19 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { aplicarArchivo, arnes, contenedor, docker, sqlOk, urlLocal } from "./local.mjs";
+import { exigirFreno, frenoUpDownUp, objetosDe } from "./frenos-arneses.mjs";
 
 const URL_API = urlLocal(process.env.NEXT_PUBLIC_SUPABASE_URL);
 const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 if (!ANON) { console.error("Falta NEXT_PUBLIC_SUPABASE_ANON_KEY (¿--env-file=.env.comunidad-local?)"); process.exit(2); }
 console.log(`base: ${contenedor()}\n`);
 // Este arnés baja 011 (borra el esquema `comunidad` CON SUS FILAS) y sólo
-// vuelve a subir hasta 014. Con 015 o posteriores aplicadas destruye datos de
-// la base compartida y la deja a medias (pasó en E9a, 28/10): se niega.
-// Las migraciones 015–021 tienen su propio up-down-up-0NN.mjs, que no baja 011.
-if (sqlOk("select count(*) from pg_tables where schemaname = 'comunidad' and tablename = 'decisiones'") !== "0") {
-  console.error("La base tiene 015 o posteriores aplicadas: este arnés (011–014) borraría el esquema y sus datos. No corre.");
-  process.exit(2);
-}
+// vuelve a subir hasta 014. En E9a (28/10) corrió sobre la base compartida con
+// 015–022 y borró datos ajenos. Antes de la primera escritura exige un estado
+// compatible: sin esquema, o SÓLO objetos de 011–014 y sin filas (auditoría
+// E9a, A2; ver frenos-arneses.mjs). Las migraciones 015–021 tienen su propio
+// up-down-up-0NN.mjs, que no baja 011.
+exigirFreno("up-down-up.mjs", sqlOk, frenoUpDownUp, objetosDe([11, 12, 13, 14]));
 
 const UP = "supabase/migrations/011_comunidad_esquema.sql";
 const DOWN = "supabase/migrations/011_comunidad_esquema_down.sql";
