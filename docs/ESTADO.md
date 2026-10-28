@@ -1267,7 +1267,10 @@ AAB tiene que ser `5` o mayor.
        `docs/medidas/2026-10-28-e8-a1-salidas.txt`.
    - **E9a, PARTE LOCAL: integración y pruebas de la web (28/10, Claude,
      autorizada por el dueño sólo en local; `supabase start`, la app local
-     y datos ficticios). PENDIENTE DE AUDITORÍA de Codex. NO cierra E9a**:
+     y datos ficticios). Auditada por Codex sobre `187be15`
+     (`docs/medidas/2026-10-28-auditoria-e9a-187be15.md`): pendiente de A1/A2
+     en las herramientas de prueba, corregidos abajo y PENDIENTES DE
+     REVISIÓN. NO cierra E9a**:
      el plan exige E0, cuyas consultas a Producción no están autorizadas, y
      faltan el secreto HMAC de Producción, aplicar 011–022 allá, las cuotas
      con datos reales, el deploy y la prueba del dueño. Teléfono real y
@@ -1280,9 +1283,9 @@ AAB tiene que ser `5` o mayor.
        a medias. Volví a aplicar 011–022 en el orden de `db-local.mjs`, con
        la configuración en los mismos valores. Verifiqué: permisos 29/29,
        invariantes 85/85 y la 021 6/6. **Esas filas no se recuperaron**: no
-       hay copia y no las recreé. Ahora el arnés se niega a correr con 015 o
-       posteriores aplicadas (`e7f0661`). `up-down-up-020.mjs` tiene el
-       mismo riesgo debajo de 021: no se corrió ni se cambió. **Línea base
+       hay copia y no las recreé. El freno de `e7f0661` sólo miraba la 016;
+       el de A2 (abajo) lo reemplaza y protege también `up-down-up-020.mjs`,
+       que no se corrió. **Línea base
        local desde E9a:** 0 participantes, 0 versiones, 0 suspensiones y 42
        cuentas `@comunidad.test`.
      - **Comprobado en navegador** (ficha real con TMDB, escritorio y
@@ -1295,10 +1298,13 @@ AAB tiene que ser `5` o mayor.
        - cambio de cuenta y respuestas tardías (12 s simulados), sin restos;
        - baja de cuenta.
      - **Todo apagado:** la rama frente a la base `52c7ae7`, con la misma
-       base local, dio innerText idéntico en 14 de 14 páginas: Home, ficha,
-       `/top`, cuenta, configuración y el diálogo de baja. Dos pares que
-       difirieron por carga se repitieron en un control alternado. La baja
-       con todo apagado funcionó.
+       base local, comparó **12 pares** de innerText (Home, ficha, `/top`,
+       cuenta, configuración y el diálogo de baja; 1280 y 375 px): 10
+       idénticos en la primera corrida y 2 que difirieron (el Home de la
+       base en 1280 todavía cargando; el banner «Instalá Yump» en la ficha
+       de la base en 375), idénticos en las dos vueltas de un control
+       alternado. El informe decía «14»: error de conteo, corregido sin
+       repetir el recorrido. La baja con todo apagado funcionó.
      - **`/api/title` en ejecución (pendiente desde E5a): CERRADO**, con
        8/8 fichas idénticas byte a byte contra la base, TMDB real, y la
        editorial incluida. El token de lectura de TMDB salió de
@@ -1328,6 +1334,43 @@ AAB tiene que ser `5` o mayor.
      Informe: `docs/medidas/2026-10-28-informe-claude-e9a.md`; salidas:
      `docs/medidas/2026-10-28-e9a-salidas.txt`; capturas:
      `docs/medidas/2026-10-28-e9a-recorrido/`.
+     - **Corrección A1/A2 de la auditoría de E9a (28/10, Claude, local,
+       PENDIENTE DE REVISIÓN de Codex):**
+       - **A1, limpieza del recorrido:** `recorrido-e9a.mjs` ya no deduce
+         propiedad por fecha, por participante sin cuenta ni por mes nuevo.
+         `preparar` instala un registro (`recorrido-e9a-registro.sql`, esquema
+         `recorrido_e9a` y tres triggers que sólo insertan ahí) con las
+         cuentas `@recorrido.test` que nacen durante el recorrido, también
+         las del dueño, el participante que nace vinculado a ellas (sigue
+         registrado después de una baja) y sus versiones. `limpiar` guarda
+         los objetivos en el archivo antes de borrar, borra sólo esos ids y
+         lo que los referencia, borra un ranking sólo si todo lo que lo forma
+         es propio, y ante una discrepancia sale con 1 sin borrar el archivo
+         ni el registro. Las órdenes «Más útiles» que mezclan versiones
+         propias y ajenas se conservan y se informan.
+       - **A2, frenos:** `frenos-arneses.mjs` lee el estado con una consulta
+         de sólo lectura y deriva lo admitido de los archivos de migración.
+         `up-down-up.mjs` admite sólo «sin esquema» u objetos de 011–014 sin
+         filas ni `config` cambiada (rechaza 015 sin 016 y el estado actual);
+         `up-down-up-020.mjs` rechaza 021 y meses consolidados antes de
+         reaplicar 020.
+       - **Pruebas:** frenos 19/19 sin base (incluye correr los dos arneses
+         REALES con un `local.mjs` falso que bloquea toda escritura: los
+         rechazos salen con 2 después de leer el estado y antes de cualquier
+         mutación); núcleo de la limpieza 6/6; aislamiento en la base local
+         real 13/13 (`pruebas-recorrido-e9a.mjs`): identidad ajena dada de
+         baja y ranking ajeno de agosto sobreviven; lo propio, también la
+         cuenta registrada a mano y dada de baja, se limpia; dos cortes y
+         el reintento con los mismos objetivos; un voto ajeno en septiembre
+         detiene la limpieza antes de borrar. Ninguna bajada se ejecutó.
+         Scripts 41/41 en `comunidad` y 7/7 en `sala`, `tsc` 0.
+       - **Base al terminar:** 0 participantes, 0 versiones, 0
+         suspensiones, 42 cuentas `@comunidad.test`, 0 `@recorrido.test`,
+         24 tablas, todo apagado, `cron` sólo `sala-barrido`, sin registro,
+         reloj, archivo de estado ni servidores. La prueba del dueño sigue
+         pendiente.
+       Informe: `docs/medidas/2026-10-28-informe-claude-e9a-a1a2.md`;
+       salidas: `docs/medidas/2026-10-28-e9a-a1a2-salidas.txt`.
    - decidir si el CHECK de 011 sigue prohibiendo U+200D (ZWJ), que
      bloquea los emojis compuestos. Es una restricción de E2a que no se
      reabrió;

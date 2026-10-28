@@ -10,7 +10,8 @@ En una terminal, desde `D:\DESARROLLO\stream central\wt-resenas-comunidad`:
 
 1. Docker Desktop abierto (los contenedores `supabase_*_streamingcentral`
    arrancan solos).
-2. Preparar los datos ficticios (enciende módulo, publicación y Top Yumpers):
+2. Preparar los datos ficticios (enciende módulo, publicación y Top Yumpers,
+   e instala el registro de lo que es propio del recorrido):
 
    ```bash
    node --env-file=.env.comunidad-local scripts/comunidad/recorrido-e9a.mjs preparar
@@ -41,9 +42,12 @@ node --env-file=.env.comunidad-local scripts/comunidad/recorrido-e9a.mjs codigo
 
 1. **Sin sesión**, en `/titulo/movie/550`: abrir RESEÑAS. Se ve la editorial
    ficticia y la invitación a registrarse, sin número de reseñas.
-2. **Registrarse** con un correo que termine en `@recorrido.test` (así lo
-   borra la limpieza). En la bienvenida elegí "No tengo ninguna por ahora":
-   en local la lista de plataformas viene vacía (ver abajo).
+2. **Registrarse** con un correo que termine en `@recorrido.test`: mientras
+   dura el recorrido, esa cuenta y su identidad en la comunidad quedan
+   registradas como propias, y la limpieza las borra aunque después la des de
+   baja. Una cuenta con otro dominio NO se registra y la limpieza no la toca
+   (tendrías que borrarla vos). En la bienvenida elegí "No tengo ninguna
+   por ahora": en local la lista de plataformas viene vacía (ver abajo).
 3. Volver a la ficha 550 → RESEÑAS: aceptar los **términos**, ver las cinco
    reseñas, "Cargar más" y cambiar entre **Más útiles** y **Recientes**.
 4. **Votar** "Me sirvió" en una ajena y comprobar que la lista no se reordena.
@@ -75,16 +79,28 @@ modo dispositivo).
 
 ## Detener y limpiar
 
-1. `Ctrl+C` en la terminal de la app.
-2. Limpiar (borra las cuentas `@recorrido.test`, sus datos y la editorial
-   ficticia; apaga los interruptores y revoca los permisos temporales):
+1. `Ctrl+C` en la terminal de la app (antes de limpiar: así nadie crea
+   cuentas mientras se borra).
+2. Limpiar. Borra SÓLO lo registrado como propio del recorrido (las cuentas
+   `@recorrido.test` creadas mientras duró, incluidas las tuyas y las dadas
+   de baja, sus datos, el ranking de septiembre si lo formaron sólo ellas y
+   la editorial ficticia), apaga los interruptores, revoca los permisos
+   temporales y quita el registro:
 
    ```bash
    node --env-file=.env.comunidad-local scripts/comunidad/recorrido-e9a.mjs limpiar
    ```
 
-   Tiene que decir "conteos de la comunidad iguales a los de antes: sí" y
-   "permisos restaurados: sí".
+   Tiene que terminar con "limpieza verificada … sin restos" y
+   "permisos restaurados: sí | registro quitado: sí". La línea de conteos
+   globales es informativa.
+
+   Si dice **"LIMPIEZA DETENIDA"** o **"LIMPIEZA INCOMPLETA"** (sale con
+   error), no se informó éxito y quedan el archivo `.recorrido-e9a.local.json`
+   y el registro para reintentar: leé el motivo, resolvelo o avisale a
+   Claude/Codex, y volvé a correr `limpiar`. Repetirlo es seguro y nunca
+   amplía lo que borra. Si se cortó a mitad (por ejemplo, cerraste la
+   terminal), también alcanza con volver a correrlo.
 
 ## Lo que este entorno NO muestra
 

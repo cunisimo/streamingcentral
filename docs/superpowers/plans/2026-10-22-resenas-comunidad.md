@@ -1133,9 +1133,14 @@ rollback;
   - `/api/title` idéntico.
   - Build verde.
   - Durante la corrida, el arnés de 011–014 borró datos ajenos de la base
-    local; ahora queda frenado.
+    local.
+  - Auditoría de Codex sobre `187be15`: A1 (la limpieza del recorrido podía
+    borrar datos ajenos) y A2 (frenos incompletos de los arneses
+    destructivos). Corregidas el 28/10 con registro de propiedad y frenos
+    derivados de las migraciones, pendientes de revisión.
 
-  Informe: `docs/medidas/2026-10-28-informe-claude-e9a.md`. Prueba del dueño:
+  Informes: `docs/medidas/2026-10-28-informe-claude-e9a.md` y
+  `docs/medidas/2026-10-28-informe-claude-e9a-a1a2.md`. Prueba del dueño:
   `docs/medidas/2026-10-28-e9a-prueba-duenio.md`.
 
 ### E9b — Android en el mismo AAB que salas

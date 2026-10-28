@@ -38,10 +38,11 @@ Las 42 cuentas `@comunidad.test` siguieron intactas. Lo que hice después:
 - **Las filas borradas no se recuperaron.** No hay copia en el repo ni en los
   informes, sólo conteos y huellas. No las recreé: serían otras filas con los
   mismos números.
-- **Freno (`e7f0661`):** `up-down-up.mjs` ahora se niega a correr si la 015 o
-  posteriores están aplicadas. Lo probé: rc 2 y el esquema intacto.
-  `up-down-up-020.mjs` (baja la 020 debajo de la 021) **no lo corrí** por el
-  mismo motivo, y no lo modifiqué.
+- **Freno (`e7f0661`):** `up-down-up.mjs` se negaba a correr si encontraba
+  `decisiones`, o sea con 016 aplicada. La auditoría (A2) mostró que con 015
+  sin 016 pasaba igual. Lo reemplazó el freno de la corrección A1/A2, que
+  protege también `up-down-up-020.mjs`; ver
+  `2026-10-28-informe-claude-e9a-a1a2.md`. Ese arnés no se corrió.
 - **Línea base nueva:** desde E9a es 0 participantes, 0 versiones y 0
   suspensiones (42 cuentas). Las baterías que comparan una huella ajena
   comparan antes y después de su propia corrida, así que no dependen de
@@ -90,13 +91,18 @@ Ficha real con TMDB, cuenta, perfiles, panel y Top Yumpers, en escritorio
 
 Comparé la rama con la base `52c7ae7` (anterior a reseñas), con la misma base
 local y TMDB, en Edge headless:
-- **Páginas:** Home, ficha (sin sesión y con sesión, con la sección abierta),
-  `/top` (sin sesión y con sesión), `/cuenta`, `/cuenta/configuracion` y el
-  diálogo de eliminar cuenta, en 1280 y 375 px.
-- **Resultado:** 12 de 14 pares con innerText idéntico en la primera corrida.
-  Los 2 restantes (el Home en 1280 todavía cargando, y el banner "Instalá
-  Yump" de la PWA en una sola corrida de la base) dieron **idénticos en las
-  dos vueltas de un control alternado**.
+- **Pares (12):** Home en 1280 y 375; ficha sin sesión en 1280; ficha con
+  sesión (sección abierta) en 1280 y 375; `/top` sin sesión en 1280 y 375;
+  `/top` con sesión en 1280; `/cuenta` en 1280 y 375; `/cuenta/configuracion`
+  y el diálogo de eliminar cuenta en 1280.
+- **Resultado:** 10 de 12 pares con innerText idéntico en la primera corrida.
+  Los 2 restantes (el Home de la base en 1280 todavía cargando, y el banner
+  "Instalá Yump" de la PWA en la ficha con sesión de la base en 375) dieron
+  **idénticos en las dos vueltas de un control alternado**.
+- **Corrección del conteo (28/10, auditoría A1/A2):** este informe decía
+  «12 de 14 pares»; las salidas enumeran 12 pares, y los 12 pares de archivos
+  base/rama guardados lo confirman. Era un error de conteo. No se repitió el
+  recorrido.
 - **Baja con todo apagado:** desde la UI de la rama, completa.
 
 ## `/api/title` en ejecución (pendiente desde E5a): cerrado
