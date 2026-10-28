@@ -222,14 +222,14 @@ Nota: el conteo ok/fallas de up-down-up y up-down-up-021 corresponde a la corrid
 ✔ revisión · si las reglas vigentes ya no rechazan el texto, es un envío normal ('publicada')
 ✔ revisión · edición: sin confirmar → 'requiere_confirmacion' sin tocar nada; confirmada → la publicada se reemplaza (deja de verse), votos reiniciados
 ✔ revisión · pasa por la admisión: con 2 retenidos propios → 'admision_autor' y nada guardado
-✔ revisión · idempotencia: respuesta perdida tras el commit → el reintento con el mismo id devuelve lo guardado (UNA versión); el mismo id sin revisión 
+✔ revisión · idempotencia: respuesta perdida tras el commit → el reintento con el mismo id devuelve lo guardado (UNA versión); el mismo id sin revisión
 ✔ denuncia · se registra, la reseña SIGUE VISIBLE; repetirla da el mismo resultado sin otra fila ni otro cupo; quien denuncia la ve marcada
 ✔ denuncia · no la propia ('propia'); no lo invisible (retenida → 'version_no_disponible'); motivo fuera del diseño → 'invalido' sin tocar la base
 ✔ denuncia · ATAQUE: 8 cuentas denuncian como grave una reseña legítima → sigue publicada y visible, y queda PRIMERA en la cola (la cantidad ordena, no o
 ✔ denuncia · cota por versión, CONCURRENCIA: tope 3 filas; 7 denuncias simultáneas → 3 filas + excedente 4, todas 'denuncia_registrada'; sigue publicada
 ✔ denuncia · tope global por hora, CONCURRENCIA: tope = ingreso + 4; 9 cuentas denuncian a la vez → exactamente 4 recibidas y 5 'cola_denuncias_llena'; con
 ✔ denuncia · límite diario propio (tope 2): la 3.ª → 'limite_diario'
-✔ denuncia · CORROBORACIÓN: una versión publicada con reglas viejas que las vigentes retendrían pasa a 'retenida' POR LA REGLA; una legítima denunciada, 
+✔ denuncia · CORROBORACIÓN: una versión publicada con reglas viejas que las vigentes retendrían pasa a 'retenida' POR LA REGLA; una legítima denunciada,
 ✔ denuncia · 'No me sirvió' masivo (12 cuentas) → ningún efecto de moderación: publicada, sin denuncias, fuera de la cola
 ✔ denuncia · respuesta perdida tras el commit → se reconcilia: 'denuncia_registrada' repetida, UNA fila, UN cupo; perdidas las dos → 'sin_confirmar' y el
 ✔ bloqueo · oculta TODAS las reseñas del autor sólo para quien bloquea; los demás las siguen viendo; su estado no cambia
@@ -279,7 +279,7 @@ Nota: el conteo ok/fallas de up-down-up y up-down-up-021 corresponde a la corrid
 ✔ caso 5b · el voto (real) confirma primero: la suspensión (real) espera y su `desde` es POSTERIOR a la marca del voto
 ✔ decisión del admin y edición del autor en paralelo (sesiones): la edición espera la reseña; al confirmar la decisión, la edición reemplaza la versión
 ✔ B10 · quitar el marcador (real): nada se restaura; el participante viejo sigue huérfano; la próxima identidad nace nueva y publica
-✔ B14 · suspendida → baja → quitar el marcador con la sanción vigente: nace suspendida; no publica ni vota; sí bloquea, borra y vuelve a pedir la baja 
+✔ B14 · suspendida → baja → quitar el marcador con la sanción vigente: nace suspendida; no publica ni vota; sí bloquea, borra y vuelve a pedir la baja
 ✔ levantar una sanción CON plazo (copiada por B14 con fin futuro): se acorta a ahora; nunca se reescribe el pasado
 ✔ denuncias RECIBIDAS en la baja del autor: se cierran en el historial mínimo (sin texto, sin comentario, sin el autor); el peso de quien denunció se conser
 ✔ A2 · bajas simultáneas, confirma primero quien DENUNCIÓ (secuencia de la auditoría): su historial no reaparece; la denuncia de una cuenta activa queda e
@@ -322,14 +322,14 @@ Nota: el conteo ok/fallas de up-down-up y up-down-up-021 corresponde a la corrid
 ✔ preparación: un título con 213 visibles + 6 que no deben verse; lector, otro lector, admin con dos TOTP
 ✔ RPC directo: anon y service_role → 401/403 con 42501/permission denied; un JWT real → 200; no hay parámetro para leer como otro
 ✔ catálogo: comunidad_resenas security definer, search_path vacío, EXECUTE sólo authenticated; modulo_activo sólo service_role; comunidad_leer_titulo ya n
-✔ más de 200 reseñas: el lector recorre las 214 visibles de a 5, en el orden (primera publicación desc, id desc), sin repetir ni saltear, con un empate de 
+✔ más de 200 reseñas: el lector recorre las 214 visibles de a 5, en el orden (primera publicación desc, id desc), sin repetir ni saltear, con un empate de
 ✔ el mismo recorrido por el ADAPTADOR de la ruta (cursor opaco) y con tandas de 20: mismo conjunto y orden
 ✔ bloqueo personal: la reseña bloqueada no la ve quien bloqueó, SÍ la ve otro lector; el suspendido no lo ve nadie
 ✔ entre páginas: retiro, borrado, edición, bloqueo y suspensión. Nada oculto reaparece por el cursor, nada se repite, nada visible se saltea
 ✔ levantar la suspensión vuelve a mostrar sus reseñas; desbloquear también
 ✔ pedidos inválidos: orden desconocido, cursor del otro orden, cursor mal formado y título inválido → 22023 sin datos; el límite se acota a 1–20
 ✔ un título sin reseñas: lista vacía, total 0, sin cursor; con el módulo APAGADO, {activo:false} y nada más
-✔ ruta: sin token o con uno inválido 401 con SÓLO {resultado, activo}; con sesión 200 privado y sin caché; inválido 400; el cursor de la ruta recorre lo 
+✔ ruta: sin token o con uno inválido 401 con SÓLO {resultado, activo}; con sesión 200 privado y sin caché; inválido 400; el cursor de la ruta recorre lo
 ### pruebas-voto-lista
 ✔ preparación: 7 reseñas reales (dos páginas: 5 + 2), un lector con sesión real y otra cuenta que ya votó dos
 ✔ positivo SIN pérdida: voto_registrado; pantalla = base; el siguiente toque RETIRA
@@ -345,14 +345,14 @@ Nota: el conteo ok/fallas de up-down-up y up-down-up-021 corresponde a la corrid
 ### pruebas-utiles
 ✔ preparación: lector, otro lector y un admin con dos TOTP reales
 ✔ Wilson en la base = valores calculados aparte (Python) en 18 casos, |error| < 1e-12; sin votos, 0
-✔ Wilson de la base = lib/comunidad/wilson.ts BIT A BIT en los 1890 pares con total ≤ 60; con 0 positivos, exactamente 0 (antes de la corrección, 0/1 daba 
+✔ Wilson de la base = lib/comunidad/wilson.ts BIT A BIT en los 1890 pares con total ≤ 60; con 0 positivos, exactamente 0 (antes de la corrección, 0/1 daba
 ✔ orden real con votos REALES: 9/10, 1/1, 2/4, empate 1/2 ×3 (fecha desc y, con la misma fecha, id desc), 0/3 y 0/0 (fecha desc)
 ✔ 20 lectores CONCURRENTES (sesiones reales, PostgREST) piden la primera página de un título sin orden → UN solo orden generado, el mismo para los 20
-✔ reutilización y vigencia (tiempo simulado): < 10 min se reutiliza; > 10 min se genera otro y el anterior sigue valiendo hasta vencer; al generar se borran 
+✔ reutilización y vigencia (tiempo simulado): < 10 min se reutiliza; > 10 min se genera otro y el anterior sigue valiendo hasta vencer; al generar se borran
 ✔ conjunto estable de 237 reseñas: el recorrido de a 5 sigue EXACTAMENTE el orden (Wilson + desempates), sin duplicar ni saltear; filas de 100 ids
 ✔ cambios ENTRE páginas (funciones reales): retiro, suspensión, bloqueo, borrado y edición. Lo oculto no reaparece, lo editado sale una vez, nada visible s
 ✔ página con MUCHAS ocultas (fixture: 120 versiones pasadas a oculta después de generar el orden): devuelve menos o ninguna, el cursor avanza exactamente 50
-✔ vencimiento a mitad de lectura (tiempo simulado): `orden_actualizado` sin reseñas; UN reinicio con el núcleo real agrega sin repetir y llega al final; un 
+✔ vencimiento a mitad de lectura (tiempo simulado): `orden_actualizado` sin reseñas; UN reinicio con el núcleo real agrega sin repetir y llega al final; un
 ✔ un cursor de OTRO título o de un orden borrado responde orden_actualizado, nunca mezcla; un cursor de «Más útiles» en «Recientes» es inválido
 ✔ votar dentro del orden congelado cambia el CONTEO que se lee, no el lugar; el orden siguiente (> 10 min, simulado) sí lo refleja
 ✔ las tablas del orden: sin grants, RLS sin policies, sin columnas del lector; wilson y orden_utiles sin EXECUTE; anon y service_role no leen «Más útiles»
@@ -395,14 +395,14 @@ Nota: el conteo ok/fallas de up-down-up y up-down-up-021 corresponde a la corrid
 ✔ caso 11: tramo que empieza, tramo que termina, suspensión (de autor y de evaluador) que empieza y que termina EXACTAMENTE en T(M) y a 1 µs de cada lado
 ✔ suspender NO cierra tramos (conciliación del 25/10): los votos del autor y del evaluador suspendidos siguen abiertos; el cómputo los excluye sólo mientra
 ✔ caso 10: edición, retiro por moderación, suspensión y bajas ENTRE el corte y la primera consulta no cambian el mes; restaurar antes del corte cuenta y de
-✔ reproducible: un voto con marca de julio que llega DESPUÉS de consolidar (fixture de reloj) no cambia el mes consolidado, aunque el cómputo de hoy sí lo 
-✔ proyección: sólo posición, puntos, estado y, para cuentas activas, id de participante, nombre comunitario, avatar del catálogo y propio; nunca user_id, 
+✔ reproducible: un voto con marca de julio que llega DESPUÉS de consolidar (fixture de reloj) no cambia el mes consolidado, aunque el cómputo de hoy sí lo
+✔ proyección: sólo posición, puntos, estado y, para cuentas activas, id de participante, nombre comunitario, avatar del catálogo y propio; nunca user_id,
 ✔ bloqueo: quien bloqueó a D lo ve como «Usuario bloqueado» (con su posición y puntos, sin id ni nombre); otro lector lo ve normal
 ✔ permisos: anon y service_role no leen (401/403 42501); las funciones internas y las tablas no tienen grants; el interruptor sólo para service_role
 ✔ ruta: sin sesión 401 SÓLO {resultado, activo}; con sesión 200 privado y sin caché; mes inválido 400; interruptores apagados → {activo:false} y el sel
 ### pruebas-top-concurrencia
 ✔ preparación: meses libres, reloj forzado, interruptores encendidos
-✔ caso 6: un voto que tomó el compartido ANTES de T(M) y confirma DESPUÉS, mientras la consolidación espera el exclusivo: la consolidación lo espera y lo 
+✔ caso 6: un voto que tomó el compartido ANTES de T(M) y confirma DESPUÉS, mientras la consolidación espera el exclusivo: la consolidación lo espera y lo
 ✔ caso 7a: con la consolidación CALCULANDO (exclusivo tomado), un voto con marca después de T(M) espera el compartido; el mes no lo incluye y coincide con e
 ✔ caso 7b: con la consolidación ESPERANDO el exclusivo, un voto nuevo (marca después de T(M)) queda detrás de ella; el previo cuenta, el nuevo no
 ✔ 50 lecturas concurrentes después del corte: UN solo cálculo y la misma respuesta; después, 50 más se resuelven sin pedir el exclusivo (con un compartido
@@ -443,26 +443,26 @@ Nota: el conteo ok/fallas de up-down-up y up-down-up-021 corresponde a la corrid
 Todo verde (37 pruebas)
 
 ## 2. Incidente: up-down-up.mjs (arnés de 011–014) sobre una base con 015–021
-✖ 014 (E3a): up → down → up da el mismo volcado; down quita sus funciones, la tabla de intentos y las columnas de términos; repetidas, inocuas 
+✖ 014 (E3a): up → down → up da el mismo volcado; down quita sus funciones, la tabla de intentos y las columnas de términos; repetidas, inocuas
     subir 014 no reprodujo el volcado
-✖ 013 (E2c): up → down → up da el mismo volcado; down quita sus funciones y sólo restaura la definición de 012; repetidas, inocuas 
+✖ 013 (E2c): up → down → up da el mismo volcado; down quita sus funciones y sólo restaura la definición de 012; repetidas, inocuas
     014_down no dejó exactamente 011 + 012 + 013
-✖ estado de partida: 011 y 012 aplicadas (repetibles) 
+✖ estado de partida: 011 y 012 aplicadas (repetibles)
     Expected values to be strictly equal:
-✖ 012_down: quita sólo lo de 012 (funciones, triggers y columnas del marcador) 
+✖ 012_down: quita sólo lo de 012 (funciones, triggers y columnas del marcador)
     Expected values to be strictly equal:
-✖ 012 up → down → up: mismos volcados; repetida, inocua 
+✖ 012 up → down → up: mismos volcados; repetida, inocua
     Cannot read properties of undefined (reading 'split')
-✖ down: el esquema desaparece y el resto queda idéntico a lo que había con 011 
+✖ down: el esquema desaparece y el resto queda idéntico a lo que había con 011
     Cannot read properties of undefined (reading 'split')
 ✔ down repetido: inocuo
-✖ up: vuelve exactamente al volcado con 011 
+✖ up: vuelve exactamente al volcado con 011
     Cannot read properties of undefined (reading 'split')
-✖ segunda vuelta down → up: mismos volcados 
+✖ segunda vuelta down → up: mismos volcados
     Cannot read properties of undefined (reading 'split')
-✖ up repetido sobre sí mismo: no cambia el volcado 
+✖ up repetido sobre sí mismo: no cambia el volcado
     Cannot read properties of undefined (reading 'split')
-✖ vuelta a 012: 011 + 012 dan el mismo volcado del principio 
+✖ vuelta a 012: 011 + 012 dan el mismo volcado del principio
     Cannot read properties of undefined (reading 'split')
      -- Name: user_reviews el autor gestiona la suya; Type: POLICY; Schema: public; Owner: postgres
      CREATE POLICY "el autor gestiona la suya" ON public.user_reviews USING ((auth.uid() = user_id)) WITH CHECK ((auth.uid() = user_id));
@@ -475,17 +475,17 @@ Todo verde (37 pruebas)
 ✔ 022 repetida: inocua
 
 ### up-down-up-021 en la misma corrida (después del incidente)
-✖ antes: sin 021 (el volcado de partida), con 020 aplicada 
+✖ antes: sin 021 (el volcado de partida), con 020 aplicada
     ERROR:  column "admision_global" does not exist
-✖ 021 up: tablas, funciones y procedimiento; purga APAGADA; plazos del dueño; huellas y excepción sin configurar 
+✖ 021 up: tablas, funciones y procedimiento; purga APAGADA; plazos del dueño; huellas y excepción sin configurar
     supabase/migrations/021_comunidad_purga.sql: ERROR:  relation "comunidad.intentos" does not exist
-✖ 021_down: vuelve EXACTAMENTE al volcado de antes (020 restaurada) y no toca datos 
+✖ 021_down: vuelve EXACTAMENTE al volcado de antes (020 restaurada) y no toca datos
     ERROR:  relation "comunidad.purga_ejecuciones" does not exist
-✖ 021_down repetida: inocua 
+✖ 021_down repetida: inocua
     supabase/migrations/021_comunidad_purga_down.sql: NOTICE:  procedure comunidad.purgar(text,timestamptz) does not exist, skipping
-✖ 021 up: vuelve exactamente al volcado con 021; repetida, inocua 
+✖ 021 up: vuelve exactamente al volcado con 021; repetida, inocua
     supabase/migrations/021_comunidad_purga.sql: ERROR:  relation "comunidad.intentos" does not exist
-✖ segunda vuelta down → up: mismos volcados; datos ajenos intactos 
+✖ segunda vuelta down → up: mismos volcados; datos ajenos intactos
     supabase/migrations/021_comunidad_purga_down.sql: NOTICE:  procedure comunidad.purgar(text,timestamptz) does not exist, skipping
 
 ### Verificación tras reaplicar 011–022 (en orden de db-local.mjs)
