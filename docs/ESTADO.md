@@ -1159,8 +1159,13 @@ AAB tiene que ser `5` o mayor.
      Auditada por Codex sobre `95c09b2`
      (`docs/medidas/2026-10-27-auditoria-e8-95c09b2.md`, copiada sin
      cambios): **pendiente de A1 (P2)**; el resto, revisado sin hallazgos.
-     **Corrección A1 hecha por Claude el 28/10 (`d37563a`), PENDIENTE DE
-     REVISIÓN de Codex** (detalle al final de este bloque).
+     Corrección A1 hecha por Claude el 28/10 (`d37563a`; detalle al final
+     de este bloque). **E8 CERRADA COMO ENTREGA LOCAL por Codex el 28/10**
+     (`docs/medidas/2026-10-28-auditoria-e8-a1-c9ba130.md`, copiada sin
+     cambios; SHA-256 `78224a71…`, igual al original): A1 corregida, sin
+     hallazgos bloqueantes nuevos; no habilita publicación, cron ni
+     Producción. Observación menor no bloqueante: un espacio final en la
+     línea 28 del log histórico de la reproducción (no se alteró).
      - **Plazos (informado por el dueño, 27/10; decisiones de producto, NO
        validadas legalmente: P3 sigue abierto para la validación):** reseñas
        y votos vigentes, sin plazo; órdenes de Más útiles al vencer sus 2 h;
