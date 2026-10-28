@@ -74,6 +74,10 @@ test("efecto antes de confirmar: restaurar dice qué votos vuelve a contar y que
   assert.match(efectoDecision("publicar", { votos: 0 }), /no tiene votos/);
   assert.match(efectoDecision("publicar", { votos: 0, revision: true }), /falso positivo/);
   assert.match(efectoDecision("retirar", { denuncias: 2 }), /Deja de verse.*2 denuncias abiertas quedan resueltas/);
+  // E9a: en singular decía "1 denuncia abierta quedan resueltas".
+  assert.match(efectoDecision("retirar", { denuncias: 1 }), /retirada\. 1 denuncia abierta queda resuelta\.$/);
+  assert.match(efectoDecision("rechazar", { denuncias: 1 }), /borrarla\. 1 denuncia abierta queda resuelta\.$/);
+  assert.match(efectoDecision("rechazar", {}), /borrarla\.$/);
   assert.match(efectoDecision("descartar", { denuncias: 1 }), /sigue como está\. La denuncia se marca como descartada/);
   assert.match(efectoDecision("descartar", { denuncias: 3 }), /3 denuncias se marcan como descartadas/);
 });

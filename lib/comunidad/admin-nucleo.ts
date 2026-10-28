@@ -114,6 +114,10 @@ export const ETIQUETA_ACCION: Readonly<Record<string, string>> = {
   pausar_publicacion: "Pausar la publicación", reanudar_publicacion: "Reanudar la publicación",
 };
 
+/** " 1 denuncia abierta queda resuelta." / " 2 denuncias abiertas quedan resueltas." / "" sin denuncias. */
+const resueltas = (den: number) =>
+  !den ? "" : den === 1 ? " 1 denuncia abierta queda resuelta." : ` ${den} denuncias abiertas quedan resueltas.`;
+
 /** Lo que se le muestra al admin ANTES de confirmar (diseño §3.4: el efecto de restaurar). */
 export function efectoDecision(accion: AccionVersion, caso: { votos?: number; denuncias?: number; revision?: boolean }): string {
   const votos = caso.votos ?? 0, den = caso.denuncias ?? 0;
@@ -128,9 +132,9 @@ export function efectoDecision(accion: AccionVersion, caso: { votos?: number; de
         ? `La versión vuelve a verse. Vuelven a contar ${votos} voto${votos === 1 ? "" : "s"} de utilidad que ya tenía, en su mes original; no se suma ninguno nuevo y los meses ya cerrados no cambian.`
         : "La versión vuelve a verse. No tiene votos de utilidad que recuperar: no se suma ninguno.";
     case "rechazar":
-      return `No se publica. El autor la ve como rechazada y puede corregirla o borrarla.${den ? ` ${den} denuncia${den === 1 ? "" : "s"} abierta${den === 1 ? "" : "s"} quedan resueltas.` : ""}`;
+      return `No se publica. El autor la ve como rechazada y puede corregirla o borrarla.${resueltas(den)}`;
     case "retirar":
-      return `Deja de verse para todos. Sus votos se conservan pero no suman mientras esté retirada.${den ? ` ${den} denuncia${den === 1 ? "" : "s"} abierta${den === 1 ? "" : "s"} quedan resueltas.` : ""}`;
+      return `Deja de verse para todos. Sus votos se conservan pero no suman mientras esté retirada.${resueltas(den)}`;
     case "descartar":
       return den === 1
         ? "La reseña sigue como está. La denuncia se marca como descartada: baja la prioridad de las próximas de esa cuenta, sin bloquearla."

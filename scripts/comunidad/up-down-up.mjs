@@ -28,6 +28,14 @@ const URL_API = urlLocal(process.env.NEXT_PUBLIC_SUPABASE_URL);
 const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 if (!ANON) { console.error("Falta NEXT_PUBLIC_SUPABASE_ANON_KEY (¿--env-file=.env.comunidad-local?)"); process.exit(2); }
 console.log(`base: ${contenedor()}\n`);
+// Este arnés baja 011 (borra el esquema `comunidad` CON SUS FILAS) y sólo
+// vuelve a subir hasta 014. Con 015 o posteriores aplicadas destruye datos de
+// la base compartida y la deja a medias (pasó en E9a, 28/10): se niega.
+// Las migraciones 015–021 tienen su propio up-down-up-0NN.mjs, que no baja 011.
+if (sqlOk("select count(*) from pg_tables where schemaname = 'comunidad' and tablename = 'decisiones'") !== "0") {
+  console.error("La base tiene 015 o posteriores aplicadas: este arnés (011–014) borraría el esquema y sus datos. No corre.");
+  process.exit(2);
+}
 
 const UP = "supabase/migrations/011_comunidad_esquema.sql";
 const DOWN = "supabase/migrations/011_comunidad_esquema_down.sql";
