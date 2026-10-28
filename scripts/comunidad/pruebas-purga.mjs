@@ -28,8 +28,9 @@
 //     meses de 2025 o para ejercitar la ventana con meses de 2026, y se
 //     restaura (los plazos del dueño quedan como estaban).
 //
-// Meses usados: 2025-04, 2025-05, 2025-07, 2025-08, 2025-09, 2025-10,
-// 2026-02, 2026-04 y 2026-08. Al empezar se comprueba que nadie más tenga
+// Meses usados: 2025-01 a 2025-05, 2025-07 a 2025-10, 2025-12, 2026-01 a
+// 2026-05 y 2026-08 (un mes purgado queda marcado: cada prueba que purga un
+// ranking usa el suyo). Al empezar se comprueba que nadie más tenga
 // tramos ni resultados en ellos; al terminar se borran sólo los de esta
 // corrida. La base es compartida: antes y después se compara una huella de
 // los datos ajenos (participantes, reseñas, versiones, suspensiones, votos).
@@ -61,7 +62,8 @@ const { prueba, cerrar } = arnes();
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const q = (v) => { if (!UUID.test(v)) throw new Error(`uuid inesperado: ${v}`); return `'${v}'`; };
 const cuentas = new Set(), participantes = new Set(), tmdbs = new Set();
-const MESES = ["2025-04-01", "2025-05-01", "2025-07-01", "2025-08-01", "2025-09-01", "2025-10-01", "2026-02-01", "2026-04-01", "2026-08-01"];
+const MESES = ["2025-01-01", "2025-02-01", "2025-03-01", "2025-04-01", "2025-05-01", "2025-07-01", "2025-08-01", "2025-09-01", "2025-10-01",
+  "2025-12-01", "2026-01-01", "2026-02-01", "2026-03-01", "2026-04-01", "2026-05-01", "2026-08-01"];
 const S = {};
 
 // --------------------------------------------------------------- tiempo
@@ -235,6 +237,7 @@ try {
       assert.equal(sqlOk(`select count(*) from comunidad.top_meses where mes = '${mes}'`), "0", `${mes} ya está consolidado`);
     }
     assert.equal(sqlOk("select count(*) from comunidad.purga_ejecuciones"), "0", "el registro de ejecuciones no está vacío");
+    assert.equal(sqlOk("select count(*) from comunidad.meses_sin_historial"), "0", "hay meses marcados de otra corrida");
     assert.equal(purgaPrevia.purga_activa, false, "la purga tiene que arrancar apagada");
     assert.equal(sqlOk("select count(*) from pg_namespace where nspname = 'solo_local'"), "0", "quedó un solo_local de otra corrida");
     S.ajenos = ajenos();
@@ -684,7 +687,7 @@ try {
     await p.terminar();
     // Más de 5 s esperando: error registrado (sólo el código), estado con_errores.
     purgaCfg({ plazo_rankings: "null" });
-    try { assert.equal(sqlOk("select comunidad.consolidar_mes('2025-07-01')::text"), "true"); }
+    try { assert.equal(sqlOk("select comunidad.consolidar_mes('2025-03-01')::text"), "true"); }
     finally { purgaCfg({ plazo_rankings: "interval '12 months'" }); }
     c.enviar("begin; select pg_advisory_xact_lock(7301, 0); select 'X|2';");
     await esperar(`exists (select 1 from pg_locks l join pg_stat_activity a on a.pid = l.pid where a.application_name = '${c.app}' and l.classid = 7301 and l.granted)`, "exclusivo tomado otra vez");
@@ -693,9 +696,9 @@ try {
     await c.terminar();
     assert.equal(e.estado, "con_errores");
     assert.deepEqual(e.resumen.rankings, { borrados: 0, omitidos: 0, lotes: 0, error: "55P03" });
-    assert.ok(existe("comunidad.top_meses where mes = '2025-07-01'"), "el lote se revirtió entero");
+    assert.ok(existe("comunidad.top_meses where mes = '2025-03-01'"), "el lote se revirtió entero");
     purgar("rankings", AHORA);
-    assert.ok(!existe("comunidad.top_meses where mes = '2025-07-01'"), "el reintento lo completa");
+    assert.ok(!existe("comunidad.top_meses where mes = '2025-03-01'"), "el reintento lo completa");
   });
 
   // ===================================================================
@@ -757,7 +760,7 @@ try {
     for (let i = 0; i < 3; i++) await publicar(a, AHORA);
     sqlOk(`update comunidad.intentos set creado_en = ${menos(AHORA, "10 days")} where participante_id = ${q(a.part)}`);
     purgaCfg({ plazo_rankings: "null" });
-    try { relojLibre(); assert.equal(sqlOk("select comunidad.consolidar_mes('2025-07-01')::text"), "true"); }
+    try { relojLibre(); assert.equal(sqlOk("select comunidad.consolidar_mes('2025-02-01')::text"), "true"); }
     finally { purgaCfg({ plazo_rankings: "interval '12 months'" }); }
     const c = new Sesion("consolidacion2");
     c.enviar("begin; select pg_advisory_xact_lock(7301, 0); select 'X|1';");
@@ -773,21 +776,21 @@ try {
     sqlOk(`select pg_cancel_backend(pid) from pg_stat_activity where application_name = '${p.app}'`);
     await esperar(`exists (select 1 from pg_stat_activity where application_name = '${p.app}' and state = 'idle')`, "cancelada");
     assert.match(p.err, /canceling statement/);
-    assert.ok(existe("comunidad.top_meses where mes = '2025-07-01'"), "el lote cancelado no dejó nada");
+    assert.ok(existe("comunidad.top_meses where mes = '2025-02-01'"), "el lote cancelado no dejó nada");
     assert.equal(ultima().estado, "en_curso", "queda registrada como interrumpida (sin terminar)");
     c.enviar("commit;");
     await c.terminar();
     await p.terminar();          // al cerrar la sesión se libera el lock de corrida (7320)
     const e = purgar("dia", AHORA);
     assert.equal(e.estado, "completa", JSON.stringify(e.resumen));
-    assert.ok(!existe("comunidad.top_meses where mes = '2025-07-01'"));
+    assert.ok(!existe("comunidad.top_meses where mes = '2025-02-01'"));
     const otra = purgar("dia", AHORA);
     assert.ok(Object.values(otra.resumen).every((x) => x.borrados === 0 && x.error === null), `idempotente: ${JSON.stringify(otra.resumen)}`);
   });
 
   await prueba("apagar en curso: la corrida termina el lote que estaba haciendo y no empieza otro (`apagada_en_curso`)", async () => {
     purgaCfg({ plazo_rankings: "null" });
-    try { relojLibre(); assert.equal(sqlOk("select comunidad.consolidar_mes('2025-07-01')::text"), "true"); }
+    try { relojLibre(); assert.equal(sqlOk("select comunidad.consolidar_mes('2025-01-01')::text"), "true"); }
     finally { purgaCfg({ plazo_rankings: "interval '12 months'" }); }
     const c = new Sesion("consolidacion3");
     c.enviar("begin; select pg_advisory_xact_lock(7301, 0); select 'X|1';");
@@ -853,6 +856,77 @@ try {
   });
 
   // ===================================================================
+  console.log("\n— A1 (auditoría 95c09b2): un mes cuyo historial se purgó no se reconstruye aunque cambie el plazo —");
+  await prueba("A1: purgar (plazo corto) → ampliar a 12 meses o dejar sin plazo → el mes purgado, consolidado o no, se rechaza sin crear filas; el conservado sin historial se sigue leyendo; el de historial completo consolida; los demás meses no cambian", async () => {
+    const A = await nueva("a1-autor"), L = await nueva("a1-lector", { sesion: true });
+    const [V1, V2, V3, V4] = S.V;
+    const f = (iso) => `timestamptz '${iso}:00-03'`;
+    // Enero de 2026: consolidado y después purgado (ranking + historial).
+    const rEne = await publicar(A, f("2026-01-05 12:00"));
+    await votar(V1, rEne, true, f("2026-01-10 12:00")); await votar(V2, rEne, true, f("2026-01-11 12:00"));
+    await borrar(A, rEne, f("2026-02-01 12:00"));                          // sin memoria: sus tramos se pueden purgar
+    // Diciembre de 2025: NUNCA consolidado; su historial se purga por estar fuera de la conservación.
+    const rDic = await publicar(A, f("2025-12-02 12:00"));
+    await votar(V3, rDic, true, f("2025-12-05 12:00"));
+    await borrar(A, rDic, f("2026-01-02 12:00"));
+    // Marzo de 2026: consolidado, se conserva, y su historial cumple el margen y se purga.
+    const rMar = await publicar(A, f("2026-03-02 12:00"));
+    await votar(V1, rMar, true, f("2026-03-05 12:00")); await votar(V4, rMar, true, f("2026-03-06 12:00"));
+    await borrar(A, rMar, f("2026-04-01 12:00"));
+    // Mayo de 2026: historial completo, sin consolidar.
+    const rMay = await publicar(A, f("2026-05-02 12:00"));
+    await votar(V2, rMay, true, f("2026-05-06 12:00"));
+    relojLibre();
+    config({ top_yumpers_activo: true });
+    const filas = (mes) => sqlOk(`select coalesce(json_agg(json_build_object('pos', posicion, 'pts', puntos, 'p', participante_id) order by id), '[]')::text from comunidad.top_resultados where mes = '${mes}'`);
+    const otros = () => sqlOk(`select coalesce(json_agg(json_build_object('mes', mes, 'pos', posicion, 'pts', puntos, 'p', participante_id) order by mes, id), '[]')::text
+      from comunidad.top_resultados where mes not in ('2026-01-01', '2025-12-01', '2026-03-01', '2026-05-01')`);
+    const meses = () => sqlOk("select coalesce(string_agg(mes::text || ':' || autores, ',' order by mes), '') from comunidad.top_meses");
+    try {
+      for (const m of ["2026-01-01", "2026-03-01"]) { const t = await rpcTop(L, m); assert.equal(t.status, 200, t.texto); }
+      const ene = filas("2026-01-01"), mar = filas("2026-03-01");
+      assert.equal(JSON.parse(ene)[0].pts, 2); assert.equal(JSON.parse(mar)[0].pts, 2);
+      sqlOk("update comunidad.top_meses set consolidado_en = timestamptz '2026-04-05 00:00:00-03' where mes = '2026-03-01'");
+      // Purga con un plazo de rankings corto (8 meses: enero y diciembre quedan fuera).
+      purgaCfg({ plazo_rankings: "interval '8 months'" });
+      purgar("rankings", AHORA); purgar("tramos", AHORA);
+      assert.ok(!existe("comunidad.top_meses where mes = '2026-01-01'"), "el ranking de enero se purgó");
+      assert.equal(cuenta("comunidad.tramos where mes_primera_positiva in ('2026-01-01', '2025-12-01', '2026-03-01')"), 0, "y el historial de los tres meses");
+      assert.equal(cuenta("comunidad.tramos where mes_primera_positiva = '2026-05-01'"), 1, "mayo conserva el suyo");
+      const mesesAntes = meses();
+      const otrosAntes = otros();   // después de purgar: desde acá, nada de lo que sigue puede cambiarlos
+      // 1) Ampliar al plazo acordado (12 meses) y 2) dejarlo sin plazo: enero y diciembre siguen irrecuperables.
+      for (const plazo of ["interval '12 months'", "null"]) {
+        purgaCfg({ plazo_rankings: plazo });
+        const t = await rpcTop(L, "2026-01-01");
+        assert.equal(t.status, 400, `enero con plazo ${plazo}: ${t.texto.slice(0, 160)}`);
+        assert.match(t.texto, /mes_invalido/);
+        for (const m of ["2026-01-01", "2025-12-01"]) {
+          const r = psql(`select comunidad.consolidar_mes('${m}');`);
+          assert.notEqual(r.status, 0, `${m} con plazo ${plazo} se reconstruyó: ${r.stdout}`);
+          assert.match(r.stderr, /mes_invalido/);
+        }
+        assert.equal(meses(), mesesAntes, "no se creó ningún mes");
+        // Marzo: conservado, sin historial, se sigue leyendo igual.
+        const m = await rpcTop(L, "2026-03-01");
+        assert.equal(m.status, 200, m.texto);
+        assert.deepEqual(JSON.parse(m.texto).items.map((x) => [x.posicion, x.puntos]), JSON.parse(mar).map((x) => [x.pos, x.pts]));
+        assert.equal(filas("2026-03-01"), mar);
+        assert.equal(otros(), otrosAntes, "los demás meses no cambian");
+      }
+      // Mayo: historial completo → consolida normalmente (con el plazo acordado).
+      purgaCfg({ plazo_rankings: "interval '12 months'" });
+      const may = await rpcTop(L, "2026-05-01");
+      assert.equal(may.status, 200, may.texto);
+      assert.deepEqual(JSON.parse(may.texto).items.map((x) => [x.posicion, x.puntos]), [[1, 1]]);
+      assert.equal(otros(), otrosAntes);
+    } finally {
+      purgaCfg({ plazo_rankings: "interval '12 months'" });
+      config({ top_yumpers_activo: false });
+    }
+  });
+
+  // ===================================================================
   console.log("\n— Permisos —");
   await prueba("permisos: nadie de la API ejecuta la purga ni ve su configuración (SQL y REST)", async () => {
     for (const rol of ["anon", "authenticated", "service_role"]) {
@@ -902,6 +976,8 @@ try {
       plazo_decisiones: iv(pp.plazo_decisiones), plazo_rankings: iv(pp.plazo_rankings), margen_historial_puntos: iv(pp.margen_historial_puntos),
       plazo_huellas: iv(pp.plazo_huellas), actualizada_en: `'${pp.actualizada_en}'` });
     sqlOk(`delete from comunidad.purga_ejecuciones where id > ${ejecucionesAntes}`);
+    // Las marcas (A1) de esta corrida: la tabla estaba vacía al empezar.
+    sqlOk("delete from comunidad.meses_sin_historial");
     for (const mes of MESES) {
       // Sólo meses que esta corrida verificó libres al empezar.
       sqlOk(`delete from comunidad.top_resultados where mes = '${mes}'; delete from comunidad.top_meses where mes = '${mes}'`);
@@ -927,12 +1003,13 @@ try {
       delete from comunidad.participantes where id in (${todos});
       commit;`);
     const lista = us_.map(q).join(",") || "null";
-    console.log(`   cuentas: ${us_.length}; restos (cuentas|participantes|meses|órdenes|ejecuciones|locks|decisiones|reloj|proto_marca igual|interruptores|purga): ${sqlOk(`select
+    console.log(`   cuentas: ${us_.length}; restos (cuentas|participantes|meses|órdenes|ejecuciones|marcas|locks|decisiones|reloj|proto_marca igual|interruptores|purga): ${sqlOk(`select
       (select count(*) from auth.users where id in (${lista}) or email like 'purga-%@comunidad.test') || '|' ||
       (select count(*) from comunidad.participantes where id in (${todos || "null"})) || '|' ||
       (select count(*) from comunidad.top_meses where mes in (${MESES.map((m) => `'${m}'`).join(",")})) || '|' ||
       (select count(*) from comunidad.ordenes_utiles where tmdb_id in (${[...tmdbs].join(",") || "null"})) || '|' ||
       (select count(*) from comunidad.purga_ejecuciones) || '|' ||
+      (select count(*) from comunidad.meses_sin_historial) || '|' ||
       (select count(*) from pg_locks where locktype = 'advisory') || '|' ||
       (select count(*) from comunidad.decisiones where admin_id in (${lista})) || '|' ||
       (select count(*) from pg_namespace where nspname = 'solo_local')`)}|${sqlOk(DEF_MARCA) === defMarcaAntes}|${sqlOk("select (modulo_activo or publicacion_activa or top_yumpers_activo or muestreo_activo)::text from comunidad.config")}|${sqlOk("select purga_activa::text from comunidad.purga_config")}`);

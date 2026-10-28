@@ -56,6 +56,13 @@
 --     purgado lo reconstruiría VACÍO desde un historial ya borrado.
 --     `consolidar_mes` y `comunidad_top_yumpers` (020) se redefinen sólo
 --     para eso.
+--   - A1 (auditoría 95c09b2): la ventana sola no alcanzaba, porque depende
+--     del plazo de HOY; ampliarlo (o dejarlo en null) volvía a habilitar un
+--     mes ya purgado, que se reconstruía vacío o incompleto. Ahora cada
+--     borrado de un ranking o de historial marca el mes en
+--     `comunidad.meses_sin_historial` (permanente, en la misma transacción)
+--     y `consolidar_mes` lo rechaza siempre. Cubre también meses que nunca
+--     se consolidaron. Un mes ya consolidado y conservado se sigue leyendo.
 --
 -- PROTECCIONES (cada una con su prueba en pruebas-purga.mjs):
 --   - nunca la vigente visible, ni retenidas, ni con revisión pedida, ni
@@ -83,9 +90,10 @@
 -- fila (`skip locked`), así que nunca entra en un ciclo de espera con una
 -- operación real; lo que salta queda para la corrida siguiente. Excepciones
 -- que sí esperan, acotadas por `lock_timeout`:
---   - rankings: K_CORTE COMPARTIDO (7301, 0), como el admin; la
---     consolidación (exclusivo) vuelve a mirar la ventana con el lock
---     tomado, así que no recrea un mes que la purga acaba de borrar;
+--   - rankings, tramos y suspensiones: K_CORTE COMPARTIDO (7301, 0), como
+--     el admin; la consolidación (exclusivo) vuelve a mirar la ventana y la
+--     marca con el lock tomado, así que no recrea un mes que la purga acaba
+--     de borrar ni lee su historial a medio borrar;
 --   - órdenes: el lock del generador del título (7311), con `try`: un
 --     título que se está regenerando se saltea.
 -- Tramos, suspensiones cerradas y denuncias cerradas no los modifica nadie
@@ -151,9 +159,25 @@ create table if not exists comunidad.purga_ejecuciones (
   resumen       jsonb not null default '{}'::jsonb
 );
 
-alter table comunidad.purga_config      enable row level security;
-alter table comunidad.purga_ejecuciones enable row level security;
-revoke all on comunidad.purga_config, comunidad.purga_ejecuciones from public, anon, authenticated, service_role;
+-- ------------------------------------------------------------------
+-- A1 (auditoría 95c09b2): meses cuyo cómputo ya no se puede reconstruir.
+-- Una fila por mes al que la purga le borró el ranking consolidado o parte
+-- del historial (tramos del mes; suspensiones cuyo intervalo cruza su
+-- corte), escrita en la misma transacción que el borrado. Es PERMANENTE y
+-- no depende de ningún plazo: ampliar `plazo_rankings` o dejarlo en null no
+-- rehabilita el mes. Sólo frena la CONSOLIDACIÓN: un mes que ya está en
+-- `top_meses` se sigue leyendo. Sin datos de nadie: sólo el mes.
+-- ------------------------------------------------------------------
+create table if not exists comunidad.meses_sin_historial (
+  mes         date primary key check (extract(day from mes) = 1),
+  marcado_en  timestamptz not null default now()
+);
+
+alter table comunidad.purga_config        enable row level security;
+alter table comunidad.purga_ejecuciones   enable row level security;
+alter table comunidad.meses_sin_historial enable row level security;
+revoke all on comunidad.purga_config, comunidad.purga_ejecuciones, comunidad.meses_sin_historial
+  from public, anon, authenticated, service_role;
 revoke all on all sequences in schema comunidad from public, anon, authenticated, service_role;
 
 -- Apoyos de los candidatos.
@@ -199,6 +223,18 @@ set search_path = ''
 as $$
   select not comunidad.vencido(comunidad.corte_de_mes(p_mes),
                                (select c.plazo_rankings from comunidad.purga_config c), p_ahora);
+$$;
+
+-- A1: marca los meses (idempotente). La llama la purga, en la transacción
+-- del borrado.
+create or replace function comunidad.marcar_sin_historial(p_meses date[])
+returns void
+language sql
+set search_path = ''
+as $$
+  insert into comunidad.meses_sin_historial (mes)
+  select distinct x from unnest(p_meses) x where x is not null order by 1
+  on conflict (mes) do nothing;
 $$;
 
 -- ¿El historial del mes (tramos y suspensiones que cruzan su corte) ya no
@@ -319,6 +355,7 @@ declare
   v_candidatos integer := 0;
   v_id bigint;
   v_versiones bigint[];
+  v_meses date[];
   v_titulo record;   -- ojo: no `t`, que es alias de tablas en las consultas
 begin
   select * into c from comunidad.purga_config;
@@ -448,25 +485,25 @@ begin
 
   elsif p_categoria = 'rankings' then
     -- K_CORTE compartido: la consolidación, con el exclusivo, vuelve a mirar
-    -- la ventana y no recrea un mes que se está borrando.
+    -- la ventana y la marca, y no recrea un mes que se está borrando.
     perform pg_advisory_xact_lock_shared(7301, 0);
-    with x as (
-      select m.mes from comunidad.top_meses m
-       where not comunidad.mes_conservado(m.mes, p_ahora)
-       order by m.mes limit p_lote
-    ), r as (
-      delete from comunidad.top_resultados t using x where t.mes = x.mes returning t.id
-    )
-    select count(*) into v_m from r;
-    delete from comunidad.top_meses m
-     where m.mes in (select y.mes from comunidad.top_meses y
-                      where not comunidad.mes_conservado(y.mes, p_ahora)
-                      order by y.mes limit p_lote);
+    select coalesce(array_agg(y.mes order by y.mes), '{}') into v_meses
+      from (select m.mes from comunidad.top_meses m
+             where not comunidad.mes_conservado(m.mes, p_ahora)
+             order by m.mes limit p_lote) y;
+    -- A1: lo consolidado se pierde → el mes queda marcado, en la MISMA
+    -- transacción que el borrado (ningún plazo posterior lo rehabilita).
+    perform comunidad.marcar_sin_historial(v_meses);
+    delete from comunidad.top_resultados t where t.mes = any(v_meses);
+    delete from comunidad.top_meses m where m.mes = any(v_meses);
     get diagnostics v_n = row_count;
     v_borrados := v_n;
     v_candidatos := v_n;
 
   elsif p_categoria = 'tramos' then
+    -- K_CORTE compartido (A1): una consolidación (exclusivo) no puede leer el
+    -- historial a medio borrar; la marca y el borrado confirman juntos.
+    perform pg_advisory_xact_lock_shared(7301, 0);
     with x as (
       select t.id from comunidad.tramos t
        where t.vigente_hasta is not null
@@ -474,12 +511,17 @@ begin
          and not (t.id = (select max(z.id) from comunidad.tramos z
                            where z.evaluador_participante = t.evaluador_participante and z.version_id = t.version_id)
                   and comunidad.par_con_memoria(t.evaluador_participante, t.version_id))
-       order by t.id limit p_lote for update skip locked)
-    delete from comunidad.tramos t using x where t.id = x.id;
-    get diagnostics v_borrados = row_count;
+       order by t.id limit p_lote for update skip locked
+    ), b as (
+      delete from comunidad.tramos t using x where t.id = x.id returning t.mes_primera_positiva as mes
+    )
+    select count(*), coalesce(array_agg(distinct b.mes), '{}') into v_borrados, v_meses from b;
+    -- A1: un tramo sólo cuenta para el mes de su primera positiva.
+    perform comunidad.marcar_sin_historial(v_meses);
     v_candidatos := v_borrados;
 
   elsif p_categoria = 'suspensiones' then
+    perform pg_advisory_xact_lock_shared(7301, 0);   -- como tramos (A1)
     with x as (
       select s.id from comunidad.suspensiones s
        where s.hasta is not null and s.hasta <= p_ahora
@@ -490,9 +532,18 @@ begin
             where comunidad.corte_de_mes(g.m::date) > s.desde
               and comunidad.corte_de_mes(g.m::date) <= s.hasta
               and not comunidad.historial_libre(g.m::date, p_ahora))
-       order by s.id limit p_lote for update skip locked)
-    delete from comunidad.suspensiones s using x where s.id = x.id;
-    get diagnostics v_borrados = row_count;
+       order by s.id limit p_lote for update skip locked
+    ), b as (
+      delete from comunidad.suspensiones s using x where s.id = x.id returning s.desde, s.hasta
+    )
+    select count(*), coalesce((select array_agg(distinct g.m::date)
+                                 from b b2, generate_series(comunidad.mes_ar(b2.desde)::timestamp, comunidad.mes_ar(b2.hasta)::timestamp,
+                                                            interval '1 month') g(m)
+                                where comunidad.corte_de_mes(g.m::date) > b2.desde
+                                  and comunidad.corte_de_mes(g.m::date) <= b2.hasta), '{}')
+      into v_borrados, v_meses from b;
+    -- A1: una suspensión cuenta para los meses cuyo corte cae en su intervalo.
+    perform comunidad.marcar_sin_historial(v_meses);
     v_candidatos := v_borrados;
 
   elsif p_categoria = 'participantes' then
@@ -637,6 +688,10 @@ begin
   if not comunidad.mes_conservado(v_mes, clock_timestamp()) then
     raise exception 'mes_invalido' using errcode = '22023', detail = 'Mes fuera de la conservación de rankings.';
   end if;
+  -- E8 A1: ni uno cuyo historial ya se purgó, cualquiera sea el plazo de hoy.
+  if exists (select 1 from comunidad.meses_sin_historial where mes = v_mes) then
+    raise exception 'mes_invalido' using errcode = '22023', detail = 'El historial de ese mes ya se purgó.';
+  end if;
   -- 2. El exclusivo (READ COMMITTED, ningún otro lock: lo hace cumplir 013).
   perform comunidad.proto_corte_exclusivo();
   -- 3. Nueva comprobación: otro pudo consolidar mientras esperábamos.
@@ -644,6 +699,10 @@ begin
   -- E8: y la purga pudo borrarlo mientras esperábamos (tenía K_CORTE compartido).
   if not comunidad.mes_conservado(v_mes, clock_timestamp()) then
     raise exception 'mes_invalido' using errcode = '22023', detail = 'Mes fuera de la conservación de rankings.';
+  end if;
+  -- E8 A1: la marca se confirma con el borrado, que también toma K_CORTE compartido.
+  if exists (select 1 from comunidad.meses_sin_historial where mes = v_mes) then
+    raise exception 'mes_invalido' using errcode = '22023', detail = 'El historial de ese mes ya se purgó.';
   end if;
   -- 4. UNA sentencia, con instantánea posterior al lock: mes y resultados juntos.
   with puntos as (
@@ -744,6 +803,7 @@ revoke all on function comunidad.par_con_memoria(uuid, bigint) from public, anon
 revoke all on function comunidad.version_protegida(bigint, timestamptz) from public, anon, authenticated, service_role;
 revoke all on function comunidad.resena_purgable(bigint, timestamptz) from public, anon, authenticated, service_role;
 revoke all on function comunidad.purga_tomar(bigint, bigint[]) from public, anon, authenticated, service_role;
+revoke all on function comunidad.marcar_sin_historial(date[]) from public, anon, authenticated, service_role;
 revoke all on function comunidad.purga_lote(text, timestamptz, integer) from public, anon, authenticated, service_role;
 revoke all on procedure comunidad.purgar(text, timestamptz) from public, anon, authenticated, service_role;
 revoke all on function comunidad.consolidar_mes(date) from public, anon, authenticated, service_role;

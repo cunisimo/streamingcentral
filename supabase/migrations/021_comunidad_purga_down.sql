@@ -2,7 +2,8 @@
 -- ventana del Top Yumpers a la de 020.
 --
 -- 🔴 LO PURGADO NO VUELVE. Este rollback quita funciones, el procedimiento,
--- la configuración y el registro de ejecuciones; las filas que una purga ya
+-- la configuración, el registro de ejecuciones y las marcas de meses sin
+-- historial (A1); las filas que una purga ya
 -- borró (textos, denuncias, decisiones, tramos, rankings, participantes) no
 -- se recuperan con esto ni con ninguna otra cosa. Antes de bajar con datos
 -- reales: desprogramar los jobs (supabase/cron-comunidad.sql, sección
@@ -16,6 +17,7 @@ begin;
 drop procedure if exists comunidad.purgar(text, timestamptz);
 drop function if exists comunidad.purga_lote(text, timestamptz, integer);
 drop function if exists comunidad.purga_tomar(bigint, bigint[]);
+drop function if exists comunidad.marcar_sin_historial(date[]);
 drop function if exists comunidad.resena_purgable(bigint, timestamptz);
 drop function if exists comunidad.version_protegida(bigint, timestamptz);
 drop function if exists comunidad.par_con_memoria(uuid, bigint);
@@ -140,5 +142,6 @@ drop index if exists comunidad.denuncias_cerradas_por_cierre;
 
 drop table if exists comunidad.purga_ejecuciones;
 drop table if exists comunidad.purga_config;
+drop table if exists comunidad.meses_sin_historial;
 
 commit;

@@ -48,10 +48,11 @@ const { prueba, cerrar } = arnes();
 // suma `huellas`, `denuncias_excedentes` y `corroboraciones`; 016 (E4) suma
 // `decisiones` (registro) y `denuncias_cerradas` (historial mínimo de la baja);
 // 018 (E5b) las órdenes de "Más útiles"; 020 (E7) los meses consolidados; 021
-// (E8) la configuración de la purga y su registro de ejecuciones.
+// (E8) la configuración de la purga, su registro de ejecuciones y las marcas de
+// meses sin historial (A1).
 const TABLAS = [
   "bajas_en_curso", "bloqueos", "config", "contadores", "corroboraciones", "decisiones", "denuncias", "denuncias_cerradas",
-  "denuncias_excedentes", "evaluaciones", "huellas", "intentos", "ordenes_utiles", "ordenes_utiles_tramos", "participantes",
+  "denuncias_excedentes", "evaluaciones", "huellas", "intentos", "meses_sin_historial", "ordenes_utiles", "ordenes_utiles_tramos", "participantes",
   "purga_config", "purga_ejecuciones", "resenas", "suspensiones", "top_meses", "top_resultados", "tramos", "versiones",
 ];
 // El inventario exacto de `public.comunidad_*`: la baja (E2b, 012), la
@@ -136,7 +137,7 @@ const COLUMNA = {
   bajas_en_curso: "intentos", bloqueos: "creado_en", config: "modulo_activo", contadores: "cantidad",
   corroboraciones: "reglas", decisiones: "motivo", denuncias: "estado", denuncias_cerradas: "estado",
   denuncias_excedentes: "cantidad", evaluaciones: "util", huellas: "creada_en",
-  intentos: "resultado", ordenes_utiles: "total", ordenes_utiles_tramos: "ids", participantes: "nombre_comunitario", resenas: "borrada_en",
+  intentos: "resultado", meses_sin_historial: "marcado_en", ordenes_utiles: "total", ordenes_utiles_tramos: "ids", participantes: "nombre_comunitario", resenas: "borrada_en",
   purga_config: "purga_activa", purga_ejecuciones: "resumen",
   suspensiones: "hasta", top_meses: "autores", top_resultados: "puntos", tramos: "vigente_hasta", versiones: "decidida_en",
 };
@@ -190,7 +191,7 @@ function correrModo(modo, preparar, casos) {
 // ===========================================================================
 console.log("— 1. SQL (SET ROLE) —");
 
-await prueba("el esquema tiene exactamente las veintitrés tablas previstas (11 de E2a + intentos de E3a + 3 de E3b + 2 de E4 + 2 de E5b + 2 de E7 + 2 de E8)", () => {
+await prueba("el esquema tiene exactamente las veinticuatro tablas previstas (11 de E2a + intentos de E3a + 3 de E3b + 2 de E4 + 2 de E5b + 2 de E7 + 3 de E8)", () => {
   const t = sqlOk("select string_agg(tablename, ',' order by tablename) from pg_tables where schemaname = 'comunidad'");
   assert.equal(t, TABLAS.join(","));
 });

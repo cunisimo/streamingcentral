@@ -56,8 +56,8 @@ const datosAjenos = () => sqlOk(`select (select count(*) from comunidad.resenas)
 const { prueba, cerrar } = arnes();
 const v = {};
 
-const FUNCIONES_021 = "select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'comunidad' and proname in ('mas_plazo', 'vencido', 'mes_conservado', 'historial_libre', 'par_con_memoria', 'version_protegida', 'resena_purgable', 'purga_tomar', 'purga_lote', 'purgar')";
-const TABLAS_021 = "select count(*) from pg_tables where schemaname = 'comunidad' and tablename in ('purga_config', 'purga_ejecuciones')";
+const FUNCIONES_021 = "select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'comunidad' and proname in ('mas_plazo', 'vencido', 'mes_conservado', 'historial_libre', 'par_con_memoria', 'version_protegida', 'resena_purgable', 'purga_tomar', 'purga_lote', 'purgar', 'marcar_sin_historial')";
+const TABLAS_021 = "select count(*) from pg_tables where schemaname = 'comunidad' and tablename in ('purga_config', 'purga_ejecuciones', 'meses_sin_historial')";
 const DEF = (f) => `select md5(pg_get_functiondef('${f}'::regprocedure))`;
 
 await prueba("antes: sin 021 (el volcado de partida), con 020 aplicada", () => {
@@ -76,14 +76,15 @@ await prueba("antes: sin 021 (el volcado de partida), con 020 aplicada", () => {
 await prueba("021 up: tablas, funciones y procedimiento; purga APAGADA; plazos del dueño; huellas y excepción sin configurar", () => {
   aplicarArchivo(UP);
   v.con = volcar("1-con-021");
-  assert.equal(sqlOk(FUNCIONES_021), "10");
-  assert.equal(sqlOk(TABLAS_021), "2");
+  assert.equal(sqlOk(FUNCIONES_021), "11");
+  assert.equal(sqlOk(TABLAS_021), "3");
   assert.equal(sqlOk(`select json_build_object('activa', purga_activa, 'intentos', plazo_intentos, 'reemplazadas', plazo_reemplazadas,
     'retiradas', plazo_retiradas, 'borradas', plazo_borradas, 'denuncias', plazo_denuncias_cerradas, 'decisiones', plazo_decisiones,
     'rankings', plazo_rankings, 'margen', margen_historial_puntos, 'huellas', plazo_huellas, 'excepcion', conservar_texto_denunciado_baja)::text
     from comunidad.purga_config`),
     '{"activa" : false, "intentos" : "7 days", "reemplazadas" : "30 days", "retiradas" : "30 days", "borradas" : "30 days", "denuncias" : "30 days", "decisiones" : "1 year", "rankings" : "1 year", "margen" : "30 days", "huellas" : null, "excepcion" : false}');
   assert.equal(sqlOk("select count(*) from comunidad.purga_ejecuciones"), "0");
+  assert.equal(sqlOk("select count(*) from comunidad.meses_sin_historial"), "0", "sin marcas: nada se purgó");
   assert.notEqual(sqlOk(DEF("comunidad.consolidar_mes(date)")), v.cons020, "021 redefine consolidar_mes");
   assert.equal(datosAjenos(), v.datos, "subir 021 no toca datos");
 });

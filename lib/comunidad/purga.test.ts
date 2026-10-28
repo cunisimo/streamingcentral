@@ -71,7 +71,7 @@ test("barrido 021: la purga no espera locks de filas (nowait / skip locked); los
   const lote = sinComentarios(funcion(sql(), "comunidad.purga_lote"));
   const tomar = sinComentarios(funcion(sql(), "comunidad.purga_tomar"));
   for (const l of tomar.split("\n").filter((x) => /for update/.test(x))) assert.match(l, /for update nowait;/, l);
-  for (const l of lote.split("\n").filter((x) => /for update/.test(x))) assert.match(l, /for update skip locked\)/, l);
+  for (const l of lote.split("\n").filter((x) => /for update/.test(x))) assert.match(l, /for update skip locked(\)|$)/, l);
   assert.match(lote, /exception when lock_not_available then/);
   assert.match(lote, /pg_try_advisory_xact_lock\(7311, hashtext\(v_titulo\.tipo \|\| ':' \|\| v_titulo\.tmdb_id\)\)/, "el lock del generador de 018, en modo try");
   // Una variable plpgsql llamada como un alias (`t`) se come las referencias `t.x` de las consultas
@@ -80,7 +80,8 @@ test("barrido 021: la purga no espera locks de filas (nowait / skip locked); los
   for (const alias of ["t", "x", "r", "m", "p", "s", "d", "v", "o", "i", "h", "y", "z", "e", "k", "a", "b", "g"]) {
     assert.doesNotMatch(decl, new RegExp(`^\\s+${alias}\\s`, "m"), `variable con nombre de alias: ${alias}`);
   }
-  assert.deepEqual(lote.match(/pg_advisory_xact_lock\w*\([^)]*\)/g), ["pg_advisory_xact_lock_shared(7301, 0)"]);
+  // K_CORTE compartido en rankings, tramos y suspensiones (A1), y ningún otro lock con espera.
+  assert.deepEqual(lote.match(/pg_advisory_xact_lock\w*\([^)]*\)/g), Array(3).fill("pg_advisory_xact_lock_shared(7301, 0)"));
   assert.match(lote, /set lock_timeout = '5s'/);
 });
 
@@ -119,6 +120,30 @@ test("barrido 021: el Top Yumpers no lee ni reconstruye un mes fuera de la conse
   assert.match(leer("lib/comunidad/top-yumpers.ts"), /if \(e\.code === "22023"\) return \{ resultado: "invalido" \};/);
 });
 
+test("barrido 021 A1: todo borrado de ranking o historial marca el mes en la misma transacción; consolidar_mes rechaza un mes marcado antes y después del exclusivo; la marca no depende de ningún plazo", () => {
+  const lote = sinComentarios(funcion(sql(), "comunidad.purga_lote"));
+  const parte = (desde: string, hasta: string) => lote.slice(lote.indexOf(`p_categoria = '${desde}'`), lote.indexOf(`p_categoria = '${hasta}'`));
+  for (const [cat, sig] of [["rankings", "tramos"], ["tramos", "suspensiones"], ["suspensiones", "participantes"]]) {
+    const p = parte(cat, sig);
+    assert.match(p, /perform comunidad\.marcar_sin_historial\(v_meses\);/, cat);
+    assert.match(p, /perform pg_advisory_xact_lock_shared\(7301, 0\);/, `${cat}: K_CORTE compartido`);
+  }
+  // Rankings: se marca ANTES de borrar los resultados y el mes.
+  const rk = parte("rankings", "tramos");
+  assert.ok(rk.indexOf("marcar_sin_historial") < rk.indexOf("delete from comunidad.top_resultados"));
+  // Tramos: el mes de la primera positiva; suspensiones: los meses cuyo corte cae en el intervalo.
+  assert.match(parte("tramos", "suspensiones"), /returning t\.mes_primera_positiva as mes/);
+  assert.match(parte("suspensiones", "participantes"), /comunidad\.corte_de_mes\(g\.m::date\) > b2\.desde\s+and comunidad\.corte_de_mes\(g\.m::date\) <= b2\.hasta/);
+  const marcas = tabla(sinComentarios(sql()), "comunidad.meses_sin_historial");
+  assert.doesNotMatch(marcas, /plazo|interval|config/, "la marca no depende de la configuración");
+  const c = sinComentarios(funcion(sql(), "comunidad.consolidar_mes"));
+  const chequeo = "if exists (select 1 from comunidad.meses_sin_historial where mes = v_mes) then";
+  const rapida = c.indexOf("if exists (select 1 from comunidad.top_meses where mes = v_mes) then return false; end if;");
+  const uno = c.indexOf(chequeo), exclusivo = c.indexOf("perform comunidad.proto_corte_exclusivo();"), dos = c.indexOf(chequeo, uno + 1);
+  assert.ok(rapida < uno && uno < exclusivo && exclusivo < dos && dos < c.indexOf("insert into comunidad.top_resultados"),
+    "un mes ya consolidado se sigue leyendo (la comprobación rápida va primero); uno marcado no se consolida");
+});
+
 test("barrido 021: permisos cerrados (nada nuevo ejecutable por la API) y sin cron ni solo_local", () => {
   const s = sinComentarios(sql());
   const nuevos = [...s.matchAll(/create or replace (?:function|procedure) (comunidad\.\w+)\(/g)].map((m) => m[1]);
@@ -126,9 +151,10 @@ test("barrido 021: permisos cerrados (nada nuevo ejecutable por la API) y sin cr
   for (const f of nuevos) assert.match(s, new RegExp(`revoke all on (?:function|procedure) ${f.replace(".", "\\.")}\\(`), f);
   const grants = [...s.matchAll(/grant [^;]+;/g)].map((m) => m[0]);
   assert.deepEqual(grants, ["grant execute on function public.comunidad_top_yumpers(date) to authenticated;"], "sólo el grant que ya tenía la lectura (020)");
-  assert.match(s, /revoke all on comunidad\.purga_config, comunidad\.purga_ejecuciones from public, anon, authenticated, service_role;/);
-  assert.match(s, /alter table comunidad\.purga_config\s+enable row level security;/);
-  assert.match(s, /alter table comunidad\.purga_ejecuciones enable row level security;/);
+  assert.match(s, /revoke all on comunidad\.purga_config, comunidad\.purga_ejecuciones, comunidad\.meses_sin_historial\s+from public, anon, authenticated, service_role;/);
+  for (const t of ["purga_config", "purga_ejecuciones", "meses_sin_historial"]) {
+    assert.match(s, new RegExp(`alter table comunidad\\.${t}\\s+enable row level security;`), t);
+  }
   assert.doesNotMatch(s, /cron\.|pg_cron|net\.http|solo_local/);
 });
 
@@ -138,7 +164,7 @@ test("barrido 021_down: restaura consolidar_mes y la lectura EXACTAMENTE como en
   for (const f of ["comunidad.consolidar_mes", "public.comunidad_top_yumpers"]) assert.equal(funcion(d, f), funcion(v020, f), f);
   assert.match(d, /LO PURGADO NO VUELVE/);
   const sc = sinComentarios(d);
-  assert.doesNotMatch(sc, /drop table if exists comunidad\.(?!purga_)/, "no borra tablas de otras entregas");
+  assert.doesNotMatch(sc, /drop table if exists comunidad\.(?!purga_|meses_sin_historial;)/, "no borra tablas de otras entregas");
   assert.doesNotMatch(sc, /\b(delete|truncate|update)\b/i);
 });
 

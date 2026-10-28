@@ -79,6 +79,9 @@ begin
   if to_regclass('comunidad.purga_ejecuciones') is not null then
     insert into comunidad.purga_ejecuciones (alcance, ahora, iniciada_en, estado) values ('dia', now(), now(), 'en_curso');
   end if;
+  if to_regclass('comunidad.meses_sin_historial') is not null then
+    insert into comunidad.meses_sin_historial (mes) values ('2025-01-01');
+  end if;
 end;
 $$;
 `;
