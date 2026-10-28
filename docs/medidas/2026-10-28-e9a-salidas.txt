@@ -1,0 +1,557 @@
+# E9a — salidas (28/10/2026, Claude, sólo local)
+
+## 1. Baterías de integración (primera corrida, en secuencia)
+pruebas-invariantes rc=0 62s 85 ok / 0 fallas
+pruebas-permisos rc=0 65s 29 ok / 0 fallas
+pruebas-concurrencia rc=0 129s 21 ok / 0 fallas
+pruebas-escritura rc=0 442s 43 ok / 0 fallas
+pruebas-moderacion rc=0 270s 46 ok / 0 fallas
+pruebas-admin rc=0 185s 38 ok / 0 fallas
+pruebas-baja rc=0 135s 26 ok / 0 fallas
+pruebas-lectura rc=0 367s 11 ok / 0 fallas
+pruebas-voto-lista rc=0 78s 11 ok / 0 fallas
+pruebas-utiles rc=0 183s 14 ok / 0 fallas
+pruebas-perfiles rc=0 80s 25 ok / 0 fallas
+pruebas-nombre-intento rc=0 33s 5 ok / 0 fallas
+pruebas-top rc=0 225s 10 ok / 0 fallas
+pruebas-top-concurrencia rc=0 84s 6 ok / 0 fallas
+pruebas-purga rc=0 646s 28 ok / 0 fallas
+up-down-up rc=1 82s 6 ok / 10 fallas
+up-down-up-021 rc=1 12s 0 ok / 6 fallas
+sala-pruebas-rls rc=0
+FIN
+
+Nota: el conteo ok/fallas de up-down-up y up-down-up-021 corresponde a la corrida del incidente (§2).
+
+### pruebas-invariantes
+✔ las fixtures completas (las once tablas) confirman → ok
+✔ config: una sola fila, todo apagado por defecto y límites de §2.1.2 → ok
+✔ autoevaluación (evaluador = autor de la versión) → 23514
+✔ evaluación que declara otro autor que el de la versión → 23503
+✔ denuncia de la propia reseña → 23514
+✔ denuncia que declara otro autor → 23503
+✔ tramo propio (evaluador = autor) → 23514
+✔ tramo con un autor que no es el de la versión (trigger) → 23503
+✔ tramo con una versión inexistente → 23503
+✔ bloquearse a sí mismo → 23514
+✔ una versión de una reseña con otro autor declarado → 23503
+✔ 79 caracteres → 23514
+✔ 80 caracteres → ok
+✔ 600 caracteres → ok
+✔ 601 caracteres → 23514
+✔ 600 letras astrales (600 puntos de código, 1200 unidades UTF-16) → ok
+✔ texto en NFD (e + acento combinante) → 23514
+✔ el mismo texto en NFC → ok
+✔ con salto de línea (fin de oración) → ok
+✔ con tabulación → 23514
+✔ con U+202E (inversión bidireccional) → 23514
+✔ con U+200B (espacio de ancho cero) → 23514
+✔ con U+0085 (control C1) → 23514
+✔ segunda reseña viva del mismo autor y título → 23505
+✔ mismo autor, otro tipo (tv 603) sí → ok
+✔ después de borrar la suya (borrada_en), puede volver a reseñar el título → ok
+✔ segundo voto vigente del mismo evaluador a la misma versión → 23505
+✔ retirado el voto, puede votar de nuevo → ok
+✔ segunda denuncia del mismo denunciante a la misma versión → 23505
+✔ segundo tramo abierto del mismo evaluador y versión → 23505
+✔ segunda suspensión abierta del mismo participante → 23505
+✔ el mismo id_intento dos veces en la misma reseña (reintento) → 23505
+✔ dos participantes con el mismo user_id → 23505
+✔ segunda fila de config → 23505
+✔ config con id = false → 23514
+✔ edición publicada: la vieja pasa a reemplazada y la vigente se mueve → ok
+✔ edición retenida: la vieja deja de verse (reemplazada) → ok
+✔ reemplazada → publicada → 23514
+✔ rechazada → publicada → 23514
+✔ rechazada → reemplazada (el autor corrige la rechazada; E4) → ok
+✔ publicada → oculta → publicada (restauración del admin) → ok
+✔ revision_solicitada → publicada (el admin aprueba) → ok
+✔ una versión no nace reemplazada → 23514
+✔ una versión no nace oculta → 23514
+✔ el texto de una versión no cambia → 23514
+✔ una reseña no cambia de título → 23514
+✔ dos versiones publicadas: la nueva no es la vigente (al confirmar) → 23514
+✔ mover la vigente sin reemplazar la publicada anterior (al confirmar) → 23514
+✔ la vigente marcada reemplazada sin moverla (al confirmar) → 23514
+✔ reseña sin versión vigente (al confirmar) → 23514
+✔ vigente que apunta a una versión de OTRA reseña (al confirmar) → 23503
+✔ cerrar un tramo → ok
+✔ cerrar un tramo dos veces → 23514
+✔ reabrir un tramo cerrado → 23514
+✔ cerrar un tramo antes de que empiece (intervalo vacío) → 23514
+✔ un tramo no nace cerrado → 23514
+✔ mes de primera positiva que no es día 1 → 23514
+✔ un tramo sobrevive al borrado de su reseña (versión sin FK) → ok
+✔ cerrar una suspensión y volver a cerrarla → 23514
+✔ acortar hacia el futuro una suspensión con plazo (E4) → ok
+✔ alargar una suspensión con plazo → 23514
+✔ llevar al pasado el fin de una suspensión → 23514
+✔ cerrada la suspensión, puede abrirse otra → ok
+✔ 1 carácter → 23514
+✔ 2 caracteres → ok
+✔ 24 caracteres → ok
+✔ 25 caracteres → 23514
+✔ con un control (U+0007) → 23514
+✔ con salto de línea → 23514
+✔ con U+202E → 23514
+✔ con espacio inicial → 23514
+✔ en NFD → 23514
+✔ en NFC, con espacio interior → ok
+✔ categoría fuera de la lista → 23514
+✔ comentario de 301 caracteres → 23514
+✔ comentario de 300 caracteres → ok
+✔ cerrar una denuncia sin fecha de cierre → 23514
+✔ cerrar una denuncia con fecha → ok
+✔ contador negativo → 23514
+✔ acción de contador desconocida → 23514
+✔ tipo de reseña desconocido → 23514
+✔ borrar auth.users (SQL): desvincula y la red de seguridad (E2b) borra lo propio, cierra tramos y conserva suspensiones; el marcador cae → ok
+✔ borrar un participante con reseñas está prohibido (no hay cascada desde participantes) → 23503
+✔ borrar con la API real de Auth (admin.deleteUser): user_id → null, nombre → null (red de seguridad, E2b), marcador → borrado
+✔ ninguna fixture de los casos quedó en la base
+### pruebas-permisos
+✔ el esquema tiene exactamente las veinticuatro tablas previstas (11 de E2a + intentos de E3a + 3 de E3b + 2 de E4 + 2 de E5b + 2 de E7 + 3 de E8)
+✔ catálogo: ningún privilegio de tabla para PUBLIC, anon, authenticated ni service_role
+✔ catálogo: ningún privilegio de columna para esos roles
+✔ catálogo: el esquema niega USAGE y CREATE; secuencias y funciones cerradas
+✔ control: una función nueva en el esquema SIN su revoke queda ejecutable por PUBLIC (default de PostgreSQL); la frena sólo el esquema
+✔ catálogo: RLS activada en las quince y ninguna policy
+✔ control positivo: el dueño (postgres) sí lee las quince tablas
+✔ control positivo: SET ROLE cambia de verdad el rol (current_user = anon)
+✔ 1a · esquema: 360 intentos reales → 42501
+✔ 1b · grants de tabla (USAGE concedido y revertido): 360 intentos → 42501
+✔ 1c · RLS sin policies (grants concedidos y revertidos, con fixtures): anon y authenticated no ven ni tocan nada
+✔ 1c · service_role tiene BYPASSRLS: con grants vería todo (por eso su cierre son 1a y 1b)
+✔ 1c · después de revertir, los grants de prueba no quedaron
+✔ crear autor, ajeno, suspendido y admin; participantes, reseña y suspensión puestas por el dueño
+✔ is_admin_mfa(): admin AAL1 → false
+✔ is_admin_mfa(): admin AAL2 con UN factor verificado → false
+✔ is_admin_mfa(): admin AAL2 con DOS factores TOTP verificados → true
+✔ is_admin_mfa(): el mismo admin con dos factores pero sesión nueva AAL1 → false
+✔ is_admin_mfa(): usuario común (sin is_admin) → false
+✔ REST: 7 credenciales × 24 tablas × 4 métodos × 2 perfiles → nunca 2xx; 404 PGRST205 / 406 PGRST106
+✔ REST: el OpenAPI no menciona ninguna tabla de comunidad; de las RPC (E2b, E3a y E3b), anon no ve ninguna y service_role ve exactamente las del inventario
+✔ GraphQL: pg_graphql no está habilitada en la base local; el endpoint lo informa y no expone nada
+✔ las únicas public.comunidad_* son las del inventario (E2b, E3a, E3b, E4, E5a, E5b, E6 y E7), security definer y search_path vacío
+✔ catálogo: EXECUTE sólo service_role en las de E2b–E3b, y sólo authenticated en las de moderación (E4) y en la lectura (E5a) y el perfil (E6)
+✔ RPC real por REST: anon y cada JWT reciben 401/403 en todas; service_role ejecuta (uid inexistente: sin efectos)
+✔ RPC real por REST a la lectura (E5a): anon y service_role → 401/403 sin datos; cada JWT real (autor, ajeno, suspendido, admin AAL1 y AAL2) → 200 como s�
+✔ RPC real por REST a las de moderación (E4): anon, autor, ajeno, suspendido, admin AAL1 y service_role → 401/403 con 42501; el admin AAL2 con dos factores
+✔ ninguna función del esquema comunidad es ejecutable por PUBLIC ni por los roles de la API
+✔ RPC por REST a una función del esquema: 406 PGRST106 con el perfil, 404 sin él, para cada credencial
+### pruebas-concurrencia
+✔ anon, authenticated y service_role no ejecutan ninguna primitiva de 013 (42501)
+✔ catálogo: ninguna función del esquema comunidad es ejecutable por PUBLIC ni por los roles de la API
+✔ fuera de orden → CB002 en el acto, sin esperar ningún lock: sin paso 1, nivel repetido, retroceso, lock tras la marca, paso 1 dos veces
+✔ la marca se toma DESPUÉS de los locks: una operación que esperó un lock marca después de que lo soltó quien lo tenía
+✔ cruce · A evalúa la reseña de B y B la de A, coordinados después del paso de cuenta: los dos confirman, sin deadlock ni CB002
+✔ 1a · votar ‖ retirar, gana votar: B espera, relee el voto y lo retira; marcas monótonas; igual al serial votar→retirar
+✔ 1b · retirar ‖ votar, gana retirar (no hay voto: no-op); el voto entra después; igual al serial retirar→votar
+✔ 2a · la edición confirma primero: el voto esperó la fila del autor, relee, ve la versión reemplazada y se rechaza (CB003); no escribe nada
+✔ 2b · el voto confirma primero: la edición espera, relee y lo reinicia con su marca (posterior); cierra su tramo
+✔ 3 · la segunda espera, relee la vigente y da conflicto (CB003); hay UNA versión nueva
+✔ 4 · dos envíos del mismo intento a la vez: UNA versión y UN reinicio de votos; el segundo devuelve la misma
+✔ 5a · la suspensión confirma primero: el voto espera la fila, relee la suspensión y se rechaza (CB004)
+✔ 5b · el voto confirma primero: la suspensión espera y su desde es POSTERIOR a la marca del voto
+✔ una sesión fuera del protocolo (versión → participante) contra una en orden: deadlock 40P01; la abortada no deja nada
+✔ lock_timeout: una cuenta nueva espera la fila del autor más de 1 s → 55P03; tampoco queda el participante que creó el paso 1
+✔ error después de la marca y de escrituras parciales (texto inválido): la edición se revierte entera
+✔ 6 · operación con el compartido tomado y marca < T, que confirma DESPUÉS de T mientras la consolidación espera: la consolidación la ve y la cuenta
+✔ 7a · operación que llega con la consolidación CALCULANDO: espera; su marca es > L; el cómputo al corte L no la incluye
+✔ 7b · operación que llega con la consolidación ESPERANDO: no se cuela delante; marca > L; la anterior sí cuenta
+✔ 11 · corte_de_mes, mes_ar y rige_antes_de en T(M) y a 1 µs de cada lado
+✔ 11 · cómputo de FIXTURE sobre filas con marcas exactas: cuentan los pares cuyo tramo rige antes de T, con primera positiva en [T(M-1), T(M)) y sin suspens
+### pruebas-escritura
+✔ matriz · suspendido: A → rechazo 'suspendida' sin escribir nada; B (borrar, retirar) → permitidas
+✔ matriz · correo pendiente: A → rechazo 'correo_pendiente' sin escribir nada; B (borrar, retirar) → permitidas
+✔ matriz · términos nuevos: A → rechazo 'terminos_pendientes' sin escribir nada; B (borrar, retirar) → permitidas
+✔ matriz · publicación pausada: A → rechazo 'publicacion_pausada' sin escribir nada; B (borrar, retirar) → permitidas
+✔ matriz · módulo apagado: A → rechazo 'modulo_apagado' sin escribir nada; B (borrar, retirar) → permitidas
+✔ matriz · baja en curso: A y B rechazadas con CB001 (baja_en_curso); el paso 1 ya había borrado todo
+✔ matriz · sin términos aceptados: no hay identidad comunitaria y nada se crea
+✔ términos: una versión distinta de la vigente no se acepta
+✔ propiedad y reglas de la fila A: no se edita ni borra lo ajeno; no se evalúa la propia; una reseña viva por título
+✔ §3.4.1 · texto idéntico tras normalizar → 'sin_cambios'; versión y votos intactos; no consume límite
+✔ §3.4.1 · rechazo de formato → anterior intacta y publicada, votos intactos, sin tocar la base
+✔ §3.4.1 · rechazo por regla de contenido → anterior intacta, votos intactos; consume UNA edición; no guarda el texto
+✔ §3.4.1 · versión esperada distinta de la vigente → 'conflicto' (version), intacta
+✔ §3.4.1 · fallo técnico en la base (texto que el CHECK rechaza, llamado directo) → error; anterior, votos y límite intactos
+✔ §3.4.1 · lock_timeout (otra transacción retiene la reseña > 5 s) → error; anterior y votos intactos
+✔ §3.4.1 · edición aceptada y publicada → anterior reemplazada, tramos cerrados, votos reiniciados UNA vez; la nueva en cero
+✔ §3.4.1 · edición aceptada y retenida → anterior reemplazada (deja de verse), votos reiniciados una vez, nueva 'retenida'
+✔ §3.4.1 · admisión cerrada (cola llena) → la anterior intacta, con sus votos, y 'admision_global' (E3b; el resto de la admisión, en pruebas-moderacion.
+✔ reintento tras confirmar (respuesta perdida): el mismo resultado, UNA versión y UN reinicio de votos
+✔ mismo id_intento con OTRO contenido → conflicto genérico, sin datos del primero; nada cambia
+✔ reintento de un rechazo de contenido: el mismo rechazo, sin consumir otra edición
+✔ el hash del intento es el del pedido normalizado (cliente y servidor firman lo mismo)
+✔ A1 · publicar: la respuesta se pierde tras el commit → se reconcilia con el mismo id_intento: 'publicada', UNA reseña, UN cupo
+✔ A1 · editar con votos: la respuesta se pierde tras el commit → 'publicada' recuperada; votos reiniciados UNA vez, UNA edición
+✔ A1 · se pierden las DOS respuestas (red) → 'sin_confirmar' (nunca 'error'); el reintento normal con el mismo id_intento recupera sin duplicar
+✔ A1 · se pierden las DOS respuestas (502) → 'sin_confirmar' (nunca 'error'); el reintento normal con el mismo id_intento recupera sin duplicar
+✔ A1 · votar, retirar y borrar con la respuesta perdida tras el commit: se reconcilian sin duplicar
+✔ A1 · un rechazo CONFIRMADO de la base no se reintenta ni se presenta como incierto: 'error', versión, votos y cupo intactos
+✔ límite de reseñas = 2 y 5 envíos simultáneos de la misma cuenta: exactamente 2 entran, nunca se supera
+✔ límite de evaluaciones = 1: 4 votos simultáneos a reseñas distintas → 1 entra
+✔ gate caso 1 · votar ‖ retirar del mismo evaluador: el segundo espera, relee y retira; igual al serial
+✔ gate caso 2a · la edición confirma primero: el voto a la versión vieja espera, relee y se rechaza (version_no_disponible)
+✔ gate caso 2b · el voto confirma primero: la edición espera y lo reinicia (votos_reiniciados = 1)
+✔ gate caso 3 · dos ediciones con la misma versión esperada: la segunda da conflicto; UNA versión nueva
+✔ gate caso 4 · el mismo id_intento en dos sesiones a la vez: UNA versión, UN reinicio; la segunda devuelve el mismo resultado
+✔ gate B3a · voto real de U en vuelo con K_CUENTA tomado: la baja de U espera y después lo borra y cierra su tramo
+✔ gate B3b · baja de U en vuelo: el voto real de U espera K_CUENTA, relee el marcador y se rechaza (CB001); nada escrito
+✔ gate actores cruzados · A evalúa la reseña de B y B la de A con las funciones reales: los dos confirman, sin deadlock
+✔ gate actores cruzados (carga) · 10 rondas de pares cruzados simultáneos sin coordinar: 20 votos, 0 errores
+✔ rutas · sin sesión → 401 en las cinco; con sesión y cuerpo inválido → 400; sin caché
+✔ rutas · publicar, rechazar, retener y editar de punta a punta con el JWT; el uid sale del token, no del cuerpo
+✔ rutas · votar y retirar por HTTP; con el módulo apagado la lectura responde { activo: false } y nada más
+✔ acceso directo · un JWT de usuario no lee ni escribe las tablas por REST ni ejecuta las funciones por RPC
+### pruebas-moderacion
+✔ duplicados · el mismo texto en otro título de la misma cuenta → 'retenida' (sin revelar la regla); otro texto → 'publicada'
+✔ duplicados · casi duplicado propio (una palabra cambiada, Jaccard ≥ 0,8) → retenida, también como edición de OTRA reseña; editar la MISMA reseña co
+✔ duplicados · el mismo texto en 3 cuentas → la 4.ª cuenta queda 'retenida' (duplicado_coordinado); las 3 primeras, publicadas
+✔ duplicados · CONCURRENCIA: 7 cuentas publican el mismo texto a la vez → exactamente 3 publicadas y 4 retenidas (lock por hash, nivel 8)
+✔ duplicados · la tabla de huellas NO contiene texto: sólo hex (64 y 16); ninguna palabra del texto aparece; un shingle en claro lo rechaza el CHECK
+✔ duplicados · borrar la reseña borra sus huellas; volver a publicar el mismo texto ya no es duplicado
+✔ duplicados · sin secreto HMAC la escritura responde 'error' y no toca la base (una regla que no corre nunca aprueba)
+✔ admisión · por autor: con 2 retenidos, el 3.º que sería retenido NO se guarda ('admision_autor', sin cupo); lo limpio se publica
+✔ admisión · por autor: editar uno de SUS 2 retenidos con otro texto retenido se admite (la vigente reemplazada sale de la cola)
+✔ admisión · por autor, CONCURRENCIA: 5 envíos retenibles simultáneos de la misma cuenta → exactamente 2 retenidos y 3 'admision_autor'
+✔ admisión · global, CONCURRENCIA (ataque que llena la cola): tope = cola + 3; 10 cuentas envían spam a la vez → exactamente 3 entran y 7 reciben 'admisi
+✔ admisión · lo retenido NO se publica por vencimiento: no hay job que lo haga (pg_cron no programa nada sobre comunidad)
+✔ revisión · publicar con teléfono → rechazo_contenido (nada guardado); pedir revisión (id nuevo) → 'revision_solicitada', invisible para otros, cuent
+✔ revisión · si las reglas vigentes ya no rechazan el texto, es un envío normal ('publicada')
+✔ revisión · edición: sin confirmar → 'requiere_confirmacion' sin tocar nada; confirmada → la publicada se reemplaza (deja de verse), votos reiniciados
+✔ revisión · pasa por la admisión: con 2 retenidos propios → 'admision_autor' y nada guardado
+✔ revisión · idempotencia: respuesta perdida tras el commit → el reintento con el mismo id devuelve lo guardado (UNA versión); el mismo id sin revisión 
+✔ denuncia · se registra, la reseña SIGUE VISIBLE; repetirla da el mismo resultado sin otra fila ni otro cupo; quien denuncia la ve marcada
+✔ denuncia · no la propia ('propia'); no lo invisible (retenida → 'version_no_disponible'); motivo fuera del diseño → 'invalido' sin tocar la base
+✔ denuncia · ATAQUE: 8 cuentas denuncian como grave una reseña legítima → sigue publicada y visible, y queda PRIMERA en la cola (la cantidad ordena, no o
+✔ denuncia · cota por versión, CONCURRENCIA: tope 3 filas; 7 denuncias simultáneas → 3 filas + excedente 4, todas 'denuncia_registrada'; sigue publicada
+✔ denuncia · tope global por hora, CONCURRENCIA: tope = ingreso + 4; 9 cuentas denuncian a la vez → exactamente 4 recibidas y 5 'cola_denuncias_llena'; con
+✔ denuncia · límite diario propio (tope 2): la 3.ª → 'limite_diario'
+✔ denuncia · CORROBORACIÓN: una versión publicada con reglas viejas que las vigentes retendrían pasa a 'retenida' POR LA REGLA; una legítima denunciada, 
+✔ denuncia · 'No me sirvió' masivo (12 cuentas) → ningún efecto de moderación: publicada, sin denuncias, fuera de la cola
+✔ denuncia · respuesta perdida tras el commit → se reconcilia: 'denuncia_registrada' repetida, UNA fila, UN cupo; perdidas las dos → 'sin_confirmar' y el
+✔ bloqueo · oculta TODAS las reseñas del autor sólo para quien bloquea; los demás las siguen viendo; su estado no cambia
+✔ bloqueo · idempotente; no a sí mismo ('propio'); límite diario (tope 1 → el 2.º 'limite_diario'); se puede denunciar después de bloquear
+✔ desbloqueo · por id: vuelve a verse; el bloqueo de OTRA cuenta no se toca ('sin_efecto', la fila sigue); repetirlo es 'sin_efecto'
+✔ bloqueo y desbloqueo · respuesta perdida tras el commit → reconciliados sin duplicar ni fallar
+✔ matriz · suspendido: C → 'denuncia_registrada'; D → permitidas
+✔ matriz · correo pendiente: C → 'correo_pendiente'; D → permitidas
+✔ matriz · términos sin aceptar: C → 'denuncia_registrada'; D → permitidas
+✔ matriz · publicación pausada: C → 'denuncia_registrada'; D → permitidas
+✔ matriz · módulo apagado: C → 'modulo_apagado'; D → permitidas
+✔ matriz · cola de retenidos llena: C → 'denuncia_registrada'; D → permitidas
+✔ matriz · cola de denuncias llena: C → 'cola_denuncias_llena'; D → permitidas
+✔ matriz · baja en curso: C → 'baja_en_curso'; D → 'baja_en_curso'
+✔ protocolo · fuera de orden → CB002: cola antes que huella, huella o cola después de la marca, cola repetida; saltear la huella vale
+✔ compuerta · admisión global: X entra a la cola (tope = cola + 1) y retiene; Y espera el lock 7304, relee y recibe 'admision_global'
+✔ compuerta · denuncias por hora: X recibe la última (tope = ingreso + 1) y retiene; Y espera el lock 7304, relee y recibe 'cola_denuncias_llena'
+✔ compuerta · duplicado entre cuentas: con el texto en 2 cuentas, X (3.ª) publica y retiene el hash; Y (4.ª) espera el lock 7303, relee y queda 'retenida'
+✔ acceso directo · un JWT de usuario (y anon) no lee ni escribe las tablas nuevas ni ejecuta las funciones de E3b
+✔ rutas · sin sesión → 401; cuerpo inválido → 400; sin caché
+✔ rutas · denunciar + bloquear en un paso por HTTP: la respuesta no trae el texto; la reseña desaparece para quien bloquea; listar y desbloquear por HTTP
+✔ rutas · pedir revisión por HTTP: edición sin confirmar → 'requiere_confirmacion'; publicar → 'revision_solicitada'
+### pruebas-admin
+✔ admin con DOS factores TOTP reales (aal2), el mismo admin en aal1 y un usuario común
+✔ catálogo: las 13 funciones del admin son security definer, search_path vacío, lock_timeout en las que escriben, EXECUTE SÓLO para authenticated
+✔ RPC directo por REST: anon, usuario común, admin AAL1 y service_role → 401/403 con 42501 en las 13; admin AAL2 → 200; nada cambia
+✔ adaptador de la ruta con la sesión AAL1 del admin y con un usuario común → `no_autorizado`; con AAL2 lee el resumen
+✔ publicar un retenido: visible para otros, primera publicación fijada, sin votos ni tramos inventados, registrado con admin, motivo y versión
+✔ rechazar un retenido: el autor lo ve rechazado y PUEDE corregirlo (rechazada → reemplazada); una edición limpia se publica
+✔ revisión pedida (rechazo de contenido enviado a revisión): prioridad 1 en la cola; publicarla queda como falso positivo
+✔ retirar una publicada con votos: oculta, tramos cerrados, votos intactos, denuncias resueltas; restaurar: los MISMOS votos vuelven y los tramos se reabren c
+✔ A1 · retirar → sale de las dos colas → la encuentran Retiradas y la situación del Registro (votos que vuelven) → restaurar desde ahí: mismos votos,
+✔ A1 · Retiradas pagina por cursor sin repetir; con AAL1 o usuario común, Retiradas y la situación son `no_autorizado`
+✔ A1 · retirada y después REEMPLAZADA, BORRADA o de una cuenta en BAJA: no figura en Retiradas, la situación lo dice y restaurar no resucita nada
+✔ decisión sobre una versión VIEJA: el autor editó → publicar la anterior es conflicto y la nueva no se toca
+✔ reseña BORRADA por el autor: publicar su retenido es conflicto; la reseña sigue borrada (no resucita)
+✔ cuenta en BAJA: la decisión tardía no encuentra nada (no_disponible) y la baja queda intacta
+✔ decisiones SIMULTÁNEAS sobre la misma versión (publicar y rechazar, intentos distintos): una se aplica, la otra es conflicto; un solo registro
+✔ reintento con el MISMO intento: devuelve lo registrado (repetido) sin otra fila; el mismo intento sobre OTRA versión es conflicto
+✔ respuesta PERDIDA después del commit: el adaptador repite UNA vez con el mismo intento y recupera `aplicada`; un solo registro
+✔ descartar: la reseña sigue visible, las denuncias quedan descartadas y la próxima denuncia de esas cuentas pesa la mitad
+✔ cerrar: con la reseña visible es conflicto (hay que decidir); borrada por el autor, el caso se archiva como resuelto
+✔ ataque de denuncias graves sobre una reseña legítima: sigue visible, sube a la cabeza de la cola; 'No me sirvió' masivo no cambia nada
+✔ suspender: no publica ni vota; SÍ borra, denuncia, bloquea y retira votos (filas B–D). Levantar: vuelve a votar. Dos registros
+✔ suspender a una cuenta dada de baja: no_disponible (cuenta eliminada), nada se escribe
+✔ caso 5a · la suspensión (real) confirma primero: el voto (real) espera la fila del evaluador, relee y se rechaza (suspendida)
+✔ caso 5b · el voto (real) confirma primero: la suspensión (real) espera y su `desde` es POSTERIOR a la marca del voto
+✔ decisión del admin y edición del autor en paralelo (sesiones): la edición espera la reseña; al confirmar la decisión, la edición reemplaza la versión
+✔ B10 · quitar el marcador (real): nada se restaura; el participante viejo sigue huérfano; la próxima identidad nace nueva y publica
+✔ B14 · suspendida → baja → quitar el marcador con la sanción vigente: nace suspendida; no publica ni vota; sí bloquea, borra y vuelve a pedir la baja 
+✔ levantar una sanción CON plazo (copiada por B14 con fin futuro): se acorta a ahora; nunca se reescribe el pasado
+✔ denuncias RECIBIDAS en la baja del autor: se cierran en el historial mínimo (sin texto, sin comentario, sin el autor); el peso de quien denunció se conser
+✔ A2 · bajas simultáneas, confirma primero quien DENUNCIÓ (secuencia de la auditoría): su historial no reaparece; la denuncia de una cuenta activa queda e
+✔ A2 · bajas simultáneas, confirma primero el AUTOR: la baja de quien denunció espera, relee y borra el historial recién creado; la de la cuenta activa qu
+✔ A2 · denuncias CRUZADAS (cada uno denunció al otro) y bajas simultáneas: sin deadlock, la segunda espera y ningún historial de los dos queda
+✔ quitar el marcador mientras la baja de esa cuenta confirma (sesiones): espera su K_CUENTA y después cancela el marcador recién creado
+✔ pausar: nadie publica ni edita; leer, borrar, denunciar y bloquear siguen; reanudar: se publica. Registrado; repetir es sin efecto
+✔ cola de retenidos por prioridad (corroborada, revisión, retenida) y paginación por cursor sin repetir ni saltear
+✔ cola de denuncias y registro paginados sin repetir; cuentas lista suspensiones y bajas pendientes
+✔ muestreo: APAGADO devuelve nada; encendido sólo durante la prueba, como mucho 5 publicadas; vuelve a apagado
+✔ ruta: sin token 401; usuario común y admin AAL1 403; admin AAL2 200 con `private, no-store`; cuerpo inválido 400; decide con la sesión del admin
+### pruebas-baja
+✔ anon y authenticated no ejecutan las cuatro; service_role no ejecuta las internas
+✔ service_role SÍ ejecuta las cuatro (uid inexistente: sin efectos)
+✔ B6 · sólo marcador; después deleteUser → completa; el marcador cae con la cuenta
+✔ B1 · paso 1 confirma y deleteUser FALLA (trigger real) → baja-parcial con el texto del contrato
+✔ B1 · lo de la otra cuenta queda: su reseña, su bloqueo; sólo cae lo que colgaba de lo borrado
+✔ B2 · durante la ventana, otra sesión que quiera escribir (resolver_participante) → baja_en_curso; no se crea participante
+✔ B13 · login nuevo con marcador: GET /api/cuenta/estado-baja → pendiente; otra cuenta no lo ve; sin sesión → 401
+✔ B7 · reingreso con marcador y reintento: completa; no queda marcador ni vínculo
+✔ B3a · escritura que tomó K_CUENTA antes: confirma; la baja espera y después la borra y cierra su tramo
+✔ B3b · escritura que verificó el Bearer antes pero llega después (secuencial): baja_en_curso, nada escrito
+✔ B3b · la misma, esperando K_CUENTA mientras la baja confirma: relee el marcador y se rechaza
+✔ B4 · dos baja_comunitaria a la vez: se serializan; la segunda no cambia nada
+✔ B4 · dos flujos completos a la vez: los dos responden ok (eliminación completa)
+✔ B4 · el segundo deleteUser llega cuando el primero ya borró: falla (404) y reconcilia → los dos responden ok
+✔ B5 · Auth borró pero la respuesta se perdió: reconcilia → completa; sin marcador (cascada)
+✔ B12 · deleteUser falla y getUserById falla por red → baja-sin-verificar; nunca ok; el marcador sigue
+✔ B12 · sin configuración para verificar (cliente ausente) → también baja-sin-verificar
+✔ B12 · el reintento vuelve a reconciliar: con red → baja-parcial; sin la falla → completa
+✔ B9 · comunidad_baja_comunitaria_admin y después borrado en Auth → completa; la consulta del runbook da 0
+✔ B10 · el admin cancela el marcador (preliminar: dueño de la base): nada se restaura; la próxima escritura crea OTRO participante
+✔ B11 · cuenta suspendida pide la baja: se permite; la suspensión no se toca; el marcador impide recrear identidad
+✔ B14 · suspendida → paso 1 → el admin cancela con la sanción vigente: el participante nuevo nace suspendido hasta sancion_hasta
+✔ B10/B14 · una baja con marcador cancelado lo REACTIVA (no crea otro)
+✔ B8a · voto de OTRA cuenta en vuelo + consolidación esperando: ciclo de colas; la baja termina o se revierte entera
+✔ B8b · escritura de la PROPIA cuenta en vuelo (retiene su K_CUENTA) + consolidación: deadlock real; se aborta una; nunca a medio cerrar
+✔ B8c · escritura de la propia cuenta que retiene K_CUENTA más que lock_timeout (5 s): Auth se revierte ENTERA y el reintento termina
+### pruebas-lectura
+✔ preparación: un título con 213 visibles + 6 que no deben verse; lector, otro lector, admin con dos TOTP
+✔ RPC directo: anon y service_role → 401/403 con 42501/permission denied; un JWT real → 200; no hay parámetro para leer como otro
+✔ catálogo: comunidad_resenas security definer, search_path vacío, EXECUTE sólo authenticated; modulo_activo sólo service_role; comunidad_leer_titulo ya n
+✔ más de 200 reseñas: el lector recorre las 214 visibles de a 5, en el orden (primera publicación desc, id desc), sin repetir ni saltear, con un empate de 
+✔ el mismo recorrido por el ADAPTADOR de la ruta (cursor opaco) y con tandas de 20: mismo conjunto y orden
+✔ bloqueo personal: la reseña bloqueada no la ve quien bloqueó, SÍ la ve otro lector; el suspendido no lo ve nadie
+✔ entre páginas: retiro, borrado, edición, bloqueo y suspensión. Nada oculto reaparece por el cursor, nada se repite, nada visible se saltea
+✔ levantar la suspensión vuelve a mostrar sus reseñas; desbloquear también
+✔ pedidos inválidos: orden desconocido, cursor del otro orden, cursor mal formado y título inválido → 22023 sin datos; el límite se acota a 1–20
+✔ un título sin reseñas: lista vacía, total 0, sin cursor; con el módulo APAGADO, {activo:false} y nada más
+✔ ruta: sin token o con uno inválido 401 con SÓLO {resultado, activo}; con sesión 200 privado y sin caché; inválido 400; el cursor de la ruta recorre lo 
+### pruebas-voto-lista
+✔ preparación: 7 reseñas reales (dos páginas: 5 + 2), un lector con sesión real y otra cuenta que ya votó dos
+✔ positivo SIN pérdida: voto_registrado; pantalla = base; el siguiente toque RETIRA
+✔ positivo con la PRIMERA respuesta perdida: la reconciliación confirma sin_cambios; pantalla = base (util, sin contar dos veces); el siguiente toque RETIRA
+✔ negativo SIN pérdida: voto_registrado; pantalla = base; el siguiente toque del mismo pulgar RETIRA
+✔ negativo con la primera respuesta perdida (reseña con un voto ajeno negativo): sin_cambios; pantalla = base
+✔ CAMBIO de voto (útil → no útil) con la primera respuesta perdida: sin_cambios; útiles −1, total igual; pantalla = base
+✔ RETIRO con la primera respuesta perdida: la reconciliación confirma sin_efecto; pantalla = base (sin voto); el siguiente toque VOTA
+✔ retiro SIN pérdida (voto_retirado) sobre una reseña con voto ajeno: pantalla = base
+✔ pérdida de AMBAS respuestas: sin_confirmar, la pantalla NO cambia y avisa la incertidumbre; el reintento posterior confirma sin_cambios y la pantalla queda
+✔ pérdida de AMBAS respuestas al retirar: sin_confirmar sin cambio visible; el reintento confirma sin_efecto y la pantalla queda sin voto = base
+✔ al final: TODA la lista (las dos páginas) coincide con la base, reseña por reseña
+### pruebas-utiles
+✔ preparación: lector, otro lector y un admin con dos TOTP reales
+✔ Wilson en la base = valores calculados aparte (Python) en 18 casos, |error| < 1e-12; sin votos, 0
+✔ Wilson de la base = lib/comunidad/wilson.ts BIT A BIT en los 1890 pares con total ≤ 60; con 0 positivos, exactamente 0 (antes de la corrección, 0/1 daba 
+✔ orden real con votos REALES: 9/10, 1/1, 2/4, empate 1/2 ×3 (fecha desc y, con la misma fecha, id desc), 0/3 y 0/0 (fecha desc)
+✔ 20 lectores CONCURRENTES (sesiones reales, PostgREST) piden la primera página de un título sin orden → UN solo orden generado, el mismo para los 20
+✔ reutilización y vigencia (tiempo simulado): < 10 min se reutiliza; > 10 min se genera otro y el anterior sigue valiendo hasta vencer; al generar se borran 
+✔ conjunto estable de 237 reseñas: el recorrido de a 5 sigue EXACTAMENTE el orden (Wilson + desempates), sin duplicar ni saltear; filas de 100 ids
+✔ cambios ENTRE páginas (funciones reales): retiro, suspensión, bloqueo, borrado y edición. Lo oculto no reaparece, lo editado sale una vez, nada visible s
+✔ página con MUCHAS ocultas (fixture: 120 versiones pasadas a oculta después de generar el orden): devuelve menos o ninguna, el cursor avanza exactamente 50
+✔ vencimiento a mitad de lectura (tiempo simulado): `orden_actualizado` sin reseñas; UN reinicio con el núcleo real agrega sin repetir y llega al final; un 
+✔ un cursor de OTRO título o de un orden borrado responde orden_actualizado, nunca mezcla; un cursor de «Más útiles» en «Recientes» es inválido
+✔ votar dentro del orden congelado cambia el CONTEO que se lee, no el lugar; el orden siguiente (> 10 min, simulado) sí lo refleja
+✔ las tablas del orden: sin grants, RLS sin policies, sin columnas del lector; wilson y orden_utiles sin EXECUTE; anon y service_role no leen «Más útiles»
+✔ «Recientes» no cambió: el mismo título recorre por fecha, sin tocar el orden congelado
+### pruebas-perfiles
+✔ preparación: autor A con 9 reseñas (7 visibles: una retirada y una borrada), otros autores, lectores con sesión real y votos
+✔ aceptado: se guarda NORMALIZADO en participantes; repetirlo es sin_cambios y no consume límite
+✔ rechazos: contacto ofuscado → rechazo_contenido con motivo; odio → nombre_no_admitido; formato → sin tocar la base. Nada se guarda
+✔ límite del día (3): el cuarto intento es rechazo_cuenta limite_diario y no cambia nada
+✔ fila A: publicación pausada, sin términos y suspensión rechazan; nada se escribe
+✔ ningún camino salta la validación: authenticated no ejecuta la función; el esquema no se expone; la base rechaza forma y decisiones inválidas aunque lla
+✔ profiles.display_name por update DIRECTO en la base NO cambia el nombre comunitario ni aparece en lo comunitario
+✔ por la RUTA: sin sesión 401; con sesión, el contacto se rechaza con motivo y uno válido se acepta (B)
+✔ acceso: sin sesión, anon y service_role no leen (ruta 401 sólo con {resultado}; RPC 401/403 42501); id inválido 400; inexistente no_existe
+✔ proyección: sólo los campos permitidos; avatar ELEGIDO (escrito como lo guarda la app) sale como id del catálogo; ni correo, ni user_id, ni display_name,
+✔ paginación: 5 + 2 por la ruta con el núcleo del cliente, sin repetir ni saltear; retirada y borrada no aparecen; agregados = visibles
+✔ cambios ENTRE páginas (retiro por E4 y borrado real): lo oculto no reaparece; nada se repite
+✔ cambio de cuenta y respuestas tardías: la tanda de OTRA cuenta (otro bloqueo, otro voto) no se aplica a esta lista
+✔ propio: ?yo=1 devuelve el perfil propio (propio, con sus reseñas); sin identidad comunitaria, sin_participante
+✔ bloqueo: quien bloqueó ve «Usuario bloqueado» sin nombre, avatar ni reseñas; otro lector lo ve normal; desbloquear lo devuelve
+✔ suspensión: los demás ven el perfil sin reseñas y con agregados en 0 (no se informa la suspensión); el suspendido ve las suyas
+✔ cuenta eliminada (flujo real de la app): el perfil queda «Cuenta eliminada», sin nombre, avatar ni reseñas
+✔ la ficha (lectura de E5a/E5b, ruta real) trae el autor: id de participante y nombre comunitario; nada más del autor
+✔ A2 · preparación: dos autores con 6 reseñas visibles cada uno (dos páginas)
+✔ A2 · bloqueo desde OTRA sesión entre páginas: «Cargar más» aplica «Usuario bloqueado» sin nombre, avatar ni reseñas; no es un error de red
+✔ A2 · respuesta tardía: una página activa pedida ANTES del bloqueo no restaura nada después de que se aplicó el bloqueo
+✔ A2 · baja del autor entre páginas (flujo real de la app): «Cargar más» aplica «Cuenta eliminada» y retira lo anterior
+✔ A2 · módulo apagado entre páginas: «Cargar más» aplica «no disponible» y retira todo
+✔ A2 · falla REAL de red: se conservan cabecera y páginas; el reintento desde el mismo cursor completa sin repetir
+✔ módulo apagado: el perfil y el nombre responden sin datos
+### pruebas-nombre-intento
+✔ 1 · respuesta perdida SIN intervención: el reintento recupera nombre_cambiado; una escritura y un cupo
+✔ 2 · primer nombre guardado, respuesta perdida, OTRA sesión confirma un segundo nombre, reintento del primero: queda el segundo
+✔ 3 · rechazo de contenido con la respuesta perdida: un solo cupo para el envío; el nombre rechazado no se guarda en claro
+✔ 4 · reintentos sucesivos del mismo intento (dos pérdidas → sin_confirmar, y la persona reintenta dos veces): un efecto, un cupo, misma marca
+✔ 5 · concurrencia (protocolo de locks): el MISMO intento dos veces a la vez → un efecto y un cupo; dos intentos distintos a la vez → dos cupos, sin dead
+### pruebas-top
+✔ preparación: meses de prueba libres; reloj forzado instalado; módulo y Top Yumpers encendidos; admin con dos TOTP
+✔ un punto por evaluador DISTINTO y autor: dos positivos de la misma persona suman 1; publicar no suma; un negativo no resta; retirar o pasar a negativo dentr
+✔ caso 11: tramo que empieza, tramo que termina, suspensión (de autor y de evaluador) que empieza y que termina EXACTAMENTE en T(M) y a 1 µs de cada lado
+✔ suspender NO cierra tramos (conciliación del 25/10): los votos del autor y del evaluador suspendidos siguen abiertos; el cómputo los excluye sólo mientra
+✔ caso 10: edición, retiro por moderación, suspensión y bajas ENTRE el corte y la primera consulta no cambian el mes; restaurar antes del corte cuenta y de
+✔ reproducible: un voto con marca de julio que llega DESPUÉS de consolidar (fixture de reloj) no cambia el mes consolidado, aunque el cómputo de hoy sí lo 
+✔ proyección: sólo posición, puntos, estado y, para cuentas activas, id de participante, nombre comunitario, avatar del catálogo y propio; nunca user_id, 
+✔ bloqueo: quien bloqueó a D lo ve como «Usuario bloqueado» (con su posición y puntos, sin id ni nombre); otro lector lo ve normal
+✔ permisos: anon y service_role no leen (401/403 42501); las funciones internas y las tablas no tienen grants; el interruptor sólo para service_role
+✔ ruta: sin sesión 401 SÓLO {resultado, activo}; con sesión 200 privado y sin caché; mes inválido 400; interruptores apagados → {activo:false} y el sel
+### pruebas-top-concurrencia
+✔ preparación: meses libres, reloj forzado, interruptores encendidos
+✔ caso 6: un voto que tomó el compartido ANTES de T(M) y confirma DESPUÉS, mientras la consolidación espera el exclusivo: la consolidación lo espera y lo 
+✔ caso 7a: con la consolidación CALCULANDO (exclusivo tomado), un voto con marca después de T(M) espera el compartido; el mes no lo incluye y coincide con e
+✔ caso 7b: con la consolidación ESPERANDO el exclusivo, un voto nuevo (marca después de T(M)) queda detrás de ella; el previo cuenta, el nuevo no
+✔ 50 lecturas concurrentes después del corte: UN solo cálculo y la misma respuesta; después, 50 más se resuelven sin pedir el exclusivo (con un compartido
+✔ B8: borrado por Auth SIN paso 1, con un voto real de otra cuenta en vuelo y una consolidación real esperando: o termina (tramos cerrados con UNA marca, par
+### pruebas-purga
+✔ preparación: meses libres, registro de purga vacío, purga APAGADA; reloj forzado; módulo y publicación encendidos; admin con dos TOTP
+✔ apagada: con candidatos vencidos, `purgar` no hace nada ni deja registro
+✔ intentos: justo antes se conserva; en y después se borra; idempotente; un reintento con un intento purgado no duplica
+✔ órdenes: vigente (1 µs antes) se conserva; vencida en y después se borra con sus tramos; la del generador real se conserva
+✔ órdenes, concurrencia: un título que el generador está regenerando (lock 7311 tomado) se saltea sin esperar; la corrida siguiente lo borra
+✔ denuncias: cerradas justo antes se conservan; en y después se borran; con otra abierta en la misma versión, se conservan; las abiertas nunca
+✔ denuncias_cerradas (historial mínimo de la baja): 30 días desde el cierre, mismo criterio
+✔ decisiones: justo antes se conserva; en y después se borra; se conservan las de casos abiertos, la suspensión vigente y el último estado de la publicaci�
+✔ reemplazadas: justo antes se conserva; en y después se borra (con sus votos y huellas; los tramos quedan); con denuncia abierta o cerrada sin vencer, se co
+✔ retiradas: justo antes se conserva; en y después se borra la reseña entera; con una versión anterior denunciada, se conserva; restaurar sigue andando
+✔ retiradas, concurrencia: una reseña tomada por un borrado en vuelo se saltea SIN esperar (nowait); al confirmar, ya no es candidata
+✔ borradas: justo antes se conserva; en y después se borra; retenida, rechazada o denunciada, se conserva; el autor puede volver a publicar
+✔ tramos: mes sin margen → nada; en el margen → se borran los cerrados que no hacen falta y queda UNO por par vivo; mes sin consolidar → nada; votar, re
+✔ suspensiones: dentro de un mes, 12 meses desde el fin (antes/en/después); cruzando un corte, se conserva hasta consolidar + margen; abierta, nunca
+✔ rankings: 1 µs antes del vencimiento se conserva; en y después se borra; un mes purgado NO se reconstruye vacío
+✔ ventana de lectura (Top Yumpers, JWT real): un mes fuera de la conservación da 400 y no se consolida; uno dentro, 200 (plazo acortado sólo en esta prueba)
+✔ rankings, concurrencia: con K_CORTE exclusivo tomado (una consolidación), la purga espera el compartido y termina al soltarlo; si pasa lock_timeout, regist
+✔ participantes: un desvinculado se borra sólo sin referencias (intentos, bloqueos de otros, tramos, suspensiones); los vinculados nunca
+✔ lotes: con lote = 2, cinco intentos vencidos salen en 3 lotes confirmados; el registro lleva sólo cantidades
+✔ una corrida por vez: con otra en curso, la segunda queda registrada como `ocupada` y no borra nada
+✔ interrupción: cancelada mientras espera en rankings, quedan confirmados SÓLO los lotes anteriores; el lote en curso no deja nada; reintentar completa; rep
+✔ apagar en curso: la corrida termina el lote que estaba haciendo y no empieza otro (`apagada_en_curso`)
+✔ edición en vuelo: la purga borra la reemplazada VIEJA de esa misma reseña sin esperar; la edición confirma y su anterior queda (recién reemplazada)
+✔ baja en vuelo: la corrida diaria completa termina sin esperar (saltea lo que la baja tiene tomado) y la baja confirma igual
+✔ A1: purgar (plazo corto) → ampliar a 12 meses o dejar sin plazo → el mes purgado, consolidado o no, se rechaza sin crear filas; el conservado sin histor
+✔ permisos: nadie de la API ejecuta la purga ni ve su configuración (SQL y REST)
+✔ ningún job programado: cron-comunidad.sql no se ejecutó (sólo `sala-barrido` en cron.job)
+✔ datos ajenos intactos después de todas las corridas
+
+### sala/pruebas-rls
+✔ 17. el barrido elimina la sala completa (seis tablas) 5 min después del estado terminal
+
+Todo verde (37 pruebas)
+
+## 2. Incidente: up-down-up.mjs (arnés de 011–014) sobre una base con 015–021
+✖ 014 (E3a): up → down → up da el mismo volcado; down quita sus funciones, la tabla de intentos y las columnas de términos; repetidas, inocuas 
+    subir 014 no reprodujo el volcado
+✖ 013 (E2c): up → down → up da el mismo volcado; down quita sus funciones y sólo restaura la definición de 012; repetidas, inocuas 
+    014_down no dejó exactamente 011 + 012 + 013
+✖ estado de partida: 011 y 012 aplicadas (repetibles) 
+    Expected values to be strictly equal:
+✖ 012_down: quita sólo lo de 012 (funciones, triggers y columnas del marcador) 
+    Expected values to be strictly equal:
+✖ 012 up → down → up: mismos volcados; repetida, inocua 
+    Cannot read properties of undefined (reading 'split')
+✖ down: el esquema desaparece y el resto queda idéntico a lo que había con 011 
+    Cannot read properties of undefined (reading 'split')
+✔ down repetido: inocuo
+✖ up: vuelve exactamente al volcado con 011 
+    Cannot read properties of undefined (reading 'split')
+✖ segunda vuelta down → up: mismos volcados 
+    Cannot read properties of undefined (reading 'split')
+✖ up repetido sobre sí mismo: no cambia el volcado 
+    Cannot read properties of undefined (reading 'split')
+✖ vuelta a 012: 011 + 012 dan el mismo volcado del principio 
+    Cannot read properties of undefined (reading 'split')
+     -- Name: user_reviews el autor gestiona la suya; Type: POLICY; Schema: public; Owner: postgres
+     CREATE POLICY "el autor gestiona la suya" ON public.user_reviews USING ((auth.uid() = user_id)) WITH CHECK ((auth.uid() = user_id));
+     -- Name: user_reviews lectura publica aprobadas; Type: POLICY; Schema: public; Owner: postgres
+     CREATE POLICY "lectura publica aprobadas" ON public.user_reviews FOR SELECT USING ((estado = 'aprobada'::text));
+✔ 022 sólo cambia policies y permisos de user_reviews (schema.sql re-crea las policies, como en db-local)
+✔ 022 aplicada: user_reviews sin policies ni permisos para anon/authenticated, RLS activa
+✔ 022_down conservador: no cambia el volcado ni reabre nada, y las filas siguen
+✔ tras 022_down, anon por REST sigue sin leer user_reviews (401/403, nunca 200)
+✔ 022 repetida: inocua
+
+### up-down-up-021 en la misma corrida (después del incidente)
+✖ antes: sin 021 (el volcado de partida), con 020 aplicada 
+    ERROR:  column "admision_global" does not exist
+✖ 021 up: tablas, funciones y procedimiento; purga APAGADA; plazos del dueño; huellas y excepción sin configurar 
+    supabase/migrations/021_comunidad_purga.sql: ERROR:  relation "comunidad.intentos" does not exist
+✖ 021_down: vuelve EXACTAMENTE al volcado de antes (020 restaurada) y no toca datos 
+    ERROR:  relation "comunidad.purga_ejecuciones" does not exist
+✖ 021_down repetida: inocua 
+    supabase/migrations/021_comunidad_purga_down.sql: NOTICE:  procedure comunidad.purgar(text,timestamptz) does not exist, skipping
+✖ 021 up: vuelve exactamente al volcado con 021; repetida, inocua 
+    supabase/migrations/021_comunidad_purga.sql: ERROR:  relation "comunidad.intentos" does not exist
+✖ segunda vuelta down → up: mismos volcados; datos ajenos intactos 
+    supabase/migrations/021_comunidad_purga_down.sql: NOTICE:  procedure comunidad.purgar(text,timestamptz) does not exist, skipping
+
+### Verificación tras reaplicar 011–022 (en orden de db-local.mjs)
+pruebas-permisos: 29 ok / 0 fallas
+pruebas-invariantes: 85 ok / 0 fallas
+up-down-up-021: 6 ok / 0 fallas
+
+### Freno agregado (e7f0661): corrida sobre la base con 015+
+La base tiene 015 o posteriores aplicadas: este arnés (011–014) borraría el esquema y sus datos. No corre. (rc=2; 24 tablas intactas)
+
+## 3. /api/title en ejecución: base 52c7ae7 (:3102) frente a la rama (:3100), TMDB real, Supabase local
+### Sin la editorial legible (anon sin SELECT en local)
+movie/550       base 200 7f950db3982a 4899B | rama 200 7f950db3982a 4899B | 2ª: 7f950db3982a / 7f950db3982a | cc base=null rama=null | IDÉNTICO
+movie/27205     base 200 32b8203a1423 4710B | rama 200 32b8203a1423 4710B | 2ª: 32b8203a1423 / 32b8203a1423 | cc base=null rama=null | IDÉNTICO
+tv/1399         base 200 467b239898fb 6271B | rama 200 467b239898fb 6271B | 2ª: 467b239898fb / 467b239898fb | cc base=null rama=null | IDÉNTICO
+tv/275224       base 200 aa36b7f03735 4462B | rama 200 aa36b7f03735 4462B | 2ª: aa36b7f03735 / aa36b7f03735 | cc base=null rama=null | IDÉNTICO
+movie/1752041   base 200 d2adfd153665 4261B | rama 200 d2adfd153665 4261B | 2ª: d2adfd153665 / d2adfd153665 | cc base=null rama=null | IDÉNTICO
+tv/322428       base 200 2b228ee8bacd 5581B | rama 200 2b228ee8bacd 5581B | 2ª: 2b228ee8bacd / 2b228ee8bacd | cc base=null rama=null | IDÉNTICO
+movie/603       base 200 9bff8776f18b 4771B | rama 200 9bff8776f18b 4771B | 2ª: 9bff8776f18b / 9bff8776f18b | cc base=null rama=null | IDÉNTICO
+tv/66732        base 200 3b97e5c7452e 4942B | rama 200 3b97e5c7452e 4942B | 2ª: 3b97e5c7452e / 3b97e5c7452e | cc base=null rama=null | IDÉNTICO
+resultado: 8/8 idénticos byte a byte
+### Con la editorial ficticia legible (permiso temporal)
+movie/550       base 200 1a2bc1cbd606 4992B | rama 200 1a2bc1cbd606 4992B | 2ª: 1a2bc1cbd606 / 1a2bc1cbd606 | cc base=null rama=null | IDÉNTICO
+movie/27205     base 200 32b8203a1423 4710B | rama 200 32b8203a1423 4710B | 2ª: 32b8203a1423 / 32b8203a1423 | cc base=null rama=null | IDÉNTICO
+tv/1399         base 200 467b239898fb 6271B | rama 200 467b239898fb 6271B | 2ª: 467b239898fb / 467b239898fb | cc base=null rama=null | IDÉNTICO
+tv/275224       base 200 aa36b7f03735 4462B | rama 200 aa36b7f03735 4462B | 2ª: aa36b7f03735 / aa36b7f03735 | cc base=null rama=null | IDÉNTICO
+movie/1752041   base 200 d2adfd153665 4261B | rama 200 d2adfd153665 4261B | 2ª: d2adfd153665 / d2adfd153665 | cc base=null rama=null | IDÉNTICO
+tv/322428       base 200 2b228ee8bacd 5581B | rama 200 2b228ee8bacd 5581B | 2ª: 2b228ee8bacd / 2b228ee8bacd | cc base=null rama=null | IDÉNTICO
+movie/603       base 200 9bff8776f18b 4771B | rama 200 9bff8776f18b 4771B | 2ª: 9bff8776f18b / 9bff8776f18b | cc base=null rama=null | IDÉNTICO
+tv/66732        base 200 3b97e5c7452e 4942B | rama 200 3b97e5c7452e 4942B | 2ª: 3b97e5c7452e / 3b97e5c7452e | cc base=null rama=null | IDÉNTICO
+resultado: 8/8 idénticos byte a byte
+
+## 4. Interruptores apagados: innerText base frente a rama (Edge headless, misma base local)
+IGUAL   apagado-configuracion-b-1280
+IGUAL   apagado-cuenta-b-1280
+IGUAL   apagado-cuenta-b-375
+IGUAL   apagado-eliminar-dialogo-b-1280
+IGUAL   apagado-ficha-anon-1280
+IGUAL   apagado-ficha-b-1280
+DIFIERE apagado-ficha-b-375 (primera corrida)
+DIFIERE apagado-home-1280 (primera corrida)
+IGUAL   apagado-home-375
+IGUAL   apagado-top-anon-1280
+IGUAL   apagado-top-anon-375
+IGUAL   apagado-top-b-1280
+### Control alternado de los dos pares que difirieron
+IGUAL   home-1280 vuelta 1
+IGUAL   home-1280 vuelta 2
+IGUAL   ficha-b-375 vuelta 1
+IGUAL   ficha-b-375 vuelta 2
+### Baja con todo apagado (rama, UI): cuenta 0, bajas_en_curso 0; la vista volvió a Ingresar.
+
+## 5. Unitarias, scripts, tipado y compilación
+npm test: ℹ tests 2535
+npm test: ℹ pass 2519
+npm test: ℹ fail 0
+npm test: ℹ skipped 16
+scripts: ℹ tests 41
+scripts: ℹ pass 41
+scripts: ℹ fail 0
+tsc --noEmit --incremental false: rc=0
+npm run build: rc=0, sin avisos ni errores; árbol sin cambios
+admin-nucleo.test.ts: 14 pass / 1 fail con el código anterior; 15 / 0 con el arreglo del plural
+
+## 6. Estado final de la base local
+participantes 0, versiones 0, reseñas 0, cuentas @comunidad.test 42, @recorrido.test 0, suspensiones 0, tramos 0, meses 0, marcas 0, ejecuciones 0, órdenes 0, decisiones 0, denuncias 0, intentos 0, locks 0, solo_local 0
+config f/f/f/f, límites 5/10/100/10/3/50, términos borrador-local-1; purga f, rankings 1 year; cron: sala-barrido
+SELECT de API en public: sólo top_ranking_entries (como antes); editorial_reviews 0; proto_marca md5 16b2f3b433958549ad20b7e361928539
+ANTES del incidente: participantes 6, versiones 2, suspensiones 2 (restos ajenos del 24/10). No se recuperaron.

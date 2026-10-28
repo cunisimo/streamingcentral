@@ -1265,6 +1265,69 @@ AAB tiene que ser `5` o mayor.
          estaba detenido: lo inicié sin tocar volúmenes.
        Informe: `docs/medidas/2026-10-28-informe-claude-e8-a1.md`; salidas:
        `docs/medidas/2026-10-28-e8-a1-salidas.txt`.
+   - **E9a, PARTE LOCAL: integración y pruebas de la web (28/10, Claude,
+     autorizada por el dueño sólo en local; `supabase start`, la app local
+     y datos ficticios). PENDIENTE DE AUDITORÍA de Codex. NO cierra E9a**:
+     el plan exige E0, cuyas consultas a Producción no están autorizadas, y
+     faltan el secreto HMAC de Producción, aplicar 011–022 allá, las cuotas
+     con datos reales, el deploy y la prueba del dueño. Teléfono real y
+     Android son E9b.
+     - 🔴 **Incidente en la base local compartida (Claude):** corrí
+       `scripts/comunidad/up-down-up.mjs` sin revisarlo. Es el arnés de
+       011–014: baja la 011 (borra el esquema `comunidad` con sus filas) y
+       sólo sube hasta la 014. **Borró los 6 participantes, 2 versiones y 2
+       suspensiones ajenas** que las entregas conservaban, y dejó el esquema
+       a medias. Volví a aplicar 011–022 en el orden de `db-local.mjs`, con
+       la configuración en los mismos valores. Verifiqué: permisos 29/29,
+       invariantes 85/85 y la 021 6/6. **Esas filas no se recuperaron**: no
+       hay copia y no las recreé. Ahora el arnés se niega a correr con 015 o
+       posteriores aplicadas (`e7f0661`). `up-down-up-020.mjs` tiene el
+       mismo riesgo debajo de 021: no se corrió ni se cambió. **Línea base
+       local desde E9a:** 0 participantes, 0 versiones, 0 suspensiones y 42
+       cuentas `@comunidad.test`.
+     - **Comprobado en navegador** (ficha real con TMDB, escritorio y
+       375 px, 38 capturas):
+       - registro, términos, publicar, editar, rechazo y revisión, borrar;
+       - votos sin reordenar, órdenes, "Cargar más" y los pulgares;
+       - denunciar, bloquear y desbloquear;
+       - perfil, nombre comunitario y Top Yumpers;
+       - panel con TOTP real (rechazar, retirar, descartar, registro);
+       - cambio de cuenta y respuestas tardías (12 s simulados), sin restos;
+       - baja de cuenta.
+     - **Todo apagado:** la rama frente a la base `52c7ae7`, con la misma
+       base local, dio innerText idéntico en 14 de 14 páginas: Home, ficha,
+       `/top`, cuenta, configuración y el diálogo de baja. Dos pares que
+       difirieron por carga se repitieron en un control alternado. La baja
+       con todo apagado funcionó.
+     - **`/api/title` en ejecución (pendiente desde E5a): CERRADO**, con
+       8/8 fichas idénticas byte a byte contra la base, TMDB real, y la
+       editorial incluida. El token de lectura de TMDB salió de
+       `../streamingcentral/.env.sala-local` (uso local ya previsto en el
+       plan de salas), cargado como variable y sin copiarlo; no se leyó
+       `.env.local`.
+     - **Controles reales:** las 15 baterías de reseñas en verde, salas 37,
+       `npm test` 2519/0/16, scripts 41/41, `tsc` 0 y `npm run build` sin
+       avisos.
+     - **Corregido:** el plural del panel («1 denuncia abierta queda
+       resuelta»), con test que falla antes.
+     - **Observación para el dueño, no cambiada:** el diálogo de eliminar
+       cuenta no menciona las reseñas de la comunidad, aunque la baja las
+       borra.
+     - **Entorno local, no son defectos:**
+       - la base de `supabase start` no da permisos de API sobre `public`;
+         el recorrido los concede mientras dura y los revoca (en Producción,
+         sin verificar: E0);
+       - `providers` está vacía;
+       - `/api/upcoming` da 500 (falta la columna de la 008 en local).
+     - **Para la prueba del dueño:** `scripts/comunidad/recorrido-e9a.mjs`
+       (`preparar | codigo | estado | limpiar`) y la guía
+       `docs/medidas/2026-10-28-e9a-prueba-duenio.md`. **No realizada.**
+     - **Limpieza:** las 13 cuentas del recorrido, sus datos y la editorial
+       ficticia, borrados; permisos temporales revocados; interruptores,
+       purga y muestreo apagados; sin servidores ni temporales.
+     Informe: `docs/medidas/2026-10-28-informe-claude-e9a.md`; salidas:
+     `docs/medidas/2026-10-28-e9a-salidas.txt`; capturas:
+     `docs/medidas/2026-10-28-e9a-recorrido/`.
    - decidir si el CHECK de 011 sigue prohibiendo U+200D (ZWJ), que
      bloquea los emojis compuestos. Es una restricción de E2a que no se
      reabrió;

@@ -1125,6 +1125,19 @@ rollback;
   apagado.
 - **Evidencia para Codex:** salidas, checklist de autorizaciones obtenidas.
 
+  **Parte local hecha por Claude el 28/10, pendiente de auditoría; E9a NO
+  cerrada:** falta E0 y los pasos de Producción de arriba.
+  - Gates de §5.0 repetidos sobre el conjunto integrado.
+  - Recorrido visible completo.
+  - Todo apagado igual a `52c7ae7`.
+  - `/api/title` idéntico.
+  - Build verde.
+  - Durante la corrida, el arnés de 011–014 borró datos ajenos de la base
+    local; ahora queda frenado.
+
+  Informe: `docs/medidas/2026-10-28-informe-claude-e9a.md`. Prueba del dueño:
+  `docs/medidas/2026-10-28-e9a-prueba-duenio.md`.
+
 ### E9b — Android en el mismo AAB que salas
 
 - **Objetivo:** bundle con reseñas y perfil nativo, junto a los arreglos de
