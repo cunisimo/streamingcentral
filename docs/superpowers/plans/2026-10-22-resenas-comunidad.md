@@ -1094,6 +1094,10 @@ rollback;
   `purgar_comunidad(ahora)` en una sola transacción.
 
   Informe: `docs/medidas/2026-10-27-informe-claude-e8.md`.
+  Auditoría sobre `95c09b2`: pendiente de A1 (un mes purgado se podía
+  reconstruir al ampliar el plazo). Corrección del 28/10 (`d37563a`, marca
+  permanente `comunidad.meses_sin_historial`), pendiente de revisión:
+  `docs/medidas/2026-10-28-informe-claude-e8-a1.md`.
 
 ### E9a — Integración web con interruptores apagados
 

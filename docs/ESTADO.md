@@ -1155,8 +1155,12 @@ AAB tiene que ser `5` o mayor.
      `docs/medidas/2026-10-27-e7-salidas.txt`; capturas:
      `docs/medidas/2026-10-27-e7-recorrido/`.
    - **E8 local: retención y purga (27/10, Claude, autorizada por el dueño
-     sólo en local; `supabase start` y datos ficticios; `a730934`).
-     PENDIENTE DE AUDITORÍA FOCALIZADA de Codex.**
+     sólo en local; `supabase start` y datos ficticios; `a730934`).**
+     Auditada por Codex sobre `95c09b2`
+     (`docs/medidas/2026-10-27-auditoria-e8-95c09b2.md`, copiada sin
+     cambios): **pendiente de A1 (P2)**; el resto, revisado sin hallazgos.
+     **Corrección A1 hecha por Claude el 28/10 (`d37563a`), PENDIENTE DE
+     REVISIÓN de Codex** (detalle al final de este bloque).
      - **Plazos (informado por el dueño, 27/10; decisiones de producto, NO
        validadas legalmente: P3 sigue abierto para la validación):** reseñas
        y votos vigentes, sin plazo; órdenes de Más útiles al vencer sus 2 h;
@@ -1223,6 +1227,39 @@ AAB tiene que ser `5` o mayor.
        volúmenes.
      Informe: `docs/medidas/2026-10-27-informe-claude-e8.md`; salidas:
      `docs/medidas/2026-10-27-e8-salidas.txt`.
+     - **Corrección A1 (28/10, Claude, sólo local; `d37563a`):**
+       - **Problema:** la ventana del ranking dependía del plazo de hoy;
+         ampliarlo o dejarlo en null rehabilitaba un mes ya purgado, que se
+         reconstruía vacío. **Reproducido antes de corregir:** enero de
+         2026 (2 puntos) purgado con plazo de 8 meses → con 12 meses, la
+         lectura real dio 200 con `autores: 0`.
+       - **Corrección:** `comunidad.meses_sin_historial`, una marca
+         PERMANENTE por mes, escrita en la misma transacción en que la purga
+         borra su ranking, un tramo de ese mes o una suspensión que cruza su
+         corte; no depende de ningún plazo y cubre meses nunca consolidados.
+         `consolidar_mes` rechaza un mes marcado (`mes_invalido`, 400 por la
+         ruta) antes y después del exclusivo; un ranking ya consolidado y
+         conservado se sigue leyendo. Tramos y suspensiones toman K_CORTE
+         compartido, como rankings. Plazos, fórmula y lectura de E7 sin
+         cambios.
+       - **Pruebas reales:** prueba A1 nueva (purgar → 12 meses y sin plazo;
+         mes nunca consolidado; conservado sin historial legible igual;
+         historial completo consolida; otros meses sin cambios):
+         `pruebas-purga` 27/28 antes y **28/28 después**; up/down/up 6/6;
+         permisos 29/29; `pruebas-top` 10/10 con la ruta;
+         `pruebas-top-concurrencia` 6/6; unitarias 36/36; **`npm test` 2519
+         pasan, 0 fallan, 16 omitidas**; `tsc` 0.
+       - **Límites:** conservadora por mes (un tramo purgado basta para
+         bloquear la reconstrucción de ese mes); un borrado manual por SQL no
+         marca; el volcado "sin 021" cambió respecto del 27/10 por las
+         particiones diarias de Realtime (dentro de la corrida, antes de
+         subir = después de bajar).
+       - **Limpieza:** base como al empezar (6/2/42/2; 0 tramos, meses,
+         marcas, ejecuciones; purga e interruptores apagados; plazo de
+         rankings en 12 meses; sólo `sala-barrido` en cron). Docker Desktop
+         estaba detenido: lo inicié sin tocar volúmenes.
+       Informe: `docs/medidas/2026-10-28-informe-claude-e8-a1.md`; salidas:
+       `docs/medidas/2026-10-28-e8-a1-salidas.txt`.
    - decidir si el CHECK de 011 sigue prohibiendo U+200D (ZWJ), que
      bloquea los emojis compuestos. Es una restricción de E2a que no se
      reabrió;
