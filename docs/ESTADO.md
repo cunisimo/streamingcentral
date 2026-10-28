@@ -1371,6 +1371,20 @@ AAB tiene que ser `5` o mayor.
          pendiente.
        Informe: `docs/medidas/2026-10-28-informe-claude-e9a-a1a2.md`;
        salidas: `docs/medidas/2026-10-28-e9a-a1a2-salidas.txt`.
+     - **Revisión de Codex sobre `092aceb`** (`docs/medidas/2026-10-28-auditoria-e9a-a1a2-092aceb.md`):
+       A2 CERRADA. A1 con un residual: un voto ajeno sobre una reseña del
+       recorrido en un mes SIN consolidar no frenaba la limpieza, que lo
+       borraba. **Corregido (28/10, Claude, local, PENDIENTE DE REVISIÓN):**
+       `limpiar` cuenta la actividad ajena que el borrado de lo propio
+       arrastraría, en cualquier mes (votos y tramos, denuncias, bloqueos y
+       decisiones de otro admin), y se detiene antes del primer borrado,
+       conservando archivo y registro. Pruebas: núcleo 8/8; aislamiento real
+       15/15 (dos votos ajenos en octubre, sin consolidar: nada borrado;
+       retirada sólo esa fixture por id, el reintento limpia lo propio;
+       recorrido normal y ranking consolidado siguen); scripts 50/50, `tsc` 0.
+       Base al terminar en la línea base, sin datos preparados ni servidores.
+       Informe: `docs/medidas/2026-10-28-informe-claude-e9a-a1-residual.md`;
+       salidas: `docs/medidas/2026-10-28-e9a-a1-residual-salidas.txt`.
    - decidir si el CHECK de 011 sigue prohibiendo U+200D (ZWJ), que
      bloquea los emojis compuestos. Es una restricción de E2a que no se
      reabrió;

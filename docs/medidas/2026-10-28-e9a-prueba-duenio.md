@@ -95,6 +95,10 @@ modo dispositivo).
    "permisos restaurados: sí | registro quitado: sí". La línea de conteos
    globales es informativa.
 
+   Usá sólo cuentas `@recorrido.test` para votar, denunciar o bloquear
+   reseñas del recorrido: la actividad de cualquier otra cuenta sobre ellas es
+   ajena, y la limpieza se detiene antes de borrarla.
+
    Si dice **"LIMPIEZA DETENIDA"** o **"LIMPIEZA INCOMPLETA"** (sale con
    error), no se informó éxito y quedan el archivo `.recorrido-e9a.local.json`
    y el registro para reintentar: leé el motivo, resolvelo o avisale a

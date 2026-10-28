@@ -1,0 +1,103 @@
+# E9a — residual A1 (auditoría sobre 092aceb), 28/10/2026: salidas
+Claude, feat/resenas-reglas desde 092aceb. Sólo Supabase local y fixtures propias identificadas por id. Sin bajadas de migraciones ni limpiezas generales.
+
+## 1. Núcleo: node --test scripts/comunidad/recorrido-e9a-nucleo.test.mjs
+✔ objetivos: lo guardado ∪ el registro, sin duplicados; nada más (8.6096ms)
+✔ meses: sólo se borra un ranking formado enteramente por datos propios (1.3098ms)
+✔ un mes ajeno que no toca participantes propios ni siquiera se evalúa (no entra en la lista) (0.4711ms)
+✔ sin objetivos, los borrados no alcanzan ninguna fila (el caso de la auditoría) (3.1039ms)
+✔ con objetivos, sólo listas de ids validadas (2.8074ms)
+✔ verificación: cualquier resto o discrepancia impide informar éxito (0.9581ms)
+✔ residual A1: un voto ajeno en un mes SIN consolidar no lo frena decidirMeses, pero sí la actividad ajena (0.89ms)
+✔ la consulta de actividad ajena mira sólo lo ajeno SOBRE lo propio, en cualquier mes (0.6997ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 399.0965
+
+## 2. Aislamiento en la base local real: node --env-file=.env.comunidad-local scripts/comunidad/pruebas-recorrido-e9a.mjs
+# Las líneas '│' son la salida de recorrido-e9a.mjs en su proceso; se omiten las trazas de pila de los cortes de prueba.
+base: supabase_db_streamingcentral
+
+✔ punto de partida: sin archivo, sin registro, sin cuentas @recorrido.test, agosto y septiembre sin consolidar
+     │ Error: CORTE DE PRUEBA en "preparar-autores"
+     │ objetivos: 2 cuenta(s), 2 participante(s), 2 versión(es)
+     │ limpieza verificada (intento 1): 2 cuenta(s) y 2 participante(s) propios, sin restos; meses propios borrados: ninguno
+     │ conteos globales de la comunidad (informativo; la actividad ajena los mueve): iguales a los de antes
+     │ interruptores: false/false/false/false | purga: false | permisos restaurados: sí | registro quitado: sí
+✔ preparar cortado tras dos autores: deja el archivo y el registro; limpiar lo deja todo como antes
+     │ Preparado. Credenciales en .recorrido-e9a.local.json (cuentas ficticias locales).
+     │   ficha principal: http://localhost:3100/titulo/movie/550  (7 reseñas ajenas + la editorial ficticia)
+     │   segunda ficha:   http://localhost:3100/titulo/movie/603
+     │   Top Yumpers de septiembre de 2026, una denuncia abierta en /admin/moderacion
+     │   registrá tu cuenta nueva con un correo que termine en @recorrido.test (queda registrada como propia del recorrido)
+✔ preparar completo
+     ajeno: {"participantes" : 1, "intentos" : 1, "huellas" : 0, "agosto" : "1:5:261f0e13-f1e6-4ee7-a293-746af2a8c35c", "agosto_mes" : 1}
+✔ durante el recorrido: identidad AJENA dada de baja, ranking AJENO de agosto, cuentas propias hechas a mano (una dada de baja)
+     │ objetivos: 14 cuenta(s), 13 participante(s), 9 versión(es)
+     │ Error: CORTE DE PRUEBA en "tras-objetivos"
+✔ limpiar cortado tras guardar los objetivos: sale con error, sin éxito, nada borrado, objetivos = el registro
+     │ objetivos: 14 cuenta(s), 13 participante(s), 9 versión(es)
+     │ Error: CORTE DE PRUEBA en "tras-comunidad"
+✔ entre intentos nace otra identidad ajena; el corte siguiente (tras comunidad) no la incluye
+     │ objetivos: 14 cuenta(s), 13 participante(s), 9 versión(es)
+     │ limpieza verificada (intento 3): 14 cuenta(s) y 13 participante(s) propios, sin restos; meses propios borrados: 2026-09-01
+     │ conteos globales de la comunidad (informativo; la actividad ajena los mueve): participantes 0→2, intentos 0→1, top_meses 0→1, top_resultados 0→1
+     │ interruptores: false/false/false/false | purga: false | permisos restaurados: sí | registro quitado: sí
+✔ reintento completo: éxito verificado; quita archivo y registro
+✔ lo propio se limpió: cuentas de preparar y a mano, el participante desvinculado y septiembre
+✔ lo ajeno sobrevivió: la identidad dada de baja con sus filas, el ranking de agosto y la cuenta viva
+     │ Error: No hay .recorrido-e9a.local.json: no sé qué restaurar ni qué es propio.
+✔ limpiar repetido sin archivo: no borra nada y lo dice
+     │ Preparado. Credenciales en .recorrido-e9a.local.json (cuentas ficticias locales).
+     │   ficha principal: http://localhost:3100/titulo/movie/550  (7 reseñas ajenas + la editorial ficticia)
+     │   segunda ficha:   http://localhost:3100/titulo/movie/603
+     │   Top Yumpers de septiembre de 2026, una denuncia abierta en /admin/moderacion
+     │   registrá tu cuenta nueva con un correo que termine en @recorrido.test (queda registrada como propia del recorrido)
+     │ objetivos: 12 cuenta(s), 11 participante(s), 8 versión(es)
+     │ LIMPIEZA DETENIDA antes de borrar. Se conservan el archivo y el registro para reintentar:
+     │   - 2026-09-01: ranking con 1 tramo(s) y 0 resultado(s) ajenos; no se toca
+     │   - actividad ajena sobre lo propio: 1 voto(s); borrar lo propio la eliminaría
+     │   - actividad ajena sobre lo propio: 1 tramo(s) de votos; borrar lo propio la eliminaría
+✔ discrepancia real: con un voto AJENO en septiembre, la limpieza se detiene ANTES de borrar, sale con 1 y conserva archivo y registro
+     │ objetivos: 12 cuenta(s), 11 participante(s), 8 versión(es)
+     │ limpieza verificada (intento 2): 12 cuenta(s) y 11 participante(s) propios, sin restos; meses propios borrados: 2026-09-01
+     │ conteos globales de la comunidad (informativo; la actividad ajena los mueve): participantes 2→3, contadores 0→1
+     │ interruptores: false/false/false/false | purga: false | permisos restaurados: sí | registro quitado: sí
+✔ resuelta la discrepancia (se quita el voto ajeno de prueba), el reintento verifica y borra septiembre
+     │ Preparado. Credenciales en .recorrido-e9a.local.json (cuentas ficticias locales).
+     │   ficha principal: http://localhost:3100/titulo/movie/550  (7 reseñas ajenas + la editorial ficticia)
+     │   segunda ficha:   http://localhost:3100/titulo/movie/603
+     │   Top Yumpers de septiembre de 2026, una denuncia abierta en /admin/moderacion
+     │   registrá tu cuenta nueva con un correo que termine en @recorrido.test (queda registrada como propia del recorrido)
+     antes: {"cuentas_propias" : 12, "resenas_propias" : 8, "evaluaciones" : 14, "tramos" : 12, "evaluaciones_ajenas" : 2, "tramos_ajenos" : 1}
+     │ objetivos: 12 cuenta(s), 11 participante(s), 8 versión(es)
+     │ LIMPIEZA DETENIDA antes de borrar. Se conservan el archivo y el registro para reintentar:
+     │   - actividad ajena sobre lo propio: 2 voto(s); borrar lo propio la eliminaría
+     │   - actividad ajena sobre lo propio: 1 tramo(s) de votos; borrar lo propio la eliminaría
+✔ residual A1: votos AJENOS en el mes corriente (sin consolidar) sobre reseñas propias detienen la limpieza ANTES de borrar
+     │ objetivos: 12 cuenta(s), 11 participante(s), 8 versión(es)
+     │ limpieza verificada (intento 2): 12 cuenta(s) y 11 participante(s) propios, sin restos; meses propios borrados: ninguno
+     │ conteos globales de la comunidad (informativo; la actividad ajena los mueve): participantes 3→5, contadores 1→3
+     │ interruptores: false/false/false/false | purga: false | permisos restaurados: sí | registro quitado: sí
+✔ residual A1: retirada SÓLO la fixture ajena (por id), el reintento limpia lo propio
+✔ limpieza de las fixtures ajenas de esta prueba (por id) y base como al principio
+
+15 de 15 pasaron.
+
+## 3. Controles afectados
+node --test scripts/comunidad/*.test.mjs scripts/sala/*.test.mjs:
+ℹ tests 50
+ℹ pass 50
+ℹ fail 0
+ℹ skipped 0
+tsc --noEmit --incremental false: exit 0
+git diff --check: limpio
+
+## 4. Estado final de la base local (sólo lectura)
+{"participantes" : 0, "versiones" : 0, "suspensiones" : 0, "evaluaciones" : 0, "tramos" : 0, "cuentas_comunidad_test" : 42, "cuentas_recorrido_o_auditoria" : 0, "tablas_comunidad" : 24, "interruptores" : "false/false/false/false", "purga" : false, "plazo_rankings" : "1 year", "cron" : ["sala-barrido"], "esquemas_recorrido_o_reloj" : 0, "triggers_recorrido" : 0, "top_meses" : 0, "editorial_550" : 0}
+archivo .recorrido-e9a.local.json: no existe; sin servidores.
