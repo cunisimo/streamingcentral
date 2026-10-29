@@ -63,10 +63,11 @@ export function armarSenales(
 // (incluido Malaso), Mi lista y Ya la vi, más lo que ya se está mostrando en el
 // Home para no repetir.
 //
-// Los descartes de "No es para mí" NO entran acá, y ese es justamente el punto:
-// NO viajan al servidor. Si viajaran, entrarían en la clave de cache del riel y
-// cada descarte costaría un rearmado completo. Se filtran en el cliente, sobre
-// el payload ya cacheado (ver ./reco-descartes).
+// Los descartes de "No es para mí" NO entran acá: los lee el SERVIDOR con el
+// token del usuario y los suma a estas exclusiones (lib/reco-descartes-servidor.ts).
+// Hasta el 29/10 no llegaban nunca al recomendador y el riel se vaciaba con cada
+// descarte sin reponerse. Se leen allá, y no se mandan desde acá, para que el
+// arreglo valga también para los bundles de Android ya instalados.
 export function clavesExcluidas(votos: Voto[], marcados: Marcado[], enHome: string[]): string[] {
   return [
     ...votos.map((x) => `${x.tipo}:${x.tmdb_id}`),

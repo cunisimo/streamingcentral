@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { recomendaciones, MAX_ORIGENES, type Senal } from "@/lib/reco";
 import { usuarioDeToken } from "@/lib/supabase";
+import { descartesDeToken } from "@/lib/reco-descartes-servidor";
 import type { MediaType, PlatformCode } from "@/lib/types";
 import { conCors, opcionesCors } from "@/lib/cors";
 
@@ -41,7 +42,14 @@ async function manejar(req: NextRequest) {
   // exista; su id no se guarda ni entra en la clave de cache.
   const auth = req.headers.get("authorization");
   const token = auth?.toLowerCase().startsWith("bearer ") ? auth.slice(7) : null;
-  if (!(await usuarioDeToken(token))) {
+  // Los descartes se leen EN PARALELO con la validación del token: con un token
+  // inválido la RLS no devuelve filas y el resultado se tira igual, así que no
+  // hay nada que esperar en serie. Ver lib/reco-descartes-servidor.ts.
+  const [usuario, descartes] = await Promise.all([
+    usuarioDeToken(token),
+    token ? descartesDeToken(token) : Promise.resolve(null),
+  ]);
+  if (!usuario) {
     return NextResponse.json({ items: [], motivo: "sin-sesion" }, { status: 401 });
   }
 
@@ -64,7 +72,13 @@ async function manejar(req: NextRequest) {
 
   const excluir = (cuerpo.excluir ?? [])
     .filter((k): k is string => typeof k === "string" && /^(movie|tv):\d+$/.test(k))
-    .slice(0, 2000);
+    .slice(0, 2000)
+    // Los descartes van DESPUÉS del recorte del cliente y sin entrar en él: si
+    // compartieran el tope, cada descarte nuevo empujaría afuera un título
+    // calificado. Entran en la clave de cache del riel (`huella` en lib/reco.ts),
+    // así que un descarte nuevo rearma el riel en la carga siguiente y el hueco
+    // se rellena con el siguiente candidato.
+    .concat(descartes ?? []);
 
   const providers = (cuerpo.providers ?? []).filter((p): p is string => typeof p === "string") as PlatformCode[];
 
