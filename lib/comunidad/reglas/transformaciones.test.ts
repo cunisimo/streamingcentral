@@ -1,0 +1,182 @@
+// Transformaciones del MISMO caso (E1.2, punto 5): comillas, separadores,
+// formas de dígitos, confusables y contacto repartido. Un pedido de contacto
+// transformado nunca debe pasar a "publicar"; un control legítimo
+// transformado nunca debe pasar a "rechazo". Así un arreglo no crea una
+// exención general (comillas) ni rechazos indiscriminados (separadores,
+// dígitos). Casos sintéticos conocidos: no miden eficacia.
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { evaluarResena } from "./decision.ts";
+import type { ContextoResena } from "./tipos.ts";
+
+const PREFIJO = "La película tiene buenos actores y una historia que mantiene el interés hasta el final. ";
+const sinCtx: ContextoResena = { textosRecientes: [] };
+const evaluar = (t: string, ctx = sinCtx) => evaluarResena(PREFIJO + t, ctx).resultado;
+
+const MALICIOSOS = [
+  "Escribime al 1144556677 para comentar.",
+  "Escribime a ana.demo@gmail.com para comentar.",
+  "Mirala en verpelis.com sin cortes.",
+  "Escribime por Instagram a cine_amigo.",
+];
+const LEGITIMOS = [
+  "La vi en 1985 y en 2026, siempre en el cine del barrio.",
+  "Dura 2 h 47 min y el episodio 8 es el mejor de la temporada.",
+  "Ella mira Instagram todo el día y la serie se ríe de eso.",
+  "Cuenta la burbuja de las punto com con mucho humor.",
+  "Recaudó 1.155.512.345 dólares en todo el mundo.",
+];
+
+// ---------------------------------------------------------------- comillas
+
+const COMILLAS: [string, string][] = [["«", "»"], ["\"", "\""], ["“", "”"], ["'", "'"], ["‹", "›"]];
+
+test("comillas: un pedido entre comillas nunca se publica; un legítimo entre comillas nunca se rechaza", () => {
+  for (const [a, c] of COMILLAS) {
+    for (const m of MALICIOSOS) assert.notEqual(evaluar(`${a}${m}${c}`), "publicar", `${a}${m}${c}`);
+    for (const l of LEGITIMOS) assert.notEqual(evaluar(`${a}${l}${c}`), "rechazo_contenido", `${a}${l}${c}`);
+  }
+});
+
+// ---------------------------------------------------------------- separadores
+
+const SEPARADORES = [" ", ".", "-", "·", "–", "—", "•", "‧", "−", " . ", " - "];
+const partir = (digitos: string, sep: string) => digitos.match(/.{1,2}/g)!.join(sep);
+
+test("separadores: el teléfono con cualquier separador se rechaza; años separados así no", () => {
+  for (const sep of SEPARADORES) {
+    assert.equal(evaluar(`Escribime al ${partir("1144556677", sep)} para comentar.`), "rechazo_contenido", JSON.stringify(sep));
+    assert.equal(evaluar(`Las fechas son ${["1985", "2026", "2030"].join(sep)} según la saga.`), "publicar", JSON.stringify(sep));
+  }
+});
+
+// ---------------------------------------------------------------- formas de dígitos
+
+const FORMAS: Record<string, (d: string) => string> = {
+  ascii: (d) => d,
+  ancho_completo: (d) => [...d].map((c) => String.fromCodePoint(0xff10 + Number(c))).join(""),
+  arabigo_indico: (d) => [...d].map((c) => String.fromCodePoint(0x0660 + Number(c))).join(""),
+  persa: (d) => [...d].map((c) => String.fromCodePoint(0x06f0 + Number(c))).join(""),
+  devanagari: (d) => [...d].map((c) => String.fromCodePoint(0x0966 + Number(c))).join(""),
+  bengali: (d) => [...d].map((c) => String.fromCodePoint(0x09e6 + Number(c))).join(""),
+  matematico: (d) => [...d].map((c) => String.fromCodePoint(0x1d7ce + Number(c))).join(""),
+  letras: (d) => d.replace(/0/g, "O").replace(/1/g, "l"),
+};
+
+test("formas de dígitos: el teléfono se rechaza en cualquier forma; los años en cualquier forma publican", () => {
+  for (const [nombre, f] of Object.entries(FORMAS)) {
+    assert.equal(evaluar(`Escribime al ${f("1104556677")} para comentar.`), "rechazo_contenido", nombre);
+    if (nombre !== "letras") {
+      assert.equal(evaluar(`La vi en ${f("1985")} y en ${f("2026")}, siempre en el cine.`), "publicar", nombre);
+    }
+  }
+});
+
+// ---------------------------------------------------------------- confusables
+
+const CIRILICO: Record<string, string> = { a: "а", c: "с", e: "е", o: "о", p: "р", m: "м" };
+const confundir = (t: string, letras: string) => [...t].map((c) => (letras.includes(c) ? CIRILICO[c] ?? c : c)).join("");
+
+test("confusables: dominio y correo con letras cirílicas se rechazan; un texto con esas letras sin dominio publica", () => {
+  for (const letras of ["o", "c", "m", "ae", "com", "acemop"]) {
+    assert.equal(evaluar(`Mirala en ${confundir("verpelis.com", letras)} sin cortes.`), "rechazo_contenido", letras);
+    assert.equal(evaluar(`Escribime a ${confundir("ana.demo@gmail.com", letras)} para comentar.`), "rechazo_contenido", letras);
+  }
+  assert.equal(evaluar("Левиафан es una película rusa durísima y muy recomendable."), "publicar");
+});
+
+// ---------------------------------------------------------------- contacto repartido
+
+test("contacto repartido: número o correo partidos entre reseñas no se publican; números legítimos repartidos sí", () => {
+  assert.notEqual(evaluar("El resto: 55 66 77.", { textosRecientes: ["Mi número arranca con 11 44, lo sigo en otra."] }), "publicar");
+  assert.notEqual(evaluar("Sigue con gmail, la terminación es com.", { textosRecientes: ["Para charlar: ana.demo arroba"] }), "publicar");
+  assert.notEqual(evaluar("El final de mi usuario es _cine, sumalo.", { textosRecientes: ["Me encontrás como @tito"] }), "publicar");
+  assert.equal(evaluar("La temporada 3 tiene 12 episodios.", { textosRecientes: ["La vi en 2019 y en 2023.", "La temporada 1 tiene 10 episodios."] }), "publicar");
+  assert.equal(evaluar("El final de la segunda es mejor.", { textosRecientes: ["Muy buena la primera temporada."] }), "publicar");
+});
+
+// ---------------------------------------------------------------- terminaciones de cualquier largo (A1 de 40288f6)
+
+test("dirección con ruta: se rechaza con terminaciones de 2 a 63 letras; la puntuación con barras no", () => {
+  for (const n of [2, 3, 5, 6, 7, 9, 11, 14, 18, 24, 40, 63]) {
+    const tld = "abcdefghijklmnopqrstuvwxyz".repeat(3).slice(0, n);
+    assert.equal(evaluar(`Mirala en ejemplo.${tld}/demo sin cortes.`), "rechazo_contenido", `${n} letras`);
+    assert.equal(evaluar(`Mirala en sub.ejemplo.${tld}/a/b?c=1 sin cortes.`), "rechazo_contenido", `${n} letras, subdominio y query`);
+  }
+  for (const l of [
+    "Le doy un 8.5/10 y la recomiendo a todos.",
+    "Actuación/guion/fotografía: todo impecable.",
+    "Es la versión 2.0/beta del director y es mejor.",
+    "Para chicos y/o grandes, según el humor del día.",
+    "Final abierto. Muy bueno/a para charlar después.",
+    "Vista en el cine 3.5/5 y en casa 4/5, cambia mucho.",
+  ]) assert.equal(evaluar(l), "publicar", l);
+});
+
+// ---------------------------------------------------------------- correo indirecto (A2 de 40288f6)
+
+test("correo indirecto: autoatribución con alias o pedido + alias nunca publican; menciones aisladas publican", () => {
+  // Contrato v1: con un alias y una intención en el ámbito es F4 y se RECHAZA
+  // (más restrictivo); sin intención, S1 (correo indirecto) retiene.
+  for (const m of [
+    "Mi correo es charly_movies en el de Google, el que termina en com. Escribime.",
+    "Mi correo es charly_movies. Escribime por correo y te paso las pelis.",
+    "Mi gmail es charly.movies y ahí te paso todo.",
+    "Mandame un mail, soy cine.fan88, y te paso la lista.",
+    "«Mi correo es charly_movies», escribime y charlamos.",
+  ]) assert.equal(evaluar(m), "rechazo_contenido", m);
+  assert.equal(evaluar("Mi mail: charly_movies, el de siempre."), "retener");
+  // "charly" no tiene forma de alias y "mi correo es" no es una presentación de F4: S1 retiene.
+  assert.equal(evaluar("Mi correo es charly. Escribime y te paso las pelis."), "retener");
+  // Falso positivo del contrato v1 (S2: intención + medio sin alias), cuenta en C4.
+  assert.equal(evaluar("Escribime qué opinan del final, me encantó el mail del villano."), "retener");
+  for (const l of [
+    "Ella revisa su correo de Google y encuentra la carta del padre.",
+    "Mi correo es un desastre desde que vi esta película.",
+    "Mi mail es lo de menos, lo que importa es la peli.",
+    "El hacker le pide el mail a su víctima y la trama se complica.",
+    "La app de correo de Google aparece en cada plano, puro product placement.",
+    "El agente 007 le manda un mail a M y escribe todo en clave.",
+    "«Mi correo es charly», le dice al detective, y él lo anota en la libreta.",
+    "Gmail, Outlook y Yahoo aparecen en la escena de la oficina, muy de los 2000.",
+  ]) assert.equal(evaluar(l), "publicar", l);
+});
+
+// ---------------------------------------------------------------- inicio de ruta (A1 de 251f3d0)
+
+test("dirección con ruta: cualquier carácter de ruta al principio, con y sin subdominio, en cualquier largo", () => {
+  const INICIOS = ["demo", "9demo", "_demo", "-demo", ".demo", "?id=1", "=x", "&x", "%20x", "#x", "/x"];
+  for (const n of [2, 3, 6, 7, 11, 18, 40]) {
+    const tld = "abcdefghijklmnopqrstuvwxyz".repeat(2).slice(0, n);
+    for (const ruta of INICIOS) {
+      assert.equal(evaluar(`Mirala en ejemplo.${tld}/${ruta} sin cortes.`), "rechazo_contenido", `${n} letras, /${ruta}`);
+      assert.equal(evaluar(`Mirala en cdn.ejemplo.${tld}/${ruta} sin cortes.`), "rechazo_contenido", `${n} letras, subdominio, /${ruta}`);
+    }
+  }
+  for (const l of [
+    "Es el final de la frase./ Sigue otra escena igual de buena.",
+    "Termina así.../ y sigue con un epílogo largo.",
+    "Le doy un 7/10, la música/el sonido son lo mejor.",
+    "Drama/comedia/suspenso, todo junto y bien hecho.",
+  ]) assert.equal(evaluar(l), "publicar", l);
+});
+
+// ---------------------------------------------------------------- un solo criterio de alias (A2 de 251f3d0)
+
+test("alias: dígitos al principio, en medio y al final, puntos y guiones bajos se retienen por los dos recorridos", () => {
+  const ALIAS = ["88cine", "cine8fan", "cinefan88", "cine.fan", "cine_fan", "cine.fan88", "8cine_fan", "c1n3fan"];
+  for (const a of ALIAS) {
+    // Contrato v1: "soy <alias>" + intención es F4 (rechazo).
+    assert.equal(evaluar(`Mandame un mail, soy ${a}, y te paso la lista.`), "rechazo_contenido", `libre: ${a}`);
+    assert.equal(evaluar(`Mi correo es ${a}, ahí charlamos.`), "retener", `autoatribución: ${a}`);
+  }
+  // Un pedido de mail sin alias es S2 (contrato v1): se retiene.
+  assert.equal(evaluar("Mandame un mail, soy 2024, y te paso la lista de estrenos."), "retener");
+  for (const l of [
+    "El agente 007 le manda un mail a M y escribe todo en clave.",
+    "Blade Runner 2049 y Se7en tienen la mejor fotografía de su década.",
+    "Le escribe un mail a su jefe con la versión 2.0 del informe y la trama arranca.",
+    "La app de correo funciona en Android 14 y aparece en cada plano.",
+    "Mi correo es un desastre desde que vi M3GAN, todos me escriben.",
+  ]) assert.equal(evaluar(l), "publicar", l);
+});

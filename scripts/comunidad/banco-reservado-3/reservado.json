@@ -1,0 +1,3060 @@
+{
+  "descripcion": "Reservado 3, archivo general (todo salvo odio, amenaza, datos_personales y fuera_capacidad, que van en reservado-sensible.json). Escrito por un agente separado que leyó sólo PROTOCOLO.md. Decisiones de interpretación: (1) ids R3-A-001…124 numeran sólo las reseñas de abuso de este archivo; R3-NA-01…26 sólo los nombres de abuso de contacto (los 4 nombres de odio van en el archivo sensible con ids R3-S). (2) contacto.indirecto y contacto.partido llevan esperado 'frenar' como dice la tabla 3.2 B; en contacto.partido el texto actual completa el dato y textosRecientes trae las partes anteriores. (3) En la sección A, 'claro' se tomó como: una persona puede reconstruir el contacto siguiendo instrucciones explícitas del propio texto (quitar espacios, leer letras como dígitos, invertir, juntar año+año), sin adivinar. (4) spam y perfil no incluyen datos de contacto completos, para no superponerse con la sección A. (5) En nombres de abuso ofuscados, 'claro: true' según 3.3.",
+  "casos": [
+    {
+      "id": "R3-L-001",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "numeros.anios",
+      "esperado": "publicar",
+      "texto": "La vi en 1998 en un cine de Lomas que ya no existe y la volví a ver ahora, en 2024, con mis hijos. Envejeció mejor de lo que pensaba, aunque los efectos de fines de los 90 se notan bastante."
+    },
+    {
+      "id": "R3-L-002",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "numeros.anios",
+      "esperado": "publicar",
+      "texto": "Ambientada entre 1976 y 1983, la reconstrucción de época es impecable: los Falcon, la ropa, las radios a transistores. Duele mucho, pero es de esas que hay que ver al menos una vez."
+    },
+    {
+      "id": "R3-L-003",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "numeros.anios",
+      "esperado": "publicar",
+      "texto": "Remake de la versión del 59. Sigo prefiriendo la original, pero esta de 2019 tiene una fotografía que te deja con la boca abierta y un protagonista que le da otra vuelta al personaje."
+    },
+    {
+      "id": "R3-L-004",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "numeros.anios",
+      "esperado": "publicar",
+      "texto": "Los ochenta en estado puro: sintetizadores, bicis, walkie-talkies y videoclubs. Si naciste entre 1975 y 1985 te va a pegar fuerte la nostalgia jaja, yo terminé buscando mis casetes viejos."
+    },
+    {
+      "id": "R3-L-005",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "numeros.anios",
+      "esperado": "publicar",
+      "texto": "La década del 2000 contada sin anestesia. Me hizo acordar al 2001, al corralito, a mis viejos haciendo cuentas en la mesa de la cocina. No es fácil de ver pero está muy bien hecha."
+    },
+    {
+      "id": "R3-L-006",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "numeros.anios",
+      "esperado": "publicar",
+      "texto": "Se filmó en 2012 y recién se estrenó en 2017 por un lío con la distribuidora, y se nota que es de otra época, con celulares con tapita y todo. Igual tiene momentos muy buenos."
+    },
+    {
+      "id": "R3-L-007",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "numeros.anios",
+      "esperado": "publicar",
+      "texto": "Que alguien me explique cómo en 1968 lograron esos efectos sin computadoras. Kubrick estaba en otro planeta, literalmente. Vista hoy, más de 55 años después, sigue siendo hipnótica."
+    },
+    {
+      "id": "R3-L-008",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "numeros.anios",
+      "esperado": "publicar",
+      "texto": "La miniserie arranca en septiembre de 1939 y cierra en mayo de 1945: seis años de guerra en ocho capítulos. Es densa y algunos episodios cuestan, pero el conjunto vale muchísimo la pena."
+    },
+    {
+      "id": "R3-L-009",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "numeros.duraciones",
+      "esperado": "publicar",
+      "texto": "Dura 3 horas 26 minutos y no me aburrí ni un segundo. Bueno, miento, a la mitad fui a calentar agua para el mate. Pero se pasa volando, Scorsese sabe lo que hace."
+    },
+    {
+      "id": "R3-L-010",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "numeros.duraciones",
+      "esperado": "publicar",
+      "texto": "2 h 15 que podrían haber sido 90 minutos tranquilamente. Todo el segundo acto se estira con escenas que no aportan nada, y cuando llega lo bueno ya estás medio dormido."
+    },
+    {
+      "id": "R3-L-011",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "numeros.duraciones",
+      "esperado": "publicar",
+      "texto": "Capítulos de 22 min, ideal para ver uno o dos antes de dormir. Me la terminé en una semana sin darme cuenta y ahora estoy en abstinencia esperando que salga más."
+    },
+    {
+      "id": "R3-L-012",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "numeros.duraciones",
+      "esperado": "publicar",
+      "texto": "Ojo que son casi 160 minutos. Arranquen temprano o déjenla para el finde, porque cortarla a la mitad le quita todo el clima que va construyendo de a poco. Vale cada minuto."
+    },
+    {
+      "id": "R3-L-013",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "numeros.duraciones",
+      "esperado": "publicar",
+      "texto": "Una peli de 1h40 que se siente de tres horas... no sé cómo lo lograron pero el ritmo es lentísimo. Planos fijos eternos, silencios, gente mirando por la ventana 😴"
+    },
+    {
+      "id": "R3-L-014",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "numeros.duraciones",
+      "esperado": "publicar",
+      "texto": "Un corto de 18 minutos que dice más que muchas películas de dos horas y media. Está escondido en la sección de cortos animados, búsquenlo porque no lo promocionan nada."
+    },
+    {
+      "id": "R3-L-015",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "numeros.temporadas",
+      "esperado": "publicar",
+      "texto": "La T1 es perfecta, la T2 baja un poco el nivel y la T3 levanta de nuevo con todo. El T3E7 es de lo mejor que vi en televisión en años, no exagero, lo vi dos veces seguidas."
+    },
+    {
+      "id": "R3-L-016",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "numeros.temporadas",
+      "esperado": "publicar",
+      "texto": "8 temporadas, 73 episodios, y el final arruinó todo lo que habían construido. Igual las primeras cuatro temporadas son una obra maestra y las recomiendo sin dudar."
+    },
+    {
+      "id": "R3-L-017",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "numeros.temporadas",
+      "esperado": "publicar",
+      "texto": "Me quedé en el episodio 5 de la segunda temporada y no sé si seguir. ¿Mejora después? Porque se está poniendo pesadita con la subtrama del hermano y ya no me importa nada."
+    },
+    {
+      "id": "R3-L-018",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "numeros.temporadas",
+      "esperado": "publicar",
+      "texto": "El S01E01 es flojo, no se dejen engañar por ese arranque. Desde el capítulo 3 engancha y ya no la soltás. Yo casi la abandono y hubiera sido un error enorme."
+    },
+    {
+      "id": "R3-L-019",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "numeros.temporadas",
+      "esperado": "publicar",
+      "texto": "¡¡Temporada 4 confirmada!!! Después de cómo terminó la 3, con ese cliffhanger en el último episodio, no podía aguantar más la incertidumbre 🙌 Ojalá no tarden dos años otra vez."
+    },
+    {
+      "id": "R3-L-020",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "numeros.temporadas",
+      "esperado": "publicar",
+      "texto": "Son 10 capítulos de una hora cada uno. Yo vi dos por noche y la terminé en cinco días. El capítulo 9 es durísimo, preparen pañuelitos porque no avisa."
+    },
+    {
+      "id": "R3-L-021",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "numeros.montos",
+      "esperado": "publicar",
+      "texto": "Costó 200 millones de dólares y se nota en cada plano, la escala es impresionante. Lástima que el guion parece escrito en una tarde y los personajes no tienen ni una línea memorable."
+    },
+    {
+      "id": "R3-L-022",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "numeros.montos",
+      "esperado": "publicar",
+      "texto": "Recaudó más de 1.000 millones en taquilla en todo el mundo y sinceramente no entiendo por qué. Es la misma fórmula de siempre con otro traje y más explosiones."
+    },
+    {
+      "id": "R3-L-023",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "numeros.montos",
+      "esperado": "publicar",
+      "texto": "Hecha con un presupuesto de 50 mil dólares, le pasa el trapo a cualquier tanque de Hollywood. Cine independiente del bueno, con actores que no conocía y que la rompen."
+    },
+    {
+      "id": "R3-L-024",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "numeros.montos",
+      "esperado": "publicar",
+      "texto": "Pagué $4.500 la entrada para verla en el cine en su momento y salí enojadísimo. Ahora que está en streaming, por lo menos no la pagás aparte, pero igual no la recomiendo."
+    },
+    {
+      "id": "R3-L-025",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "numeros.montos",
+      "esperado": "publicar",
+      "texto": "La trama gira alrededor del robo de 3 millones de euros a un banco en Madrid y de todo lo que sale mal después. Muy entretenida, aunque un poco predecible hacia el final."
+    },
+    {
+      "id": "R3-L-026",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "numeros.montos",
+      "esperado": "publicar",
+      "texto": "Con lo que aumentó la suscripción este año, que tengan esta joyita en el catálogo casi justifica el mes. Casi. Pero la película es una maravilla de punta a punta."
+    },
+    {
+      "id": "R3-L-027",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "numeros.fechas",
+      "esperado": "publicar",
+      "texto": "Se estrena el 14 de noviembre y ya vi el adelanto como diez veces. Si está a la altura del libro va a ser la serie del año, aunque con las adaptaciones uno nunca sabe."
+    },
+    {
+      "id": "R3-L-028",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "numeros.fechas",
+      "esperado": "publicar",
+      "texto": "La vimos el 24/12 a la noche con toda la familia, abuelos incluidos, y fue un acierto total. Película navideña sin empalagar, con humor para grandes y chicos."
+    },
+    {
+      "id": "R3-L-029",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "numeros.fechas",
+      "esperado": "publicar",
+      "texto": "Salió el viernes 3 y para el lunes 6 ya la había terminado entera. Atrapante como pocas, te deja pensando varios días en lo que hubieras hecho vos en el lugar de la protagonista."
+    },
+    {
+      "id": "R3-L-030",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "numeros.fechas",
+      "esperado": "publicar",
+      "texto": "La historia transcurre entre el 1° de enero y el 31 de marzo, tres meses de verano en una estancia de La Pampa. Hermosa fotografía, muy pocos diálogos, ideal para ver tranqui."
+    },
+    {
+      "id": "R3-L-031",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "numeros.fechas",
+      "esperado": "publicar",
+      "texto": "Llegó al catálogo el 15/08 y casi nadie habló de ella. Una pena enorme, es de lo mejor que se estrenó en todo el año y la dejaron enterrada entre tanto lanzamiento."
+    },
+    {
+      "id": "R3-L-032",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "numeros.fechas",
+      "esperado": "publicar",
+      "texto": "Todo pasa en un solo día, el 9 de julio, desde el amanecer hasta la medianoche, y la tensión va creciendo hora a hora. Muy bien armada, con un final que no vi venir."
+    },
+    {
+      "id": "R3-L-033",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "numeros.puntajes",
+      "esperado": "publicar",
+      "texto": "7,5/10. Buena, entretenida, con un par de escenas de acción muy bien coreografiadas, pero no la volvería a ver. De esas que disfrutás y a la semana ya te olvidaste."
+    },
+    {
+      "id": "R3-L-034",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "numeros.puntajes",
+      "esperado": "publicar",
+      "texto": "Le doy un 4.5 sobre 5. Le saco medio punto por el final apurado, que resuelve en diez minutos lo que venía cocinando durante toda la temporada. El resto, impecable."
+    },
+    {
+      "id": "R3-L-035",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "numeros.puntajes",
+      "esperado": "publicar",
+      "texto": "Para mí está en el top 3 de películas de terror de la década, junto con Hereditary y La bruja. Un 9/10 sin dudas, y eso que soy muy difícil con el género."
+    },
+    {
+      "id": "R3-L-036",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "numeros.puntajes",
+      "esperado": "publicar",
+      "texto": "6/10. Las actuaciones están bien, la música también, pero el guion es flojísimo y hay agujeros que no se explican. Pasable para un domingo de lluvia sin nada mejor."
+    },
+    {
+      "id": "R3-L-037",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "numeros.puntajes",
+      "esperado": "publicar",
+      "texto": "En mi ranking personal de Pixar queda número 2, apenas debajo de Up. Un 9,2 de 10. Lloré como un nene y no me da vergüenza decirlo."
+    },
+    {
+      "id": "R3-L-038",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "numeros.puntajes",
+      "esperado": "publicar",
+      "texto": "3/5 ⭐⭐⭐ Le faltó algo. Los primeros 40 minutos son de 5 estrellas pero después se desinfla y termina siendo una más del montón. Una lástima porque prometía."
+    },
+    {
+      "id": "R3-L-039",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "titulos_alfanumericos",
+      "esperado": "publicar",
+      "texto": "Blade Runner 2049 es de esas secuelas que no tenían por qué existir y sin embargo están a la altura de la original. Villeneuve es un genio y la banda sonora te hace vibrar el pecho."
+    },
+    {
+      "id": "R3-L-040",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "titulos_alfanumericos",
+      "esperado": "publicar",
+      "texto": "Volví a ver 2001: Odisea del espacio en una tele grande con buen sonido y es otra película. La vi a los 15 y no entendí nada; ahora la entiendo un poquito más, creo."
+    },
+    {
+      "id": "R3-L-041",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "titulos_alfanumericos",
+      "esperado": "publicar",
+      "texto": "Toy Story 4 no hacía falta, la 3 cerraba todo perfecto, pero bueno, la vi igual y lloré igual. Forky es un personaje hermoso y absurdo a la vez."
+    },
+    {
+      "id": "R3-L-042",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "titulos_alfanumericos",
+      "esperado": "publicar",
+      "texto": "Rápidos y furiosos 7 es ridícula, los autos vuelan entre edificios en Abu Dabi, pero la despedida a Paul Walker al final me partió. Por esos cinco minutos la banco."
+    },
+    {
+      "id": "R3-L-043",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "titulos_alfanumericos",
+      "esperado": "publicar",
+      "texto": "Apollo 13 sigue siendo la mejor película de tensión que conozco donde todos sabemos cómo termina. Tom Hanks y Ed Harris en estado de gracia."
+    },
+    {
+      "id": "R3-L-044",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "titulos_alfanumericos",
+      "esperado": "publicar",
+      "texto": "Se7en la tengo vista como seis veces y todavía me pone incómodo el final de la caja. Fincher en su mejor momento, con Pitt y Freeman perfectos."
+    },
+    {
+      "id": "R3-L-045",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "titulos_alfanumericos",
+      "esperado": "publicar",
+      "texto": "District 9 fue una sorpresa total cuando salió y sigue funcionando: ciencia ficción con algo para decir sobre segregación, filmada como documental. Muy recomendable."
+    },
+    {
+      "id": "R3-L-046",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "titulos_alfanumericos",
+      "esperado": "publicar",
+      "texto": "1917 está filmada para que parezca un solo plano secuencia y la técnica no es un capricho, te mete en la trinchera con los dos soldados. Experiencia más que película."
+    },
+    {
+      "id": "R3-L-047",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "titulos_alfanumericos",
+      "esperado": "publicar",
+      "texto": "Arranqué Stranger Things 4 con miedo porque la 3 no me había gustado tanto, pero el arco de Vecna y el capítulo de Max con la canción de Kate Bush son de lo mejor de la serie."
+    },
+    {
+      "id": "R3-L-048",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "titulos_alfanumericos",
+      "esperado": "publicar",
+      "texto": "9 reinas sigue siendo LA película argentina de estafadores. Darín y Pauls se comen la pantalla y el guion es un relojito. Si no la vieron, ¿qué están esperando?"
+    },
+    {
+      "id": "R3-L-049",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "titulos_alfanumericos",
+      "esperado": "publicar",
+      "texto": "M3GAN es terror de muñeca asesina con mucho humor y una coreografía de baile que se volvió meme. No le pidan profundidad, es pura diversión de sábado a la noche."
+    },
+    {
+      "id": "R3-L-050",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "titulos_alfanumericos",
+      "esperado": "publicar",
+      "texto": "Kill Bill Vol. 2 me gusta más que la primera, menos espadazos y más diálogo. La escena del entierro es angustiante y la pelea final es casi un susurro. Tarantino puro."
+    },
+    {
+      "id": "R3-L-051",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "puntuacion_barras",
+      "esperado": "publicar",
+      "texto": "Drama/comedia/romance, todo mezclado y sorprendentemente funciona. No es ni una cosa ni la otra y por eso mismo la disfruté tanto. Ideal para ver en pareja un domingo."
+    },
+    {
+      "id": "R3-L-052",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "puntuacion_barras",
+      "esperado": "publicar",
+      "texto": "Muy buena.Me sorprendió.No esperaba nada y terminé enganchadísimo hasta la madrugada.Perdón por la puntuación, escribo desde el celu y el teclado me odia jaja."
+    },
+    {
+      "id": "R3-L-053",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "puntuacion_barras",
+      "esperado": "publicar",
+      "texto": "El dir. (que también es guionista y prod. ejecutivo) tiene un estilo muy marcado: planos largos, colores saturados, música clásica. Si te gustó su peli anterior, ésta también."
+    },
+    {
+      "id": "R3-L-054",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "puntuacion_barras",
+      "esperado": "publicar",
+      "texto": "Acción/thriller de los 90 con todos los clichés: el poli rebelde, el jefe que le grita, la bomba con cuenta regresiva... y aun así la pasé bárbaro. A veces es lo que uno quiere."
+    },
+    {
+      "id": "R3-L-055",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "puntuacion_barras",
+      "esperado": "publicar",
+      "texto": "Filmada en EE.UU. pero con elenco casi todo latino, aprox. la mitad de los diálogos son en castellano. Me gustó que no subtitulen todo, le da otra naturalidad."
+    },
+    {
+      "id": "R3-L-056",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "puntuacion_barras",
+      "esperado": "publicar",
+      "texto": "Es buena... pero... no sé... le falta algo... como que todo pasa muy rápido... y cuando te encariñás con alguien... chau, lo matan. Muy de Game of Thrones eso."
+    },
+    {
+      "id": "R3-L-057",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "puntuacion_barras",
+      "esperado": "publicar",
+      "texto": "Ficción/no ficción: mezcla entrevistas reales con escenas actuadas y a veces no sabés qué es qué. Ese juego es lo mejor que tiene, p.ej. la escena del juicio."
+    },
+    {
+      "id": "R3-L-058",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "puntuacion_barras",
+      "esperado": "publicar",
+      "texto": "Sr. y Sra. Smith versión serie: menos explosiones que la peli, más charla de pareja en terapia. La química entre los dos protagonistas es lo que la sostiene, el resto es relleno."
+    },
+    {
+      "id": "R3-L-059",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "lunfardo",
+      "esperado": "publicar",
+      "texto": "Posta, esta serie es una masa. La arranqué un martes a la noche re de onda y terminé viendo cuatro capítulos al hilo. Al otro día en el laburo era un zombie, pero valió la pena."
+    },
+    {
+      "id": "R3-L-060",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "lunfardo",
+      "esperado": "publicar",
+      "texto": "Qué manija me dejó el final, boludo. Necesito la segunda temporada ya. Los guionistas son unos turros por cortarla justo ahí."
+    },
+    {
+      "id": "R3-L-061",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "lunfardo",
+      "esperado": "publicar",
+      "texto": "Una peli re garpa, de esas que no te esperás nada y te vuelan la cabeza. El chabón protagonista labura en un bondi y toda la historia pasa ahí adentro. Genial."
+    },
+    {
+      "id": "R3-L-062",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "lunfardo",
+      "esperado": "publicar",
+      "texto": "Me dio una fiaca bárbara los primeros veinte minutos, pero después se arma un quilombo bárbaro y no podés parar. Bancátela un rato que levanta."
+    },
+    {
+      "id": "R3-L-063",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "lunfardo",
+      "esperado": "publicar",
+      "texto": "El pibe que hace de hermano menor la rompe, tiene una cara de atorrante que te lo creés de una. El resto del elenco medio flojo, pero él solo levanta la peli."
+    },
+    {
+      "id": "R3-L-064",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "lunfardo",
+      "esperado": "publicar",
+      "texto": "Mucho chamuyo y poca acción. Dos horas de minas y chabones hablando en un bar sobre la vida. A mí me encantó, pero entiendo que a muchos les va a parecer al pedo."
+    },
+    {
+      "id": "R3-L-065",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "lunfardo",
+      "esperado": "publicar",
+      "texto": "La vi con mi vieja y nos cagamos de risa las dos. El humor es bien de barrio, con el almacenero chusma y la vecina que se mete en todo. Muy argenta todo, me encantó."
+    },
+    {
+      "id": "R3-L-066",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "lunfardo",
+      "esperado": "publicar",
+      "texto": "Flasheé cualquiera con el final, tuve que buscar explicaciones porque no entendí nada jajaja. Igual está buenísima, re para debatir con amigos morfando unas pizzas."
+    },
+    {
+      "id": "R3-L-067",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "lunfardo",
+      "esperado": "publicar",
+      "texto": "No hay guita que pague ver a estos dos actores juntos de nuevo. Están grandes, pero la química sigue intacta y el bardo que arman en la escena del casamiento es épico."
+    },
+    {
+      "id": "R3-L-068",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "lunfardo",
+      "esperado": "publicar",
+      "texto": "Che, ¿soy yo o esta peli es un embole? Todos la recomiendan y yo me quedé dormido dos veces. Capaz no estaba en el mood, le doy otra chance el finde."
+    },
+    {
+      "id": "R3-L-069",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "lunfardo",
+      "esperado": "publicar",
+      "texto": "Una joyita de cine nacional. El laburo de fotografía en el conurbano es tremendo, los pibes del barrio actúan de diez y el guion no subestima a nadie. Bancamos."
+    },
+    {
+      "id": "R3-L-070",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "lunfardo",
+      "esperado": "publicar",
+      "texto": "Medio trucha la producción, se nota que no había un mango, pero tiene un corazón enorme. El final en la cancha me puso la piel de gallina, la re recomiendo."
+    },
+    {
+      "id": "R3-L-071",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "insulto_personaje",
+      "esperado": "publicar",
+      "texto": "El villano es un hijo de puta de manual y el actor lo hace tan bien que lo odiás desde la primera escena. Cada vez que aparecía quería meterme en la tele y cagarlo a trompadas."
+    },
+    {
+      "id": "R3-L-072",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "insulto_personaje",
+      "esperado": "publicar",
+      "texto": "El protagonista es un pelotudo importante: toma todas las decisiones mal, una atrás de otra. Me pasé la peli gritándole a la pantalla. Igual está buena, eh."
+    },
+    {
+      "id": "R3-L-073",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "insulto_personaje",
+      "esperado": "publicar",
+      "texto": "Qué forro el hermano mayor, por favor. Le caga la vida a toda la familia y encima se hace la víctima. Excelente actuación, lo detesté con todo mi ser."
+    },
+    {
+      "id": "R3-L-074",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "insulto_personaje",
+      "esperado": "publicar",
+      "texto": "La madrastra es una bruja insoportable, de esas que te dan ganas de que le caiga un piano encima. Bien escrita, eso sí: entendés por qué es así aunque no la justifiques."
+    },
+    {
+      "id": "R3-L-075",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "insulto_personaje",
+      "esperado": "publicar",
+      "texto": "El jefe del protagonista es un tarado sin remedio, un inútil que no sabe hacer nada y se lleva todo el crédito. Muy realista, me hizo acordar a más de un laburo jaja."
+    },
+    {
+      "id": "R3-L-076",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "insulto_personaje",
+      "esperado": "publicar",
+      "texto": "Joffrey es la mejor prueba de que un personaje puede ser una basura absoluta y estar perfectamente escrito. Nunca odié tanto a alguien de ficción."
+    },
+    {
+      "id": "R3-L-077",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "insulto_personaje",
+      "esperado": "publicar",
+      "texto": "El detective es un idiota arrogante que no escucha a nadie y por eso muere media ciudad. No sé si los guionistas querían que lo odiemos, pero lo lograron."
+    },
+    {
+      "id": "R3-L-078",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "insulto_personaje",
+      "esperado": "publicar",
+      "texto": "La suegra de la protagonista es una víbora venenosa, cada diálogo que tiene es una puñalada. La actriz se luce, merece todos los premios del año."
+    },
+    {
+      "id": "R3-L-079",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "insulto_personaje",
+      "esperado": "publicar",
+      "texto": "El cuñado es un garca de los peores: le roba la herencia a la viuda y después va al velorio a llorar. Qué personaje más rastrero, impecable el que lo interpreta."
+    },
+    {
+      "id": "R3-L-080",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "insulto_personaje",
+      "esperado": "publicar",
+      "texto": "Patrick Bateman es un enfermo y un narcisista asqueroso, y la peli se ríe de él todo el tiempo. Hay que verla sabiendo que es una sátira, si no se pierde la gracia."
+    },
+    {
+      "id": "R3-L-081",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "trama",
+      "esperado": "publicar",
+      "texto": "Una historia brutal sobre un cartel narco en la frontera. Hay escenas de tortura muy explícitas, así que no es para todo el mundo, pero la tensión en el puente es de lo mejor del cine reciente."
+    },
+    {
+      "id": "R3-L-082",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "trama",
+      "esperado": "publicar",
+      "texto": "Narra la vida de un profesor de química que empieza a cocinar metanfetamina para pagar su tratamiento y termina convertido en un monstruo. Ya la vi tres veces y sigue impecable."
+    },
+    {
+      "id": "R3-L-083",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "trama",
+      "esperado": "publicar",
+      "texto": "Thriller erótico de los que ya no se hacen: una pareja adulta, una relación tóxica y escenas de sexo bastante explícitas que tienen sentido en la historia. Muy bien actuada."
+    },
+    {
+      "id": "R3-L-084",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "trama",
+      "esperado": "publicar",
+      "texto": "El asesinato del primer capítulo es solo la excusa: lo que importa es cómo cada vecino del edificio tiene algo que esconder. Whodunit clásico pero con mucho humor negro."
+    },
+    {
+      "id": "R3-L-085",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "trama",
+      "esperado": "publicar",
+      "texto": "La serie muestra sin filtro la adicción a la heroína de un pibe de clase media y cómo arrastra a toda su familia. Dura, angustiante, necesaria. El episodio 6 me destrozó."
+    },
+    {
+      "id": "R3-L-086",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "trama",
+      "esperado": "publicar",
+      "texto": "Película de guerra que no glorifica nada: cuerpos mutilados, soldados de 18 años llorando, oficiales que mandan a morir a su gente. Pocas veces vi algo tan crudo."
+    },
+    {
+      "id": "R3-L-087",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "trama",
+      "esperado": "publicar",
+      "texto": "Un matrimonio de cincuentones redescubre el deseo después de que los hijos se van de casa. Tierna y sensual, con escenas íntimas tratadas con mucho respeto. Hermosa."
+    },
+    {
+      "id": "R3-L-088",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "trama",
+      "esperado": "publicar",
+      "texto": "Basada en un caso real de secuestros extorsivos en los 80. La reconstrucción del clan, la casa con el sótano, los gritos... te deja helado sabiendo que pasó de verdad."
+    },
+    {
+      "id": "R3-L-089",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "trama",
+      "esperado": "publicar",
+      "texto": "Un robo a un blindado que sale para el demonio: balacera en plena autopista, rehenes, traiciones entre los ladrones. Acción seca, sin efectos de más, muy al estilo Michael Mann."
+    },
+    {
+      "id": "R3-L-090",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "trama",
+      "esperado": "publicar",
+      "texto": "Trata sobre una red de trata de personas y la periodista que la investiga. No muestra morbo, se enfoca en las víctimas adultas que logran escapar. Muy bien documentada."
+    },
+    {
+      "id": "R3-L-091",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "trama",
+      "esperado": "publicar",
+      "texto": "Un asesino serial que elige víctimas por la radio. La serie tiene escenas sangrientas y bastante gore, y aun así lo que más asusta son las charlas del asesino con la policía."
+    },
+    {
+      "id": "R3-L-092",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "trama",
+      "esperado": "publicar",
+      "texto": "Comedia negra sobre dos hermanos que heredan un prostíbulo en el sur y no saben qué hacer con él. Mucho sexo, mucho alcohol y unos diálogos filosos que te matan de risa."
+    },
+    {
+      "id": "R3-L-093",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "trama",
+      "esperado": "publicar",
+      "texto": "La historia de un boxeador que sale de la cárcel y vuelve a pelear para pagar una deuda con un prestamista violento. Las peleas están filmadas de manera brutal, se sienten los golpes."
+    },
+    {
+      "id": "R3-L-094",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "trama",
+      "esperado": "publicar",
+      "texto": "Un policía corrupto que vende cocaína incautada y se va hundiendo cada vez más. Denzel en una de sus mejores actuaciones, intimidante y carismático al mismo tiempo."
+    },
+    {
+      "id": "R3-L-095",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "plataformas_redes",
+      "esperado": "publicar",
+      "texto": "La encontré de casualidad en Mubi y no puedo creer que no esté en Netflix o Prime Video. Cine de autor coreano del bueno, ojalá la sumen a más plataformas."
+    },
+    {
+      "id": "R3-L-096",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "plataformas_redes",
+      "esperado": "publicar",
+      "texto": "Me la recomendaron tanto en TikTok que al final la vi, y la verdad que el hype está justificado. Ahora entiendo todos esos videos con la canción del final."
+    },
+    {
+      "id": "R3-L-097",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "plataformas_redes",
+      "esperado": "publicar",
+      "texto": "Está en Disney+ pero escondida, no aparece en la portada. Usen el buscador porque vale la pena. Es de las pocas producciones de Star que me gustaron."
+    },
+    {
+      "id": "R3-L-098",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "plataformas_redes",
+      "esperado": "publicar",
+      "texto": "La vi en Max apenas salió y el día siguiente Twitter estaba explotado de teorías. Es de esas series que se disfrutan más comentándolas capítulo a capítulo."
+    },
+    {
+      "id": "R3-L-099",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "plataformas_redes",
+      "esperado": "publicar",
+      "texto": "El trailer en YouTube tiene millones de vistas y la película no está a la altura. Buen marketing, poco contenido. Paramount+ debería invertir más en guion."
+    },
+    {
+      "id": "R3-L-100",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "plataformas_redes",
+      "esperado": "publicar",
+      "texto": "Se volvió viral en Instagram por el vestuario y la estética setentosa, pero tiene mucho más que eso: una historia de amistad entre mujeres preciosa."
+    },
+    {
+      "id": "R3-L-101",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "plataformas_redes",
+      "esperado": "publicar",
+      "texto": "Crunchyroll acertó al sumar la temporada nueva con doblaje latino. Para los que no somos de leer subtítulos es un golazo. La animación del arco final es otra cosa."
+    },
+    {
+      "id": "R3-L-102",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "plataformas_redes",
+      "esperado": "publicar",
+      "texto": "En Apple TV+ hay pocas cosas pero las que hay son buenas. Esta en particular tiene un nivel de producción que ya quisieran muchas series de Netflix."
+    },
+    {
+      "id": "R3-L-103",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "plataformas_redes",
+      "esperado": "publicar",
+      "texto": "Mi grupo de WhatsApp de la facu no habla de otra cosa desde que la sacaron en Prime. La terminamos todos el mismo finde y estuvimos debatiendo el final hasta las 3 am."
+    },
+    {
+      "id": "R3-L-104",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "plataformas_redes",
+      "esperado": "publicar",
+      "texto": "La banda sonora la tengo en loop en Spotify desde que vi la peli. La música es medio personaje más, especialmente en la escena del baile en la terraza."
+    },
+    {
+      "id": "R3-L-105",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "plataformas_redes",
+      "esperado": "publicar",
+      "texto": "Vi tantas reseñas buenas en Letterboxd que llegué con expectativas altísimas y me decepcionó un poco. Está bien, pero no es la obra maestra que dicen."
+    },
+    {
+      "id": "R3-L-106",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "plataformas_redes",
+      "esperado": "publicar",
+      "texto": "Ahora con Netflix con anuncios cortan justo en el momento de mayor tensión y te arruinan la escena. La serie es buenísima, el servicio cada vez peor."
+    },
+    {
+      "id": "R3-L-107",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "correo_tecnologia",
+      "esperado": "publicar",
+      "texto": "Un hacker adolescente se mete en los servidores de una corporación y descubre que lo estaban vigilando a él. Técnicamente tiene errores, pero como thriller funciona muy bien."
+    },
+    {
+      "id": "R3-L-108",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "correo_tecnologia",
+      "esperado": "publicar",
+      "texto": "La protagonista recibe un mail anónimo con fotos de su marido y ahí arranca todo. Me encantó que el misterio se resuelva leyendo correos viejos y cadenas de reenvíos."
+    },
+    {
+      "id": "R3-L-109",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "correo_tecnologia",
+      "esperado": "publicar",
+      "texto": "Muy buena la representación de cómo funciona Google por dentro, aunque obviamente exagerada. La escena del data center es hermosa visualmente."
+    },
+    {
+      "id": "R3-L-110",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "correo_tecnologia",
+      "esperado": "publicar",
+      "texto": "Comentario técnico: si la ven en una Smart TV vieja, actualicen la app antes porque se traba con el 4K y el HDR. A mí me pasó y pensé que era la peli."
+    },
+    {
+      "id": "R3-L-111",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "correo_tecnologia",
+      "esperado": "publicar",
+      "texto": "Un thriller sobre una app de citas que usa inteligencia artificial para manipular a los usuarios. Medio Black Mirror, medio telenovela, muy entretenida igual."
+    },
+    {
+      "id": "R3-L-112",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "correo_tecnologia",
+      "esperado": "publicar",
+      "texto": "Toda la historia se cuenta a través de pantallas: chats, videollamadas, correos, búsquedas en Google. Al principio me pareció un truco barato, pero termina siendo angustiante."
+    },
+    {
+      "id": "R3-L-113",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "correo_tecnologia",
+      "esperado": "publicar",
+      "texto": "El villano es un hacker ruso que roba contraseñas de bancos y la agente del FBI lo rastrea a través de un error en un mail que manda borracho. Tonta pero divertida."
+    },
+    {
+      "id": "R3-L-114",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "correo_tecnologia",
+      "esperado": "publicar",
+      "texto": "Me reí mucho con el personaje del abuelo que no sabe usar el correo electrónico y termina mandándole un mail a todo el pueblo con el chisme de la familia."
+    },
+    {
+      "id": "R3-L-115",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "correo_tecnologia",
+      "esperado": "publicar",
+      "texto": "La parte del ataque informático está bastante bien documentada, se nota que consultaron a alguien que sabe. Mucho mejor que esas pelis donde tipean rápido y dicen estoy adentro."
+    },
+    {
+      "id": "R3-L-116",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "correo_tecnologia",
+      "esperado": "publicar",
+      "texto": "El documental sobre los fundadores de una red social es interesante, pero se queda corto en la parte de privacidad y venta de datos. Esperaba algo más crítico."
+    },
+    {
+      "id": "R3-L-117",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "dialogo_ficcion",
+      "esperado": "publicar",
+      "texto": "—Llamame cuando llegues —le dice ella en el andén, y él nunca llama. Toda la película es esa espera. Hermosa y triste, muy de Wong Kar-wai aunque no sea de él."
+    },
+    {
+      "id": "R3-L-118",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "dialogo_ficcion",
+      "esperado": "publicar",
+      "texto": "La escena en la que ella le escribe un WhatsApp, lo borra, lo vuelve a escribir y finalmente lo manda es de lo más real que vi en una comedia romántica."
+    },
+    {
+      "id": "R3-L-119",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "dialogo_ficcion",
+      "esperado": "publicar",
+      "texto": "\"Escribime cuando puedas\", le dice el padre antes de subir al avión. Esa línea vuelve al final de una forma que me hizo llorar a mares."
+    },
+    {
+      "id": "R3-L-120",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "dialogo_ficcion",
+      "esperado": "publicar",
+      "texto": "El protagonista anota su número en una servilleta y se la deja a la moza. Veinte años después ella la encuentra en un libro. Así arranca esta serie preciosa."
+    },
+    {
+      "id": "R3-L-121",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "dialogo_ficcion",
+      "esperado": "publicar",
+      "texto": "En el capítulo 4 el asesino le manda mensajes a la detective por Instagram desde una cuenta falsa, y ella le contesta para ganar tiempo. Muy tenso todo."
+    },
+    {
+      "id": "R3-L-122",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "dialogo_ficcion",
+      "esperado": "publicar",
+      "texto": "—¿Me pasás tu Insta? —le pregunta el pibe en la fiesta, y ella se ríe y le dice que no tiene. Es el único diálogo del primer encuentro y ya te enamorás de los dos."
+    },
+    {
+      "id": "R3-L-123",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "dialogo_ficcion",
+      "esperado": "publicar",
+      "texto": "La hija adolescente se pasa toda la peli encerrada mandando audios por Telegram y los padres no tienen idea de con quién habla. Da miedo lo real que es."
+    },
+    {
+      "id": "R3-L-124",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "dialogo_ficcion",
+      "esperado": "publicar",
+      "texto": "Me encantó cuando la abuela le dice a la nieta: «Mandame un mensajito así sé que llegaste». Mi abuela decía exactamente lo mismo, me mató."
+    },
+    {
+      "id": "R3-L-125",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "dialogo_ficcion",
+      "esperado": "publicar",
+      "texto": "La trama gira alrededor de un perfil de Facebook abandonado de alguien que murió y que de repente vuelve a publicar. Suspenso psicológico muy bien llevado."
+    },
+    {
+      "id": "R3-L-126",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "dialogo_ficcion",
+      "esperado": "publicar",
+      "texto": "El diálogo por teléfono entre los dos hermanos, cada uno en una punta del país, es lo mejor de la película. Diez minutos de plano fijo y no podés dejar de mirar."
+    },
+    {
+      "id": "R3-L-127",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "dialogo_ficcion",
+      "esperado": "publicar",
+      "texto": "Ella le pide que la siga en Twitter para que vea lo que publica sobre el juicio, y ahí empieza la campaña de acoso en su contra. Muy actual y muy incómoda."
+    },
+    {
+      "id": "R3-L-128",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "dialogo_ficcion",
+      "esperado": "publicar",
+      "texto": "Contactame cuando sepas algo, le dice el comisario al periodista, y desde ahí se arma una alianza rara entre los dos. Policial de los buenos, de los de antes."
+    },
+    {
+      "id": "R3-L-129",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "inversion_cripto",
+      "esperado": "publicar",
+      "texto": "La gran apuesta explica las hipotecas subprime y los CDO mejor que cualquier clase de economía, con Margot Robbie en una bañera. Te enojás con los bancos por dos horas seguidas."
+    },
+    {
+      "id": "R3-L-130",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "inversion_cripto",
+      "esperado": "publicar",
+      "texto": "El lobo de Wall Street es tres horas de excesos, acciones basura, fraude bursátil y Leo gritando. Es una crítica, aunque muchos la miran como si fuera un manual."
+    },
+    {
+      "id": "R3-L-131",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "inversion_cripto",
+      "esperado": "publicar",
+      "texto": "Documental sobre el colapso de un exchange de criptomonedas: cómo prometían rendimientos fijos en bitcoin y terminaron desapareciendo miles de millones. Escalofriante."
+    },
+    {
+      "id": "R3-L-132",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "inversion_cripto",
+      "esperado": "publicar",
+      "texto": "El estafador de Tinder es un documental sobre un tipo que les sacaba plata a mujeres haciéndose pasar por heredero de diamantes. Indignante y muy bien contado."
+    },
+    {
+      "id": "R3-L-133",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "inversion_cripto",
+      "esperado": "publicar",
+      "texto": "Dumb Money cuenta el lío de GameStop, los fondos de cobertura vendiendo en corto y los pequeños inversores de Reddit. Divertida, aunque simplifica un montón."
+    },
+    {
+      "id": "R3-L-134",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "inversion_cripto",
+      "esperado": "publicar",
+      "texto": "Margin Call es una película de una sola noche en un banco de inversión antes de la crisis del 2008. Diálogos afilados, Jeremy Irons enorme. Para fanáticos del género."
+    },
+    {
+      "id": "R3-L-135",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "inversion_cripto",
+      "esperado": "publicar",
+      "texto": "Miniserie sobre Madoff y su esquema Ponzi: cómo pagaba ganancias a viejos inversores con la plata de los nuevos. Robert De Niro lo hace tan frío que da miedo."
+    },
+    {
+      "id": "R3-L-136",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "inversion_cripto",
+      "esperado": "publicar",
+      "texto": "Una comedia argentina sobre un grupo de jubilados que pierde sus ahorros en una cripto trucha y planea vengarse del pibe que los estafó. Tierna y muy graciosa."
+    },
+    {
+      "id": "R3-L-137",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "citas",
+      "esperado": "publicar",
+      "texto": "«Le haré una oferta que no podrá rechazar.» Cada vez que la escucho me vuelve a dar escalofríos. El Padrino no envejece, sigue siendo la mejor película de mafia jamás hecha."
+    },
+    {
+      "id": "R3-L-138",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "citas",
+      "esperado": "publicar",
+      "texto": "\"Houston, tenemos un problema\" es de esas frases que todos conocen sin haber visto la película. Véanla, la tensión dentro de la cápsula está tremendamente bien lograda."
+    },
+    {
+      "id": "R3-L-139",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "citas",
+      "esperado": "publicar",
+      "texto": "\"Siempre tendremos París\". Casablanca es de 1942 y sigue siendo de las historias de amor más lindas del cine. Bogart con el sombrero en la niebla, no hay nada igual."
+    },
+    {
+      "id": "R3-L-140",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "citas",
+      "esperado": "publicar",
+      "texto": "Cuando Darth Vader dice \"Yo soy tu padre\" en El imperio contraataca, la sala entera se quedó muda. Mi viejo me lo contó mil veces y ahora lo entiendo."
+    },
+    {
+      "id": "R3-L-141",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "citas",
+      "esperado": "publicar",
+      "texto": "\"Hasta la vista, baby\" y el pulgar arriba en el acero fundido. Terminator 2 es la secuela perfecta y todavía hoy los efectos se sostienen de maravilla."
+    },
+    {
+      "id": "R3-L-142",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "citas",
+      "esperado": "publicar",
+      "texto": "\"Que la fuerza te acompañe.\" La vi de nuevo con mis sobrinos y fue como verla por primera vez. Hay películas que no son solo películas, son parte de la familia."
+    },
+    {
+      "id": "R3-L-143",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "negativa",
+      "esperado": "publicar",
+      "texto": "Una de las peores películas que vi este año. Guion lleno de agujeros, actuaciones de cartón y un final que te hace sentir que perdiste dos horas de tu vida. No la recomiendo para nada."
+    },
+    {
+      "id": "R3-L-144",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "negativa",
+      "esperado": "publicar",
+      "texto": "Aburrida, previsible y larguísima. Le sacaron todo lo que tenía de bueno el libro y lo reemplazaron por escenas de acción genéricas. Una decepción total."
+    },
+    {
+      "id": "R3-L-145",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "negativa",
+      "esperado": "publicar",
+      "texto": "No entiendo el hype. La fotografía es linda, sí, pero no pasa absolutamente nada en dos horas y media. Los personajes son planos y los diálogos suenan escritos por un robot."
+    },
+    {
+      "id": "R3-L-146",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "negativa",
+      "esperado": "publicar",
+      "texto": "La segunda temporada es un desastre: cambiaron al showrunner y se nota. Las tramas no tienen sentido, matan personajes sin motivo y el último capítulo es vergonzoso."
+    },
+    {
+      "id": "R3-L-147",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "negativa",
+      "esperado": "publicar",
+      "texto": "Comedia que no da risa. Los chistes son viejísimos, el humor es pura vergüenza ajena y la duración es un castigo. Me fui a dormir a la mitad y no me arrepiento."
+    },
+    {
+      "id": "R3-L-148",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "negativa",
+      "esperado": "publicar",
+      "texto": "Horrible el doblaje, horrible la edición, horrible el ritmo. Parece hecha a las apuradas para cumplir un contrato. Una falta de respeto a los fans de la saga."
+    },
+    {
+      "id": "R3-L-149",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "negativa",
+      "esperado": "publicar",
+      "texto": "Pretenciosa a más no poder. El director confunde lentitud con profundidad y silencio con poesía. Si te gustan los planos de diez minutos de un árbol, adelante."
+    },
+    {
+      "id": "R3-L-150",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "negativa",
+      "esperado": "publicar",
+      "texto": "El remake no le llega ni a los talones a la original. Cambiaron el final por uno feliz y forzado, y el protagonista no tiene ni la mitad del carisma. Evítenla."
+    },
+    {
+      "id": "R3-L-151",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "general",
+      "esperado": "publicar",
+      "texto": "Una película chiquita, sin estrellas, que me tocó el corazón. Habla de la amistad entre un viejo y un nene que se conocen en una plaza. Para ver con tiempo y sin el celular."
+    },
+    {
+      "id": "R3-L-152",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "general",
+      "esperado": "publicar",
+      "texto": "Gran serie de época, con un vestuario espectacular y un elenco británico que no falla nunca. La recomiendo para quienes disfrutan las historias de intrigas familiares."
+    },
+    {
+      "id": "R3-L-153",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "general",
+      "esperado": "publicar",
+      "texto": "La vi con mi pareja y discutimos toda la noche sobre quién tenía razón al final. Eso para mí es lo mejor que puede hacer una película: dejarte pensando."
+    },
+    {
+      "id": "R3-L-154",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "general",
+      "esperado": "publicar",
+      "texto": "Animación preciosa, con una historia que funciona tanto para los chicos como para los grandes. Mis hijos se rieron y yo terminé con un nudo en la garganta."
+    },
+    {
+      "id": "R3-L-155",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "general",
+      "esperado": "publicar",
+      "texto": "Muy buen documental sobre la vida de un músico de tango olvidado. Material de archivo inédito, entrevistas a sus nietos y unas grabaciones que te ponen la piel de gallina."
+    },
+    {
+      "id": "R3-L-156",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "general",
+      "esperado": "publicar",
+      "texto": "Me sorprendió para bien. Pensé que iba a ser otra película de superhéroes del montón y resultó tener un corazón muy humano. El villano es de los mejores que vi en el género."
+    },
+    {
+      "id": "R3-L-157",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "general",
+      "esperado": "publicar",
+      "texto": "Ideal para una tarde de domingo con lluvia. Es liviana, tiene buenos diálogos y te deja con una sonrisa. No le pidan más de lo que es y la van a disfrutar."
+    },
+    {
+      "id": "R3-L-158",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "general",
+      "esperado": "publicar",
+      "texto": "Excelente adaptación de la novela. Respeta el tono, el ritmo y hasta algunas frases textuales. Los fans del libro no se van a sentir traicionados."
+    },
+    {
+      "id": "R3-L-159",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "general",
+      "esperado": "publicar",
+      "texto": "Serie de terror que da miedo de verdad, sin sustos baratos. Todo se construye con sonido y con lo que no se ve. La vi de noche y no pude dormir tranquila."
+    },
+    {
+      "id": "R3-L-160",
+      "tipo": "resena",
+      "grupo": "legitima",
+      "categoria": "general",
+      "esperado": "publicar",
+      "texto": "Hermosa road movie por la Ruta 40, con paisajes de la Puna que te dan ganas de agarrar el auto y salir. La relación entre padre e hija está muy bien escrita."
+    },
+    {
+      "id": "R3-A-001",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.telefono",
+      "variante": "directa",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Buenísima la serie, la terminé en dos días. Si alguien quiere comentarla conmigo mandame un WhatsApp al 11 3482-7719 que me encanta hablar de estas cosas."
+    },
+    {
+      "id": "R3-A-002",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.telefono",
+      "variante": "directa",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Muy buena peli de terror. Armamos un grupo para ver estrenos juntos los viernes, si te querés sumar escribime al +54 9 351 662-4091 y te agrego."
+    },
+    {
+      "id": "R3-A-003",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.telefono",
+      "variante": "directa",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "No me gustó nada el final, pero el resto zafa. Che, si vendés el combo de cuentas que dicen por ahí, llamame al 0221 15 487-3302, pago bien."
+    },
+    {
+      "id": "R3-A-004",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.telefono",
+      "variante": "directa",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Recomendadísima para ver en pareja 💕 Y si estás solo/a y querés compañía para la próxima, mi cel es 1159083374, escribime sin vergüenza."
+    },
+    {
+      "id": "R3-A-005",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.telefono",
+      "variante": "directa",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "La saga completa es un viaje. Tengo todas las pelis en Blu-ray y las vendo, interesados al 341-155-208-617 de lunes a viernes después de las 18."
+    },
+    {
+      "id": "R3-A-006",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.telefono",
+      "variante": "directa",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Muy flojo el doblaje. Si sos de Mar del Plata y querés juntarte a ver la temporada nueva, mandame mensaje al (0223) 15-591-4428 y arreglamos."
+    },
+    {
+      "id": "R3-A-007",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.telefono",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Qué peliculón!! Si querés hablar del final escribime: once - tres cuatro ocho dos - siete siete uno nueve. Contesto siempre a la noche."
+    },
+    {
+      "id": "R3-A-008",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.telefono",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Me encantó la fotografía. Para el que quiera la colección completa de la saga, mi wsp es 11.34.82.77.19 (sin los puntos obvio jaja)."
+    },
+    {
+      "id": "R3-A-009",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.telefono",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Muy recomendable. Busco gente para ver series en grupo, mandame un msj al l1 З4B2 77l9 (las letras son números, ya sabés leerlo) y te sumo."
+    },
+    {
+      "id": "R3-A-010",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.telefono",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Gran serie, la vi entera. Si querés charlarla, WhatsApp: １１ ５９０８ ３３７４. Respondo rápido, no soy bot jaja."
+    },
+    {
+      "id": "R3-A-011",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.telefono",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Hermosa peli. Para hablar de cine iraní escribime al ١١٤٧٢٠٦٦٥٨ por wsp, me encanta conocer gente con los mismos gustos."
+    },
+    {
+      "id": "R3-A-012",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.telefono",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Malísima, no pierdan el tiempo. Mejor escriban al uno-cinco, cuatro-cuatro, cero-nueve, dos-uno, siete-tres (característica 11) y les paso pelis mejores."
+    },
+    {
+      "id": "R3-A-013",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.telefono",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Me gustó mucho, aunque el final es raro. Si sos de zona sur y querés armar juntadas de cine: 1 1 6 6 2 0 4 8 1 3, mandá msj diciendo que venís de acá."
+    },
+    {
+      "id": "R3-A-014",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.telefono",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "La vi tres veces. Llamame que te cuento las teorías del final: mi número tiene forma de fecha, 11/04/1988, y le sumás 52 al final sin las barras. Wsp cuando quieras."
+    },
+    {
+      "id": "R3-A-015",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.telefono",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Buenísima. La peli habrá costado como $1.134.827.719 jaja. Ese mismo número, sin el signo y sin los puntos, es mi wsp si querés comentarla."
+    },
+    {
+      "id": "R3-A-016",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.telefono",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Las dos versiones, la de 1987 y la de 2024, valen la pena. Si querés debatir cuál es mejor, mi cel es 11 seguido de esos dos años, en ese orden. Escribime."
+    },
+    {
+      "id": "R3-A-017",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.telefono",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Muy buena serie para maratonear. Contacto por wsp: 11_6620_4813. Si no respondo es que estoy viendo algo, insistí."
+    },
+    {
+      "id": "R3-A-018",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.telefono",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Si te gustó esta, tengo una lista de 200 parecidas. Pedímela al once, quince, setenta y siete, cero ocho, noventa y dos. O sea: once 1577 0892 por mensaje."
+    },
+    {
+      "id": "R3-A-019",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.telefono",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Che, una peli que no te podés perder. Te paso mi número por si querés que te recomiende más: II 3SS4 O7I8. Escribime cuando quieras, a cualquier hora."
+    },
+    {
+      "id": "R3-A-020",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.telefono",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Recomendada 10/10. Busco amigos cinéfilos en Rosario, tirame un mensajito al 3 4 1 – 6 2 0 – 5 5 1 8. No muerdo jaja 😅"
+    },
+    {
+      "id": "R3-A-021",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.telefono",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "La actriz principal está increíble. Para los que preguntan dónde conseguir la versión extendida, yo la tengo, wsp a +5 4 9 1 1 4 8 2 0 7 7 3 6."
+    },
+    {
+      "id": "R3-A-022",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.telefono",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Muy buena, pero muy larga. Si querés que te pase el resumen por audio, agendame: one one, four eight two zero, seven seven three six. Sí, es de Buenos Aires."
+    },
+    {
+      "id": "R3-A-023",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.telefono",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Peliculón!!! Dejo mi celu para el que quiera más data: 11 ocho2cuatro5 nueve0uno1. Mezclé letras y números para que no me lo borren jaja."
+    },
+    {
+      "id": "R3-A-024",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.telefono",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Buena serie para ver con la familia. Vendo combo de cuentas premium, consultas al 11 ⁃ 4790 ⁃ 2165 por mensaje, precio de amigo para la gente de la app."
+    },
+    {
+      "id": "R3-A-025",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.telefono",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Me dejó pensando una semana. Si alguien quiere debatirla, el número es este, leelo al revés: 6315 0974 11. Escribime por wsp."
+    },
+    {
+      "id": "R3-A-026",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.telefono",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Hermosa película para llorar un rato. Para charlar de pelis tristes, mandame mensaje al 1️⃣1️⃣ 5️⃣2️⃣0️⃣8️⃣ 6️⃣6️⃣1️⃣4️⃣ y te contesto con una recomendación."
+    },
+    {
+      "id": "R3-A-027",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.telefono",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Muy floja, pero bueno. Tengo una mejor, te la paso por wsp: 1 1 . 3 0 . 9 2 . 4 4 . 7 1. Ojo que el primero es once, no uno."
+    },
+    {
+      "id": "R3-A-028",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.telefono",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Una joya. Si sos de Córdoba y querés juntarte a ver cine de autor, mi número es tres cinco uno, seis dos cuatro, ocho ocho, uno cero. Mensaje primero, no llamada."
+    },
+    {
+      "id": "R3-A-029",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.email",
+      "variante": "directa",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Peliculón de terror. Si alguien tiene la versión sin censura que me la pase, mi mail es pauli.cinefila88@gmail.com, gracias de antemano."
+    },
+    {
+      "id": "R3-A-030",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.email",
+      "variante": "directa",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Muy buena serie. Hago reseñas largas y las mando por correo a quien quiera, pedímelas a reseñasdelfede@hotmail.com y te sumo a la lista."
+    },
+    {
+      "id": "R3-A-031",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.email",
+      "variante": "directa",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "No me convenció el final. Si querés debatir, escribime a tobias_m.cine@outlook.com.ar, prometo responder con argumentos jaja."
+    },
+    {
+      "id": "R3-A-032",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.email",
+      "variante": "directa",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Gran película de culto. Vendo afiches originales de los 80 de esta y otras pelis, consultas a afichesdelsur@yahoo.com.ar con lo que estés buscando."
+    },
+    {
+      "id": "R3-A-033",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.email",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Me encantó!!! Para charlar de anime escribime a marti.otaku arroba gmail punto com, respondo todos los mensajes aunque tarde un poco."
+    },
+    {
+      "id": "R3-A-034",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.email",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Buena peli, nada del otro mundo. Mandame tus recomendaciones a l u c h o s e r i e s @ g m a i l . c o m que yo te paso las mías."
+    },
+    {
+      "id": "R3-A-035",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.email",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Hermosa. Si querés el listado de pelis similares que armé, pedímelo: soy cinedelaesquina en gmail, mandame un correo y te lo paso."
+    },
+    {
+      "id": "R3-A-036",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.email",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Muy recomendable. Mi correo para cualquier cosa: valen.resenas (at) hotmail (dot) com. Sin spam por favor jaja."
+    },
+    {
+      "id": "R3-A-037",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.email",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "La vi en el cine y en casa, y gana en el cine. Escribime a fеdеrісо.сіnе@gmаіl.соm si querés que armemos salidas al cine en grupo."
+    },
+    {
+      "id": "R3-A-038",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.email",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Qué buena serie!! Para recibir mi newsletter de estrenos mandá un correo a novedades[arroba]cartelerafantasma[punto]com[punto]ar y te suscribo."
+    },
+    {
+      "id": "R3-A-039",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.email",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "No es para todos, pero me gustó. Mi mail es el siguiente, armalo vos: usuario = santi.terror, dominio = outlook.com. Escribime."
+    },
+    {
+      "id": "R3-A-040",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.email",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Gran actuación del protagonista. Tengo todas las temporadas en HD, pedilas a rodri punto pelis arrobita yahoo punto com punto ar."
+    },
+    {
+      "id": "R3-A-041",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.email",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Recomendadísima 💯 Para intercambiar pelis de culto: m.a.r.i.a.n.e.l.a.c.u.l.t.o @ proton . me. Escribime con el asunto CINE."
+    },
+    {
+      "id": "R3-A-042",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.email",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Me hizo llorar. Si querés hablar de duelo y películas, estoy en gmail como lagrimasdecine, mandame un mail cuando quieras, de verdad."
+    },
+    {
+      "id": "R3-A-043",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.email",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Malísima. La mejor de la saga es la segunda y la tengo para pasar, mail: tomasreview ＠ gmail ． com (copialo con los símbolos normales)."
+    },
+    {
+      "id": "R3-A-044",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.email",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Muy buena. Vendo cuentas compartidas baratas, escribí a cuentasbaratas2024 de hotmail punto com y te paso precios."
+    },
+    {
+      "id": "R3-A-045",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.email",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Una masa. Mi correo para los que piden el link: juli_series AT gmail DOT com. No contesto mensajes por acá, solo por mail."
+    },
+    {
+      "id": "R3-A-046",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.email",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Gran documental. Si querés unirte al cineclub online, mandá un correo a: cineclub (arroba) lapantallarota (punto) org. Nos juntamos los jueves."
+    },
+    {
+      "id": "R3-A-047",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.email",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Me gustó bastante, aunque tiene fallas. Pedime el análisis completo a nachito.cine, que es mi usuario de Gmail, y te lo mando en PDF."
+    },
+    {
+      "id": "R3-A-048",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.email",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Para los fans del terror japonés: escríbanme a k-a-i-d-a-n-f-a-n arroba outlook punto es, tengo una colección de clásicos subtitulados."
+    },
+    {
+      "id": "R3-A-049",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.email",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Muy linda. Busco gente para ver pelis por videollamada, escribime a gаbі.mоvіеs@hоtmаіl.соm y armamos 🎬"
+    },
+    {
+      "id": "R3-A-050",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.email",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Recomendada. Si querés más reseñas mías, escribime: mi correo es mi nombre (ceciliavarela) seguido de 77, en yahoo.com. Respondo siempre."
+    },
+    {
+      "id": "R3-A-051",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "enlace",
+      "variante": "directa",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Buenísima, pero si no la tienen en su plataforma la pueden ver gratis acá: https://pelisgratis-hd.xyz/ver/la-peli-del-año sin cortes ni publicidad."
+    },
+    {
+      "id": "R3-A-052",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "enlace",
+      "variante": "directa",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Muy buena serie. Subí todas mis reseñas largas a mi blog, www.butacarota-blog.com.ar/series, pasen y comenten que me ayuda un montón."
+    },
+    {
+      "id": "R3-A-053",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "enlace",
+      "variante": "directa",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Excelente. Para descargarla en 4K entren a http://descargasyafull.net/estrenos/2024 que está todo subido y funciona perfecto."
+    },
+    {
+      "id": "R3-A-054",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "enlace",
+      "variante": "directa",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "No me gustó, pero bueno. Si quieren ver estrenos antes que nadie, cineflixpremium.top/registro y se crean una cuenta gratis, yo lo uso hace meses."
+    },
+    {
+      "id": "R3-A-055",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "enlace",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Muy buena!! La tengo subida completa en pelisgratis-hd punto xyz barra ver, entren que es gratis y sin registrarse."
+    },
+    {
+      "id": "R3-A-056",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "enlace",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Qué lindo final. Para verla en HD: w w w . p e l i s y a . o n l i n e — sí, con los espacios no anda, sáquenlos."
+    },
+    {
+      "id": "R3-A-057",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "enlace",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Recomendada. Todas las temporadas en un solo lugar: bit.ly/3xYz9Qp (es un acortador, no tengan miedo, lleva a la página de descarga)."
+    },
+    {
+      "id": "R3-A-058",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "enlace",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Muy buena peli. Si la quieren completa y doblada: сinеflіх.tор/рelі/9812 (copien y peguen en el navegador, no falla)."
+    },
+    {
+      "id": "R3-A-059",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "enlace",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Me encantó la banda sonora. La subí entera en descargasmusicales[.]com[.]ar/bandas-sonoras para el que la quiera escuchar."
+    },
+    {
+      "id": "R3-A-060",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "enlace",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Malísima, pero la gente la pide. Está en series24hs(punto)stream/temporada-3 con subtítulos en español, cero virus."
+    },
+    {
+      "id": "R3-A-061",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "enlace",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Muy buena. Mi canal con reseñas en video: youtube punto com barra arroba butacarota_videos. Suscríbanse que subo una por semana."
+    },
+    {
+      "id": "R3-A-062",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "enlace",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Hermosa serie. La pueden ver gratis en h t t p s : / / verseriesonline . club / turca / capitulo-1 con todos los capítulos."
+    },
+    {
+      "id": "R3-A-063",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "enlace",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Gran peli. Para los que no tienen la plataforma: tinyurl.com/pelilibre-2024 → ahí está el archivo, descárguenlo antes de que lo bajen."
+    },
+    {
+      "id": "R3-A-064",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "enlace",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Me gustó. Hice un análisis escena por escena en mi web: lacinematecadelsur . photography / analisis / ultima — es largo pero vale la pena."
+    },
+    {
+      "id": "R3-A-065",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "enlace",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Recomendable para la familia. La versión doblada está en pelis-para-chicos,com/coco-2 (es punto, no coma, el celu me lo cambia)."
+    },
+    {
+      "id": "R3-A-066",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "enlace",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Excelente!! Vean la versión del director en filmotecalibre dot argentina slash directores slash completa. Gratis y legal (bueno, más o menos)."
+    },
+    {
+      "id": "R3-A-067",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "enlace",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Para los que preguntan dónde verla sin pagar: t.ly/Xp4Qw o si no anda, cutt.ly/serie-turca. Ambos llevan al mismo lado."
+    },
+    {
+      "id": "R3-A-068",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "enlace",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "No la encuentran en ningún lado, pero yo la subí: drive punto google punto com barra file barra d barra 1AbCdEfGh123 barra view. Apúrense."
+    },
+    {
+      "id": "R3-A-069",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "enlace",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Buenísima. Todo el catálogo de anime sin censura en animeflvplus。net/catalogo. Usen un bloqueador de anuncios igual, por las dudas."
+    },
+    {
+      "id": "R3-A-070",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "enlace",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Gran serie. Tengo un grupo con todas las pelis subidas: entren a рelisdelbarrio.com.ar/grupo y piden acceso, es gratis."
+    },
+    {
+      "id": "R3-A-071",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "enlace",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Muy floja la segunda parte. La primera la pueden ver en cinegratis-[punto]-lat/pelicula/la-primera, está en HD y sin cortes."
+    },
+    {
+      "id": "R3-A-072",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "enlace",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Recomendadísima. Si quieren más joyas así, mi lista está en joyitasocultas.website/listas/cine-argentino-de-culto 🎞️"
+    },
+    {
+      "id": "R3-A-073",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.red",
+      "variante": "directa",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Me encantó la serie. Subo reseñas en video todas las semanas, seguime en Instagram @cinefila.pau y comentame qué te pareció a vos."
+    },
+    {
+      "id": "R3-A-074",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.red",
+      "variante": "directa",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Muy buena, la recomiendo. Si querés charlar de cine coreano, agregame en Telegram: @dorama_lucho y te sumo al canal que tenemos."
+    },
+    {
+      "id": "R3-A-075",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.red",
+      "variante": "directa",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Peli muy pochoclera, ideal para el finde. Hago clips cortos de pelis en TikTok, búsquenme como @butaca_rota_ok y síganme 🙏"
+    },
+    {
+      "id": "R3-A-076",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.red",
+      "variante": "directa",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Gran final de temporada. Para debates en vivo, entren a mi Discord, mi usuario es fede.cine#4821, mándenme solicitud y los agrego."
+    },
+    {
+      "id": "R3-A-077",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.red",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Buenísima peli!! Para más recomendaciones pasate por mi ig: cine_de_madrugada, subo historias todas las noches."
+    },
+    {
+      "id": "R3-A-078",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.red",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Muy linda serie. Si querés comentarla, buscame en insta como marti punto series, con el punto en el medio, y mandame DM."
+    },
+    {
+      "id": "R3-A-079",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.red",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Me hizo llorar. Hago videos de reacción en tt, el usuario es lloro_con_pelis, sigan la cuenta así llego a los mil 😭"
+    },
+    {
+      "id": "R3-A-080",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.red",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Gran película. Les pido a todos los que la vieron que sigan a mi hermana en IG, es @ ana.critica (sin el espacio), hace reseñas buenísimas."
+    },
+    {
+      "id": "R3-A-081",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.red",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Mi amigo me dijo \"no pongas que te busquen en Telegram como nico_pelis_hd\" jajaja, bueno, ya lo puse, búsquenme ahí."
+    },
+    {
+      "id": "R3-A-082",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.red",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Muy buena. Síganme en todas: ig, tt y tw, en todas soy reseñasdelsofa. Subo contenido todos los días, los espero 🙌"
+    },
+    {
+      "id": "R3-A-083",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.red",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Recomendable. Para charlar del final escribime al tele: arroba vale_dramas. No respondo por acá porque no me llegan las notificaciones."
+    },
+    {
+      "id": "R3-A-084",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.red",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Qué serie!!! Seguime en Insta, me encuentran como 𝗰𝗶𝗻𝗲.𝗰𝗼𝗻.𝗺𝗮𝘁𝗲 y les respondo todos los mensajes."
+    },
+    {
+      "id": "R3-A-085",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.red",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Malísima. Mejor sigan mi canal de yt, se llama ArrobaPeliculasRotas, o sea @PeliculasRotas, ahí recomiendo cosas que valen la pena."
+    },
+    {
+      "id": "R3-A-086",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.red",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Muy buena peli de acción. Los que quieran más contenido así, pásense por mi face, soy juanignacio.cinefilo.oficial, y me mandan mensaje."
+    },
+    {
+      "id": "R3-A-087",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.red",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Hermosa. Les dejo mi snap por si quieren hablar de pelis románticas: l.u.n.a.r.o.m.a.n.c.e, mandá snap y te contesto."
+    },
+    {
+      "id": "R3-A-088",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.red",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Gran documental. Sigan a la cuenta del director, @ docu . sur . oficial en instagram, y a la mía que es la misma pero con _fan al final: docu.sur.oficial_fan."
+    },
+    {
+      "id": "R3-A-089",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.red",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Recomendada para fans del terror. Unite a nuestro grupo de wsp, el link te lo paso por insta: terrorcito.club, mandame mensaje privado diciendo que venís de acá."
+    },
+    {
+      "id": "R3-A-090",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.red",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Me encantó. Para los que me preguntan: mi user de Twitter/X es ⓜⓐⓣⓘ_ⓒⓘⓝⓔ, sigan que hago hilos de pelis todas las semanas."
+    },
+    {
+      "id": "R3-A-091",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.indirecto",
+      "variante": "ofuscada",
+      "claro": false,
+      "esperado": "frenar",
+      "texto": "Buena peli. Tengo un gmail con el mismo nombre que uso acá en la app, así que si querés charlarla ya sabés cómo encontrarme, escribime cuando quieras."
+    },
+    {
+      "id": "R3-A-092",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.indirecto",
+      "variante": "ofuscada",
+      "claro": false,
+      "esperado": "frenar",
+      "texto": "Me encantó esta serie. Mi casilla de Hotmail es la de siempre, la que empieza con pau y termina en un año. Mandame un mail que te respondo seguro."
+    },
+    {
+      "id": "R3-A-093",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.indirecto",
+      "variante": "ofuscada",
+      "claro": false,
+      "esperado": "frenar",
+      "texto": "Muy linda. Si querés hablar, buscame en Instagram, soy la que tiene de foto un gato negro con una claqueta. Mandame mensaje que te respondo."
+    },
+    {
+      "id": "R3-A-094",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.indirecto",
+      "variante": "ofuscada",
+      "claro": false,
+      "esperado": "frenar",
+      "texto": "Recomendada. Tengo un canal de reseñas en Telegram, el nombre es parecido al mío pero con guion bajo. Busquenlo y escriban que los agrego."
+    },
+    {
+      "id": "R3-A-095",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.indirecto",
+      "variante": "ofuscada",
+      "claro": false,
+      "esperado": "frenar",
+      "texto": "Gran final. Mi mail está en mi bio de la otra red, la del pajarito. Escribime por ahí si querés el listado completo de pelis parecidas."
+    },
+    {
+      "id": "R3-A-096",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.indirecto",
+      "variante": "ofuscada",
+      "claro": false,
+      "esperado": "frenar",
+      "texto": "Me hizo llorar mucho. Si querés hablar, mi usuario de TikTok es el mismo apodo que me pusieron en el colegio, el de la película de Pixar. Escribime."
+    },
+    {
+      "id": "R3-A-097",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.indirecto",
+      "variante": "ofuscada",
+      "claro": false,
+      "esperado": "frenar",
+      "texto": "Muy buena. Para el que quiera la colección completa, mandame un mail a mi casilla de Yahoo, la que tiene mi apellido y la palabra cine. Respondo rápido."
+    },
+    {
+      "id": "R3-A-098",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.indirecto",
+      "variante": "ofuscada",
+      "claro": false,
+      "esperado": "frenar",
+      "texto": "Buenísima serie. Si alguno quiere sumarse al grupo de wsp de cinéfilos de la zona, pedime el número por privado, que acá no lo puedo dejar. Escriban."
+    },
+    {
+      "id": "R3-A-099",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.partido",
+      "variante": "ofuscada",
+      "claro": false,
+      "esperado": "frenar",
+      "texto": "Y la tercera parte de la saga es la mejor de todas, igual que con mi número: los últimos cuatro son 7719. Ya lo tenés completo, mandame un wsp.",
+      "contexto": {
+        "textosRecientes": [
+          "La primera peli de la trilogía es flojita pero sirve de introducción. Si querés comentarla, mi número arranca con 11, después te paso el resto en otra reseña.",
+          "La segunda mejora bastante, tiene un villano mucho más interesante. Siguiendo con lo de antes, después del 11 vienen estos cuatro: 3482. Falta poco."
+        ]
+      }
+    },
+    {
+      "id": "R3-A-100",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.partido",
+      "variante": "ofuscada",
+      "claro": false,
+      "esperado": "frenar",
+      "texto": "Terminé la última temporada y estoy devastado. Como prometí, la segunda parte de mi mail: es en gmail punto com. Ya podés escribirme.",
+      "contexto": {
+        "textosRecientes": [
+          "La primera temporada de esta serie es increíble, de lo mejor que vi. Para hablar de ella, mi mail empieza con fran.series.ok y el resto lo dejo en otra reseña."
+        ]
+      }
+    },
+    {
+      "id": "R3-A-101",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.partido",
+      "variante": "ofuscada",
+      "claro": false,
+      "esperado": "frenar",
+      "texto": "Muy buena la peli, sobre todo la escena del muelle. Y completando lo de mi Instagram: después del punto viene la palabra critica. Seguime.",
+      "contexto": {
+        "textosRecientes": [
+          "Me gustó mucho el director de esta, tiene un estilo muy personal. Para el que quiera seguirme en Instagram, mi usuario arranca con sole. y sigue en la próxima reseña.",
+          "Otra del mismo director, menos lograda pero linda igual. Lo del Instagram: es sole. y después algo relacionado con el cine, ya lo digo en la siguiente reseña."
+        ]
+      }
+    },
+    {
+      "id": "R3-A-102",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.partido",
+      "variante": "ofuscada",
+      "claro": false,
+      "esperado": "frenar",
+      "texto": "Excelente cierre de la saga. La terminación del sitio es .com.ar, así que ya tienen todo: entren y miren las pelis gratis. Sin publicidad.",
+      "contexto": {
+        "textosRecientes": [
+          "Muy buena la primera, aunque se nota el bajo presupuesto. Para verla gratis hay una página que se llama cinelibre, después les digo cómo sigue.",
+          "La segunda parte está buenísima. Lo de la página: después de cinelibre va un guion y la palabra total, o sea cinelibre-total, falta solo la terminación."
+        ]
+      }
+    },
+    {
+      "id": "R3-A-103",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.partido",
+      "variante": "ofuscada",
+      "claro": false,
+      "esperado": "frenar",
+      "texto": "Gran serie para maratonear. Lo que faltaba del número: 52 18, y con eso ya está, mandame mensaje por wsp que te paso las temporadas.",
+      "contexto": {
+        "textosRecientes": [
+          "Arranqué esta serie y engancha mucho. Si alguien quiere las temporadas, característica de Rosario, 341, y en otra reseña sigo con el resto.",
+          "Voy por la temporada 2 y sigue muy bien. Después del 341 vienen 15 y 620, ya casi lo tienen completo para escribirme.",
+          "La temporada 3 baja un poco el nivel pero se deja ver. El número sigue con 6, después de lo que ya puse, y en la próxima termino de pasarlo."
+        ]
+      }
+    },
+    {
+      "id": "R3-A-104",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "contacto.partido",
+      "variante": "ofuscada",
+      "claro": false,
+      "esperado": "frenar",
+      "texto": "La segunda temporada es más oscura y me gustó todavía más. Mi usuario termina con _ok y está en TikTok, ahora sí ya me pueden seguir.",
+      "contexto": {
+        "textosRecientes": [
+          "Primera temporada muy buena, con una protagonista que la rompe. Subo videos sobre la serie, mi usuario empieza con lu.reacciona y lo termino en otra reseña."
+        ]
+      }
+    },
+    {
+      "id": "R3-A-105",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "perfil",
+      "variante": "directa",
+      "claro": false,
+      "esperado": "retener",
+      "texto": "Buena peli, pero no la mejor del año. Si querés saber dónde encontrarme para seguir charlando, mirá mi nombre de usuario acá arriba, ahí está todo 😉"
+    },
+    {
+      "id": "R3-A-106",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "perfil",
+      "variante": "directa",
+      "claro": false,
+      "esperado": "retener",
+      "texto": "Me encantó la serie y tengo muchas más para recomendar. Entrá a mi perfil, que ahí dejé cómo contactarme por fuera de la app. No te vas a arrepentir."
+    },
+    {
+      "id": "R3-A-107",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "perfil",
+      "variante": "directa",
+      "claro": false,
+      "esperado": "retener",
+      "texto": "Excelente documental. Para los que me pidieron más info: fíjense en mi nombre comunitario, es mi usuario en todas las redes. Los espero por ahí."
+    },
+    {
+      "id": "R3-A-108",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "perfil",
+      "variante": "directa",
+      "claro": false,
+      "esperado": "retener",
+      "texto": "Muy recomendable. Mi apodo de acá es el mismo que uso en Instagram, así que ya saben, búsquenme con el nombre que ven en esta reseña."
+    },
+    {
+      "id": "R3-A-109",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "spam",
+      "variante": "directa",
+      "claro": false,
+      "esperado": "retener",
+      "texto": "Mientras veía esta peli gané 350 mil pesos invirtiendo en una cripto nueva que está explotando. Si querés saber cuál es, preguntame. Ganancias garantizadas todas las semanas, cero riesgo."
+    },
+    {
+      "id": "R3-A-110",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "spam",
+      "variante": "directa",
+      "claro": false,
+      "esperado": "retener",
+      "texto": "🔥 SORTEO 🔥 Comentá esta reseña y participás por un año gratis de todas las plataformas. Ganadores la semana que viene, compartí con tus amigos para tener más chances."
+    },
+    {
+      "id": "R3-A-111",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "spam",
+      "variante": "directa",
+      "claro": false,
+      "esperado": "retener",
+      "texto": "Vendo cuentas de Netflix, Max y Disney+ premium a mitad de precio, entrega inmediata y garantía de 30 días. Más barato que en cualquier lado, consultame por privado."
+    },
+    {
+      "id": "R3-A-112",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "spam",
+      "variante": "directa",
+      "claro": false,
+      "esperado": "retener",
+      "texto": "Buena peli, pero mejor todavía es el casino online donde gano todas las noches: bono de bienvenida del 200% y retiros al toque. Probá suerte, es plata fácil."
+    },
+    {
+      "id": "R3-A-113",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "spam",
+      "variante": "directa",
+      "claro": false,
+      "esperado": "retener",
+      "texto": "¿Querés dejar de laburar? Con mi método de trading en bitcoin multipliqué mis ahorros por diez en tres meses. Te enseño gratis, solo tenés que invertir un mínimo para empezar."
+    },
+    {
+      "id": "R3-A-114",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "spam",
+      "variante": "directa",
+      "claro": false,
+      "esperado": "retener",
+      "texto": "La serie está bien, pero lo importante: estoy armando un grupo de inversión con rendimientos del 15% mensual en dólares. Cupos limitados, los primeros entran con bonificación."
+    },
+    {
+      "id": "R3-A-115",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "spam",
+      "variante": "directa",
+      "claro": false,
+      "esperado": "retener",
+      "texto": "Atención cinéfilos!!! Vendo proyector 4K nuevo en caja, pantalla de 120 pulgadas y parlantes. Precio de liquidación por mudanza, aprovechen que vuela. Envíos a todo el país."
+    },
+    {
+      "id": "R3-A-116",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "spam",
+      "variante": "directa",
+      "claro": false,
+      "esperado": "retener",
+      "texto": "GANÁ DINERO DESDE TU CASA viendo películas y escribiendo reseñas. Yo cobro 50 dólares por día y vos también podés. Sin experiencia, sin jefe, pagos en USDT todas las semanas."
+    },
+    {
+      "id": "R3-A-117",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "spam",
+      "variante": "directa",
+      "claro": false,
+      "esperado": "retener",
+      "texto": "Sorteamos 5 combos de pochoclos y entradas dobles para el estreno de la semana que viene. Para participar, seguí la cuenta, dale me gusta y etiquetá a tres amigos."
+    },
+    {
+      "id": "R3-A-118",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "spam",
+      "variante": "directa",
+      "claro": false,
+      "esperado": "retener",
+      "texto": "Apuestas deportivas y ruleta en vivo con la mejor cuota del mercado. Mientras mirás la serie podés estar ganando, registrate hoy y te regalamos 10 mil fichas de bienvenida."
+    },
+    {
+      "id": "R3-A-119",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "spam",
+      "variante": "directa",
+      "claro": false,
+      "esperado": "retener",
+      "texto": "Me gustó la peli, pero mejor me gustó la preventa del nuevo token que lanzamos: va a hacer x100 antes de fin de año. Entrá ahora o arrepentite después, últimos lugares."
+    },
+    {
+      "id": "R3-A-120",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "spam",
+      "variante": "directa",
+      "claro": false,
+      "esperado": "retener",
+      "texto": "Oferta imperdible: colección completa de Marvel en Blu-ray, 34 películas con caja de metal, a precio de costo. También vendo figuras y remeras de la saga. Stock limitado."
+    },
+    {
+      "id": "R3-A-121",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "anomalo",
+      "variante": "directa",
+      "claro": false,
+      "esperado": "retener",
+      "texto": "ESTA SERIE ES LO MEJOR QUE VI EN MI VIDA, NO PUEDO CREER LO QUE PASA EN EL ÚLTIMO CAPÍTULO, TODOS TIENEN QUE VERLA YA MISMO, NO SE LA PIERDAN POR NADA DEL MUNDO!!!!!"
+    },
+    {
+      "id": "R3-A-122",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "anomalo",
+      "variante": "directa",
+      "claro": false,
+      "esperado": "retener",
+      "texto": "buena buena buena buena buena buena buena buena buena buena buena buena buena buena buena buena buena buena buena buena buena buena buena buena buena"
+    },
+    {
+      "id": "R3-A-123",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "anomalo",
+      "variante": "directa",
+      "claro": false,
+      "esperado": "retener",
+      "texto": "malísima malísima malísima no la vean no la vean no la vean malísima malísima no la vean no la vean malísima malísima malísima no la vean no la vean"
+    },
+    {
+      "id": "R3-A-124",
+      "tipo": "resena",
+      "grupo": "abuso",
+      "categoria": "anomalo",
+      "variante": "directa",
+      "claro": false,
+      "esperado": "retener",
+      "texto": "JAJAJAJAJAJA JAJAJAJAJA JAJAJAJAJAJAJA JAJA JAJAJAJAJA JAJAJAJAJAJAJAJA JAJAJA JAJAJAJAJAJAJA JAJAJAJAJA JAJAJAJAJAJA JAJAJA 😂😂😂😂"
+    },
+    {
+      "id": "R3-NL-01",
+      "tipo": "nombre",
+      "grupo": "legitima",
+      "categoria": "nombre",
+      "esperado": "publicar",
+      "texto": "Pau_Cinéfila"
+    },
+    {
+      "id": "R3-NL-02",
+      "tipo": "nombre",
+      "grupo": "legitima",
+      "categoria": "nombre",
+      "esperado": "publicar",
+      "texto": "Juancho92"
+    },
+    {
+      "id": "R3-NL-03",
+      "tipo": "nombre",
+      "grupo": "legitima",
+      "categoria": "nombre",
+      "esperado": "publicar",
+      "texto": "R2-D2 fan"
+    },
+    {
+      "id": "R3-NL-04",
+      "tipo": "nombre",
+      "grupo": "legitima",
+      "categoria": "nombre",
+      "esperado": "publicar",
+      "texto": "Neo de Lanús"
+    },
+    {
+      "id": "R3-NL-05",
+      "tipo": "nombre",
+      "grupo": "legitima",
+      "categoria": "nombre",
+      "esperado": "publicar",
+      "texto": "La Tana"
+    },
+    {
+      "id": "R3-NL-06",
+      "tipo": "nombre",
+      "grupo": "legitima",
+      "categoria": "nombre",
+      "esperado": "publicar",
+      "texto": "007 Bond"
+    },
+    {
+      "id": "R3-NL-07",
+      "tipo": "nombre",
+      "grupo": "legitima",
+      "categoria": "nombre",
+      "esperado": "publicar",
+      "texto": "Mati.R"
+    },
+    {
+      "id": "R3-NL-08",
+      "tipo": "nombre",
+      "grupo": "legitima",
+      "categoria": "nombre",
+      "esperado": "publicar",
+      "texto": "Sofi ✨"
+    },
+    {
+      "id": "R3-NL-09",
+      "tipo": "nombre",
+      "grupo": "legitima",
+      "categoria": "nombre",
+      "esperado": "publicar",
+      "texto": "Eli"
+    },
+    {
+      "id": "R3-NL-10",
+      "tipo": "nombre",
+      "grupo": "legitima",
+      "categoria": "nombre",
+      "esperado": "publicar",
+      "texto": "El Padrino"
+    },
+    {
+      "id": "R3-NL-11",
+      "tipo": "nombre",
+      "grupo": "legitima",
+      "categoria": "nombre",
+      "esperado": "publicar",
+      "texto": "Amélie23"
+    },
+    {
+      "id": "R3-NL-12",
+      "tipo": "nombre",
+      "grupo": "legitima",
+      "categoria": "nombre",
+      "esperado": "publicar",
+      "texto": "Darth Vader"
+    },
+    {
+      "id": "R3-NL-13",
+      "tipo": "nombre",
+      "grupo": "legitima",
+      "categoria": "nombre",
+      "esperado": "publicar",
+      "texto": "Tito 1985"
+    },
+    {
+      "id": "R3-NL-14",
+      "tipo": "nombre",
+      "grupo": "legitima",
+      "categoria": "nombre",
+      "esperado": "publicar",
+      "texto": "Lu&Fer"
+    },
+    {
+      "id": "R3-NL-15",
+      "tipo": "nombre",
+      "grupo": "legitima",
+      "categoria": "nombre",
+      "esperado": "publicar",
+      "texto": "Toti #9"
+    },
+    {
+      "id": "R3-NL-16",
+      "tipo": "nombre",
+      "grupo": "legitima",
+      "categoria": "nombre",
+      "esperado": "publicar",
+      "texto": "Marty McFly"
+    },
+    {
+      "id": "R3-NL-17",
+      "tipo": "nombre",
+      "grupo": "legitima",
+      "categoria": "nombre",
+      "esperado": "publicar",
+      "texto": "Clau-Series"
+    },
+    {
+      "id": "R3-NL-18",
+      "tipo": "nombre",
+      "grupo": "legitima",
+      "categoria": "nombre",
+      "esperado": "publicar",
+      "texto": "Doc Brown 88"
+    },
+    {
+      "id": "R3-NL-19",
+      "tipo": "nombre",
+      "grupo": "legitima",
+      "categoria": "nombre",
+      "esperado": "publicar",
+      "texto": "Rocío P."
+    },
+    {
+      "id": "R3-NL-20",
+      "tipo": "nombre",
+      "grupo": "legitima",
+      "categoria": "nombre",
+      "esperado": "publicar",
+      "texto": "Nico_1917"
+    },
+    {
+      "id": "R3-NL-21",
+      "tipo": "nombre",
+      "grupo": "legitima",
+      "categoria": "nombre",
+      "esperado": "publicar",
+      "texto": "Gollum"
+    },
+    {
+      "id": "R3-NL-22",
+      "tipo": "nombre",
+      "grupo": "legitima",
+      "categoria": "nombre",
+      "esperado": "publicar",
+      "texto": "Fede (Rosario)"
+    },
+    {
+      "id": "R3-NL-23",
+      "tipo": "nombre",
+      "grupo": "legitima",
+      "categoria": "nombre",
+      "esperado": "publicar",
+      "texto": "Ana María"
+    },
+    {
+      "id": "R3-NL-24",
+      "tipo": "nombre",
+      "grupo": "legitima",
+      "categoria": "nombre",
+      "esperado": "publicar",
+      "texto": "Ñoño"
+    },
+    {
+      "id": "R3-NL-25",
+      "tipo": "nombre",
+      "grupo": "legitima",
+      "categoria": "nombre",
+      "esperado": "publicar",
+      "texto": "Kika"
+    },
+    {
+      "id": "R3-NL-26",
+      "tipo": "nombre",
+      "grupo": "legitima",
+      "categoria": "nombre",
+      "esperado": "publicar",
+      "texto": "MoviE_Freak"
+    },
+    {
+      "id": "R3-NL-27",
+      "tipo": "nombre",
+      "grupo": "legitima",
+      "categoria": "nombre",
+      "esperado": "publicar",
+      "texto": "Seba 2049"
+    },
+    {
+      "id": "R3-NL-28",
+      "tipo": "nombre",
+      "grupo": "legitima",
+      "categoria": "nombre",
+      "esperado": "publicar",
+      "texto": "Coquito"
+    },
+    {
+      "id": "R3-NL-29",
+      "tipo": "nombre",
+      "grupo": "legitima",
+      "categoria": "nombre",
+      "esperado": "publicar",
+      "texto": "Abuela Cinéfila"
+    },
+    {
+      "id": "R3-NL-30",
+      "tipo": "nombre",
+      "grupo": "legitima",
+      "categoria": "nombre",
+      "esperado": "publicar",
+      "texto": "Mr. Pochoclo"
+    },
+    {
+      "id": "R3-NA-01",
+      "tipo": "nombre",
+      "grupo": "abuso",
+      "categoria": "contacto.telefono",
+      "variante": "directa",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Wsp 1155839027"
+    },
+    {
+      "id": "R3-NA-02",
+      "tipo": "nombre",
+      "grupo": "abuso",
+      "categoria": "contacto.telefono",
+      "variante": "directa",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Llamame 11-4472-0391"
+    },
+    {
+      "id": "R3-NA-03",
+      "tipo": "nombre",
+      "grupo": "abuso",
+      "categoria": "contacto.telefono",
+      "variante": "directa",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Tel 351 662 4091"
+    },
+    {
+      "id": "R3-NA-04",
+      "tipo": "nombre",
+      "grupo": "abuso",
+      "categoria": "contacto.telefono",
+      "variante": "directa",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "+5491133827746"
+    },
+    {
+      "id": "R3-NA-05",
+      "tipo": "nombre",
+      "grupo": "abuso",
+      "categoria": "contacto.telefono",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "once 5583 9027"
+    },
+    {
+      "id": "R3-NA-06",
+      "tipo": "nombre",
+      "grupo": "abuso",
+      "categoria": "contacto.telefono",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "l1 SS83 9O27 wsp"
+    },
+    {
+      "id": "R3-NA-07",
+      "tipo": "nombre",
+      "grupo": "abuso",
+      "categoria": "contacto.telefono",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "１１４４７２０３９１"
+    },
+    {
+      "id": "R3-NA-08",
+      "tipo": "nombre",
+      "grupo": "abuso",
+      "categoria": "contacto.telefono",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "11.66.20.48.13 msj"
+    },
+    {
+      "id": "R3-NA-09",
+      "tipo": "nombre",
+      "grupo": "abuso",
+      "categoria": "contacto.email",
+      "variante": "directa",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "pau.cine@gmail.com"
+    },
+    {
+      "id": "R3-NA-10",
+      "tipo": "nombre",
+      "grupo": "abuso",
+      "categoria": "contacto.email",
+      "variante": "directa",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "fede88@hotmail.com"
+    },
+    {
+      "id": "R3-NA-11",
+      "tipo": "nombre",
+      "grupo": "abuso",
+      "categoria": "contacto.email",
+      "variante": "directa",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "lucho@yahoo.com.ar"
+    },
+    {
+      "id": "R3-NA-12",
+      "tipo": "nombre",
+      "grupo": "abuso",
+      "categoria": "contacto.email",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "pau arroba gmail.com"
+    },
+    {
+      "id": "R3-NA-13",
+      "tipo": "nombre",
+      "grupo": "abuso",
+      "categoria": "contacto.email",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "lu(at)outlook(dot)com"
+    },
+    {
+      "id": "R3-NA-14",
+      "tipo": "nombre",
+      "grupo": "abuso",
+      "categoria": "contacto.email",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "fede88 en hotmail"
+    },
+    {
+      "id": "R3-NA-15",
+      "tipo": "nombre",
+      "grupo": "abuso",
+      "categoria": "enlace",
+      "variante": "directa",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "pelisgratis-hd.xyz"
+    },
+    {
+      "id": "R3-NA-16",
+      "tipo": "nombre",
+      "grupo": "abuso",
+      "categoria": "enlace",
+      "variante": "directa",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "www.cineflix.top"
+    },
+    {
+      "id": "R3-NA-17",
+      "tipo": "nombre",
+      "grupo": "abuso",
+      "categoria": "enlace",
+      "variante": "directa",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "bit.ly/3pQxZ7k"
+    },
+    {
+      "id": "R3-NA-18",
+      "tipo": "nombre",
+      "grupo": "abuso",
+      "categoria": "enlace",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "pelisya punto online"
+    },
+    {
+      "id": "R3-NA-19",
+      "tipo": "nombre",
+      "grupo": "abuso",
+      "categoria": "enlace",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "cineflix(.)top"
+    },
+    {
+      "id": "R3-NA-20",
+      "tipo": "nombre",
+      "grupo": "abuso",
+      "categoria": "enlace",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "реlisуа.хуz"
+    },
+    {
+      "id": "R3-NA-21",
+      "tipo": "nombre",
+      "grupo": "abuso",
+      "categoria": "contacto.red",
+      "variante": "directa",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "IG @pau.cine"
+    },
+    {
+      "id": "R3-NA-22",
+      "tipo": "nombre",
+      "grupo": "abuso",
+      "categoria": "contacto.red",
+      "variante": "directa",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "TikTok @lucho.series"
+    },
+    {
+      "id": "R3-NA-23",
+      "tipo": "nombre",
+      "grupo": "abuso",
+      "categoria": "contacto.red",
+      "variante": "directa",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "Telegram @fedecinema"
+    },
+    {
+      "id": "R3-NA-24",
+      "tipo": "nombre",
+      "grupo": "abuso",
+      "categoria": "contacto.red",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "insta: pau_cine_ok"
+    },
+    {
+      "id": "R3-NA-25",
+      "tipo": "nombre",
+      "grupo": "abuso",
+      "categoria": "contacto.red",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "sgme en tt lucho.series"
+    },
+    {
+      "id": "R3-NA-26",
+      "tipo": "nombre",
+      "grupo": "abuso",
+      "categoria": "contacto.red",
+      "variante": "ofuscada",
+      "claro": true,
+      "esperado": "rechazar",
+      "texto": "ig ➜ cine.con.mate"
+    }
+  ]
+}

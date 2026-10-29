@@ -2,6 +2,7 @@ node_modules
 .next
 .env.local
 .env.sala-local
+.env.comunidad-local
 .DS_Store
 *.log
 
@@ -51,3 +52,6 @@ out-capacitor/
 
 # logs de los procesos de Next que levanta el banco aislado (scripts/banco/correr.mjs)
 .banco-logs/
+
+# Credenciales ficticias del recorrido local de E9a (scripts/comunidad/recorrido-e9a.mjs).
+.recorrido-e9a.local.json

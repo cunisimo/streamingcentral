@@ -1036,7 +1036,7 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 /* --- Panel: Top semanal manual ------------------------------------------- */
 /* Reusa `.admin` (ancho, tipografía, inputs). Acá van sólo las piezas que esa
    pantalla agrega: la navegación, el editor de posiciones y el buscador. */
-.admin-nav{display:flex;gap:14px;align-items:center;max-width:760px;margin:0 auto;padding:16px 24px 0}
+.admin-nav{display:flex;gap:10px 14px;align-items:center;flex-wrap:wrap;max-width:760px;margin:0 auto;padding:16px 24px 0}
 .admin-nav a{font-size:14px;font-weight:600;color:var(--dim);text-decoration:none}
 .admin-nav a[aria-current="page"]{color:var(--text);text-decoration:underline}
 .admin-nav button{margin-left:auto;background:none;border:none;color:var(--dim);font-size:14px;cursor:pointer}
@@ -1109,6 +1109,8 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .sala-enlace{display:flex;gap:8px;margin-top:6px}
 .sala-enlace input{flex:1;min-width:0;border:1px solid var(--line-2);border-radius:10px;background:var(--surface);padding:11px 14px;font-size:13.5px;font-family:var(--body);color:var(--dim);outline:none}
 .sala-enlace .rlt-btn{height:44px;padding:0 16px}
+.sala-compartir{width:100%;margin-top:6px}
+.sala-compartir svg{width:18px;height:18px;flex:none}
 .sala-config{margin-top:4px}
 .sala-seg{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;padding:4px;border-radius:999px;background:var(--surface);border:1px solid var(--line-2);width:fit-content}
 .sala-seg .tt:disabled{opacity:.55;cursor:default}
@@ -1207,6 +1209,7 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .sala-ganadora .rlt-title{font-size:26px}
 .sala-acciones-resultado{justify-content:center;margin-top:18px}
 .sala-acciones-resultado .rlt-btn{text-decoration:none}
+.sala-compartir-match svg{width:18px;height:18px;flex:none}
 .sala-pie-resultado{margin-top:26px;text-align:left}
 .sala-pie-resultado .sala-vence{text-align:center}
 .sala-preparar{margin-top:4px}
@@ -1301,3 +1304,126 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 @keyframes sala-cel-fin{from{opacity:1}to{opacity:0;visibility:hidden}}
 @keyframes sala-cel-titulo{from{opacity:0;transform:translateY(16px) scale(.9)}to{opacity:1;transform:none}}
 @keyframes sala-cel-poster{from{opacity:0;transform:translateY(24px) scale(.8)}to{opacity:1;transform:none}}
+
+/* Reseñas de la comunidad (E3a, interfaz local). Reusa el acordeón .resenas
+   y los diálogos .dlg; acá sólo lo propio: editor, contador, avisos y votos. */
+.cm{--danger:#C0392B}
+[data-theme="dark"] .cm{--danger:#E74C3C}
+.cm-bloque{margin:16px 0;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.cm-h{font-family:var(--display);font-size:15px;font-weight:700;margin:0 0 8px}
+.cm-sub{font-size:13.5px;color:var(--dim);line-height:1.55;margin:0 0 10px}
+.cm-estado{display:inline-block;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--dim);margin:0 0 6px}
+.cm-texto{font-size:15px;line-height:1.62;white-space:pre-wrap;margin:0 0 10px}
+.cm-textarea{width:100%;box-sizing:border-box;min-height:140px;padding:10px 12px;border-radius:var(--radius-sm);border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);font-family:var(--body);font-size:15px;line-height:1.55;resize:vertical}
+.cm-textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
+.cm-contador{font-size:12.5px;color:var(--dim);margin:6px 0 0;text-align:right;font-variant-numeric:tabular-nums}
+.cm-contador.corto,.cm-contador.largo{color:var(--danger)}
+.cm-aviso{font-size:13px;color:var(--text);background:var(--surface-2);border-radius:var(--radius-sm);padding:8px 10px;margin:8px 0 0}
+.cm-acciones{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.cm-msg{font-size:13.5px;line-height:1.5;margin:10px 0 0;padding:8px 10px;border-radius:var(--radius-sm);background:var(--surface-2)}
+.cm-msg.exito{color:var(--good)}
+.cm-msg.rechazo,.cm-msg.error{color:var(--danger)}
+.cm-msg.sin_confirmar{color:var(--text);border:1px dashed var(--line-2)}
+.cm-link{background:none;border:none;padding:0;color:var(--accent);font:inherit;font-weight:600;text-decoration:underline;cursor:pointer}
+/* Evaluación: conteo arriba, pulgares abajo. 44×44 de superficie táctil;
+   el elegido va relleno, con el color de acento y borde; foco visible. */
+.cm-eval{display:flex;flex-direction:column;align-items:flex-start;gap:6px;margin-top:10px}
+.cm-eval .cm-conteo{font-family:var(--body);font-size:12.5px;line-height:1.4;font-weight:400;color:var(--dim);white-space:normal;margin:0}
+.cm-eval-btns{display:flex;gap:8px}
+.cm-pulgar{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;flex:0 0 auto;padding:0;border-radius:999px;border:1px solid var(--line-2);background:var(--surface);color:var(--dim);cursor:pointer;transition:background-color .15s,color .15s,border-color .15s}
+.cm-pulgar-ico{width:22px;height:22px;flex:0 0 auto;display:block}
+.cm-pulgar.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.cm-pulgar:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.cm-pulgar[aria-disabled="true"]{opacity:.55;cursor:default}
+@media (hover:hover){.cm-pulgar:not(.on):not([aria-disabled="true"]):hover{color:var(--text);border-color:var(--faint)}}
+.cm .btn:disabled{opacity:.55;cursor:default}
+/* E3b: menú de la reseña ajena (denunciar, bloquear), su diálogo y la lista
+   de bloqueados. Botón de 44×44, ítems de 44 de alto, foco visible. */
+.cm-cab{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:2px}
+.cm-cab .badge{margin-bottom:0}
+.cm-lista{margin-top:12px;min-width:0}
+/* E6: el nombre comunitario del autor (enlace a su perfil, sin mayúsculas
+   forzadas: es un nombre) y el perfil comunitario. Enlaces de 44 de alto. */
+.review .badge.cm-autor{text-transform:none;letter-spacing:0;font-size:13.5px;color:var(--text);min-width:0}
+.cm-autor a{display:inline-flex;align-items:center;min-height:44px;color:inherit;text-decoration:underline;text-decoration-color:var(--line-2);text-underline-offset:3px;overflow-wrap:anywhere}
+.cm-perfil{padding-top:8px;padding-bottom:24px}
+.cm-perfil h1{margin:0;font-size:22px;overflow-wrap:anywhere}
+.cm-perfil-cab{display:flex;align-items:center;gap:14px;margin:12px 0 6px}
+.cm-perfil-avatar{width:64px;height:64px;border-radius:50%;flex:0 0 auto;background:var(--surface-2)}
+.cm-perfil .review .badge a{display:inline-flex;align-items:center;min-height:44px;color:inherit}
+.cm-nombre{margin-top:24px}
+.top-secciones{margin:8px 0 12px}
+/* E7: Top Yumpers. Filas de 44+ de alto; el nombre se corta sin desbordar. */
+.cm-top{margin-top:8px}
+.cm-top-invita{margin-top:12px;display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+.cm-top-lista{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.cm-top-fila{display:grid;grid-template-columns:32px 36px minmax(0,1fr) auto;align-items:center;gap:10px;min-height:48px;padding:6px 10px;border:1px solid var(--line-2);border-radius:var(--radius-sm);background:var(--surface)}
+.cm-top-fila.propia{border-color:var(--accent)}
+.cm-top-pos{font-family:var(--display);font-weight:700;font-size:17px;text-align:center}
+.cm-top-avatar{width:36px;height:36px;border-radius:50%;background:var(--surface-2);display:block}
+.cm-top-nombre{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14.5px}
+.cm-top-nombre a{color:inherit;text-decoration:underline;text-decoration-color:var(--line-2);text-underline-offset:3px;display:inline-flex;align-items:center;min-height:44px}
+.cm-top-puntos{font-size:13px;color:var(--dim);white-space:nowrap}
+.cm-nombre .cm-sub{margin:4px 0 8px}
+.cm-orden{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 6px}
+.cm-orden-op{border:1px solid var(--line-2);border-radius:999px;background:var(--surface);color:var(--dim);padding:8px 14px;min-height:44px;font-size:13px;font-weight:600;cursor:pointer}
+.cm-orden-op.on{background:var(--text);color:var(--bg);border-color:var(--text)}
+.cm-orden-op[aria-disabled="true"]{opacity:.55;cursor:not-allowed}
+.cm-orden-pronto{font-size:11px;font-weight:500;margin-left:4px}
+.cm-mas{margin-top:12px;min-height:44px;width:100%}
+.cm-invita{margin-top:12px;padding:14px;border:1px dashed var(--line-2);border-radius:var(--radius-sm);display:flex;flex-direction:column;align-items:flex-start;gap:4px}
+.cm-invita-t{font-weight:700;margin:0}
+.cm-invita .btn{min-height:44px;margin-top:4px}
+.cm-menu{position:relative;flex:0 0 auto}
+.cm-menu-btn{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;padding:0;border:none;border-radius:999px;background:none;color:var(--dim);cursor:pointer}
+.cm-menu-btn svg{width:20px;height:20px;display:block}
+.cm-menu-btn:focus-visible,.cm-menu-item:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (hover:hover){.cm-menu-btn:hover{color:var(--text);background:var(--surface-2)}.cm-menu-item:hover{background:var(--surface-2)}}
+.cm-menu-lista{position:absolute;right:0;top:46px;z-index:20;min-width:200px;padding:6px 0;background:var(--surface);border:1px solid var(--line-2);border-radius:var(--radius-sm);box-shadow:var(--sh-h)}
+.cm-menu-item{display:block;width:100%;min-height:44px;padding:0 16px;border:none;background:none;color:var(--text);font-family:var(--body);font-size:14.5px;text-align:left;cursor:pointer}
+.cm-dlg{max-width:460px}
+.cm-cats{border:none;margin:0 0 10px;padding:0}
+.cm-cat{display:flex;align-items:center;gap:10px;min-height:44px;font-size:14.5px;line-height:1.35;cursor:pointer}
+.cm-cat input{width:20px;height:20px;flex:0 0 auto;accent-color:var(--accent)}
+.cm-com{min-height:80px}
+.cm-bloq{margin-top:8px}
+.cm-revision p{margin:0 0 8px}
+.cm-bloqueados{list-style:none;margin:8px 0 0;padding:0}
+
+/* Moderación de reseñas de la comunidad (E4, /admin/moderacion) */
+.admin.mod{max-width:860px;--danger:#C0392B}
+.mod-resumen{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:14px 0}
+.mod-dato{border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:12px 14px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.mod-dato span{font-size:12px;color:var(--dim);font-weight:600}
+.mod-dato strong{font-size:18px}
+.mod-dato small{font-size:12px;color:var(--faint);line-height:1.45}
+.mod-ok{color:var(--good)}
+.mod-pausa{color:#e08a00}
+.mod-btn{margin-top:6px;align-self:flex-start;min-height:44px}
+.mod-muestreo{grid-column:1/-1;margin:0}
+.mod-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:18px 0 10px;border-bottom:1px solid var(--line);padding-bottom:10px}
+.mod-tabs button{border:1px solid var(--line-2);border-radius:999px;background:var(--surface);color:var(--dim);padding:10px 14px;min-height:44px;font-size:13.5px;font-weight:600;cursor:pointer}
+.mod-tabs button[aria-selected="true"]{background:var(--text);color:var(--bg);border-color:var(--text)}
+.mod-lista{list-style:none;margin:0;padding:0}
+.mod-caso{border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:14px 16px;margin-top:10px;min-width:0}
+.mod-cab{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center}
+.mod-chip{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--surface-2);color:var(--dim)}
+.mod-chip-grave{background:rgba(229,72,77,.14);color:#e5484d}
+.mod-meta{font-size:12.5px;color:var(--faint);line-height:1.5;margin:6px 0 0;overflow-wrap:anywhere}
+.mod-regla{font-size:13px;color:var(--dim);margin:8px 0 0;overflow-wrap:anywhere}
+.mod-regla code,.mod-uuid{font-size:12px;overflow-wrap:anywhere}
+.mod-texto{margin:10px 0 0;padding:10px 12px;border-left:3px solid var(--line-2);background:var(--surface-2);border-radius:8px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:14.5px;line-height:1.55}
+.mod-coms{margin:8px 0 0;padding-left:18px;font-size:13px;color:var(--dim);line-height:1.5;overflow-wrap:anywhere}
+.mod-autor{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin-top:10px;font-size:12.5px}
+.mod-cod{font-family:ui-monospace,monospace;font-weight:700;font-size:12.5px}
+.mod-ante{color:var(--faint)}
+.mod-autor .cm-link{min-height:44px}
+.mod-acciones{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.mod-acciones .btn,.mod-acciones .cfg-danger-btn{min-height:44px}
+.mod-h2{font-family:var(--display);font-size:18px;margin:20px 0 4px}
+.mod-mas{margin-top:14px;min-height:44px}
+.mod-ver{min-height:44px;margin-top:4px}
+.mod-ficha{margin-top:10px;padding:12px 14px;border:1px dashed var(--line-2);border-radius:10px;min-width:0}
+.mod-acciones .mod-meta{margin:0;align-self:center}
+.mod-dlg{max-width:480px}
+.mod-motivo{width:100%;box-sizing:border-box;min-height:84px}

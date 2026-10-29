@@ -1,11 +1,11 @@
 # Estado de Yump
 
-> **Estado canónico. Actualizado el 20 de octubre de 2026 (noche).**
+> **Estado canónico. Actualizado el 21 de octubre de 2026.**
 > Leer este bloque antes de los antecedentes históricos. Arquitectura y reglas:
 > [`CLAUDE.md`](../CLAUDE.md). Problemas históricos: [`ISSUES.md`](ISSUES.md).
 > No duplicar este estado en otros manuales: enlazarlo.
 
-## Resumen vigente — 20/10/2026 (qué está hecho y qué falta)
+## Resumen vigente — 21/10/2026 (qué está hecho y qué falta)
 
 **Leer esto primero.** Esta sección reemplaza a las anteriores "Estado de
 producto e integración" y "Próximo trabajo, en orden" (09/09), que habían
@@ -16,8 +16,9 @@ debajo de "Antecedentes anteriores al 09/09/2026" es histórico. Categorías de 
 pública de deployments de GitHub, estado `success`), **dueño** (informado por
 el dueño), **Producción** (comprobado contra `app.yump.ar`).
 
-**Producción web.** Último cambio de CÓDIGO en `main`: `7937b4c`, desplegado
-el 19/10 (deploy 7183850925). Los commits posteriores en `main` son sólo de
+**Producción web.** Último cambio de CÓDIGO en `main`: `09cc2ee` (Top
+exclusivamente manual), desplegado el 20/10 con `main` = `915ef2e` (deploy
+7210383316). Los commits posteriores en `main` son sólo de
 documentación (su deploy se registra en la entrada de cada uno). Todo el
 código de `main` está en Producción. Entregas recientes,
 todas con deploy `success`: Yumpeá `2af1a37` (27/09, 6698094206), filmografía
@@ -69,8 +70,13 @@ estén aplicadas: cada una tiene su evidencia, de distinta fuerza.
   se comprobó. Que esté sin verificar **no autoriza ejecutarla**: es una
   decisión del dueño, aparte.
 
-El proyecto no usa el historial del CLI (`[db.migrations] enabled = false`),
-así que no hay una tabla de migraciones aplicadas que consultar.
+El proyecto no usa el historial del CLI (`[db.migrations] enabled = false`).
+**Corrección (E0, 29/10, sólo lectura):** en Producción SÍ existe
+`supabase_migrations.schema_migrations`, pero con sólo 3 entradas sueltas
+(`netflix_top10`, `005_dismissed`, `top_manual`): no es un registro de lo
+aplicado. Lo que hay se comprueba por catálogo
+(`scripts/comunidad/e0-produccion.mjs`): 001–003 y 006–010 presentes;
+**011–021 ausentes y 022 sin aplicar** (ver la entrada de reseñas, E0).
 
 **Google Play (informado por el dueño):** AAB `2 (1.0.0)` en Alpha (28/09);
 AAB `3 (1.1.0)` en Alpha (3/10) y acceso a Producción pedido a Google
@@ -113,29 +119,1362 @@ AAB tiene que ser `5` o mayor.
    después (HTTP público): `wt-integracion-3c1.vercel.app` sigue respondiendo
    200 con el último deployment. Que un push a `main` ya no genere deploys de
    ese proyecto se podrá comprobar recién con el próximo push (GitHub
-   deployments). Queda decidir si se elimina.
-3b. **Top exclusivamente manual — IMPLEMENTADO EN RAMA, SIN INTEGRAR NI
-   DESPLEGAR.** Decisión del dueño (20/10/2026): el Top de TODAS las
-   plataformas, Netflix incluida, usa sólo sus publicaciones de `/admin/top`;
-   no existe ninguna fuente alternativa. Que `netflix_top10` no se actualice
-   **no es una avería**. **Configuración (informado por el dueño, 20/10):**
-   apagó Cron Jobs en el proyecto `streamingcentral`. **Implementación (Git):**
-   rama `feat/top-solo-manual`, commit `09cc2ee`, local, sin push. Retira el
-   cutover atómico, el respaldo al top automático y a la popularidad de TMDB,
-   la evidencia `top-oficial`, la ingesta, la ruta `/api/cron/netflix-top10` y
-   `vercel.json`. Conserva `netflix_top10` y sus datos. **Falta:** (1) la
-   ~~prueba manual del dueño~~ — **hecha: el dueño informó "todo ok" el
-   20/10/2026** (local, `feat/top-solo-manual` en `423ef04`, código de
-   `09cc2ee`: `/top` contra sus publicaciones en Películas y Series, la ruta
-   vieja del cron en 404 y las simulaciones locales); (2) **justo antes del merge**, comprobar (sólo
-   lectura) que `netflix_top10` sigue sin semanas posteriores a `2026-10-04`
-   ni escrituras posteriores al 13/10 — si cambió, hay que subir
-   `VERSION_DISPONIBILIDAD` y `VERSION_HOME` (ver la auditoría de cachés); (3)
-   merge y deploy con su autorización; (4) después del deploy, comprobar en el
-   panel de Vercel que el proyecto ya no declara el cron, y abrir el Top en la
-   app 1.2.0 instalada; (5) decidir si se borra la variable `CRON_SECRET` de
-   Vercel (sin uso desde este cambio; configuración, no se tocó). Detalle en la
-   entrada "Top exclusivamente manual" de "Evidencia y alcance".
+   deployments). Queda decidir si se elimina. **Comprobado con el push del
+   20/10 (`915ef2e`):** GitHub registra UN solo deployment (entorno
+   "Production", contexto "Vercel"), ninguno de `wt-integracion-3c1`: el
+   proyecto ya no despliega desde Git.
+3b. **Top exclusivamente manual — INTEGRADO Y DESPLEGADO (20/10/2026).**
+   Decisión del dueño (20/10): el Top de TODAS las plataformas, Netflix
+   incluida, usa sólo sus publicaciones de `/admin/top`; no existe ninguna
+   fuente alternativa. Que `netflix_top10` no se actualice **no es una
+   avería**. **Git:** `main` avanzó por fast-forward `70757a4` → `915ef2e`
+   (código en `09cc2ee`). **Deploy:** 7210383316, `success` 20:32:33 UTC.
+   **Prueba local del dueño:** OK (20/10). Deploy re-comprobado el 21/10
+   (API pública de GitHub: 7210383316, `915ef2e`, Production, `success`).
+   **Falta (del dueño):** (1) en el panel de Vercel, confirmar que
+   `streamingcentral` ya no lista el cron; (2) probar el Top en la web de
+   Producción y en la app Android 1.2.0 instalada; (3) decidir si se borra
+   `CRON_SECRET` de Vercel (sin uso; no se tocó). ⚠️ El commit `06f3c59`
+   (rama `feat/compartir-invitacion`) había anotado (1) y (2) como hechas
+   ("Pruebas OK", informado por el dueño); la sesión de integración del 21/10
+   no tiene esa confirmación explícita, así que quedan PENDIENTES hasta que el
+   dueño la dé.
+   Detalle en las entradas del Top de "Evidencia y alcance".
+3c. **Yumpeá: "Compartir invitación" en el lobby + ícono de "Compartir" del
+   resultado — DESARROLLO Y PRUEBA LOCAL TERMINADOS; integración a `main` y
+   deploy PENDIENTES DE AUTORIZACIÓN (21/10/2026).** Rama
+   `integracion/yumpea-compartir` (worktree `wt-integracion-compartir`, desde
+   `origin/main` `915ef2e`), local, sin push: une por merge
+   `feat/compartir-invitacion` (`f0fc85c`, `2d260e6`, `06f3c59`, sobre
+   `88c5120`) y `fix/icono-compartir-match` (`f49ff65`). **Prueba local
+   aprobada por el dueño (21/10)**, sobre el build local con Supabase SIMULADO:
+   no hubo salas reales, WhatsApp real, teléfono ni Producción. Auditoría de
+   Codex sobre `298555a` sin defectos bloqueantes. **Falta:** merge a `main` y
+   deploy con autorización del dueño (con eso llega a la web y la PWA).
+   **Android:** NO tiene release propia; estos cambios viajan en el MISMO AAB
+   que el futuro sistema de reseñas de usuarios (decisión del dueño, 21/10;
+   versión y `versionCode` sin fijar). Opcional, no requisito de cierre: el
+   recorrido con una sala real descripto en "Evidencia y alcance".
+3d. **Reseñas de usuarios y Top Yumpers — EN DISEÑO (21/10/2026).** Diseño
+   de Codex y revisión de Claude en la rama local `docs/resenas-comunidad`
+   (sólo documentación). Nada implementado ni autorizado.
+   **Decisión del dueño (21/10): sin gastos adicionales.** No hay API paga,
+   banco pago, tope de USD 10, servicios nuevos ni upgrades, y tampoco
+   transferencia a una API gratuita. La revisión v3 propone moderación por
+   reglas propias, sin clasificador externo. Codex auditó la v3.1
+   (`e34c53e`); el contrato de baja quedó cerrado en la revisión §2.2.3.
+   **Plan preparado** (22/10):
+   `docs/superpowers/plans/2026-10-22-resenas-comunidad.md`, entregas
+   E0–E9c; corregido tras la auditoría de Codex sobre `9450006`.
+   **E1 y su corrección E1.1 (reglas puras y banco sintético)
+   implementadas en local**, rama `feat/resenas-reglas`, sin conectar a
+   nada.
+   - **E1 no cumple su aceptación.** La auditoría de `ffa5061` lo confirmó.
+   - **E1.1 tampoco:** el reservado 2, más grande y escrito en su mayor parte
+     por un agente que no conocía las reglas, **no cumple C1 ni C2** (12 de
+     124 contactos claros sin detectar; 87,2 % de ofuscadas detectadas).
+   - **E1.2** corrige huecos mecánicos y familias divulgadas. La auditoría de
+     `40288f6` encontró dos huecos (terminaciones largas en enlaces con ruta y
+     correo incompleto o indirecto), corregidos en local el 22/10 (ver
+     "Corrección de E1.2" abajo). La auditoría de `251f3d0` encontró dos huecos
+     en esas mismas familias (inicio de ruta y criterio de alias), corregidos
+     en local el 22/10 (ver "Segunda corrección de E1.2" abajo). Codex la
+     aprobó en `a8e973a` para medir. **Reservado 3 híbrido (23/10),
+     ejecutado una vez: NO CUMPLE C1 (24/116 claros sin detectar) ni C2
+     (69/99).** C3 y C4 se cumplen (0/160). Ver "Reservado 3" abajo.
+   - **Sí hubo una medición.** Fue **híbrida**: la parte general (340 casos,
+     124 reseñas de abuso) la escribió un agente separado, según la autoría
+     declarada, y la parte sensible (36 casos) la escribió Claude, no
+     independiente. **No fue una validación independiente integral**, y su
+     resultado **no aprueba E1**. Codex lo confirmó en
+     `docs/medidas/2026-10-23-auditoria-reservado-3-4183d37.md`.
+   - **E1 sigue sin aprobarse.** No hay más parches ni otro reservado
+     autorizados, y no se avanza a E2.
+   - **Propuesta de alcance, v2.1 (23/10, sólo documentación, pendiente de
+     Codex y del dueño):**
+     - `docs/medidas/2026-10-23-propuesta-alcance-moderacion.md`;
+     - catálogo, todavía **borrador**:
+       `docs/medidas/2026-10-23-catalogo-moderacion-propuesto.md`.
+
+     **La v2 corrigió la auditoría de `4ef9a51`:**
+     - la evidencia es por versión; un solo conjunto independiente, y si
+       falla queda fallido, sin aprobado por agotamiento;
+     - catálogo con exclusiones cerradas;
+     - operación de las dos colas con hipótesis marcadas;
+     - el muestreo P6 figura como "no aceptado" (no "rechazado"); el
+       contenido de `user_reviews` en Producción, como no verificado.
+
+     **La v2.1 concilia la auditoría de `2bc6c1c`:**
+     - CS por familia (H1, H2 reseñas, H2 nombres y H3), sin compensación
+       por el agregado;
+     - dos rutas de autoría para la parte sensible: independiente, o
+       evidencia limitada que exige un dictamen y una aceptación específica;
+     - prioridad única y casos mixtos: una exclusión no exime;
+     - P-1 corregida: denunciar no oculta de inmediato y pausar no retira lo
+       visible;
+     - F1 sin separadores, S alineada con el generador, E8 separada de la
+       restricción de generación.
+
+     **v3 (23/10, auditoría de `cac5c50`):** el catálogo pasa a ser
+     **candidato a aprobación**:
+     - referencias fijadas por versión y huella: Unicode 18.0.0, UTS #39
+       18.0.0 e IANA `2026102300`, **consultadas y no incorporadas**;
+     - listas cerradas, ámbito de 25 palabras y generador (qué enumera y qué
+       muestrea);
+     - CS medido por el disparo de la familia sobre casos puros;
+     - `_` en S;
+     - E9 pendiente de aceptación y E8 como cobertura no certificada.
+
+     Hay puntos abiertos con resolución propuesta en el catálogo §12.
+     **v3.1 (23/10, auditoría de `77d8bda`):**
+     - composición de F3 con espacios y terminaciones largas (F3-4, sin
+       depender de IANA);
+     - S3 con verbos de remisión al perfil (§6.R);
+     - **la condición de uso de la lista de IANA queda pendiente de
+       verificación** (no se afirma CC0);
+     - las huellas figuran como calculadas por Claude, no verificadas por un
+       segundo revisor.
+
+     Las recomendaciones para P-1, E9, P-2 y P-4, todas pendientes de
+     aceptación, están en la propuesta §10.
+     **Contrato de moderación v1 (24/10):** el dueño aprobó como base de
+     implementación el catálogo v3.2, con las dos enmiendas de `5982374` y
+     la **variante sin IANA** (F3-2 y F3-6 sólo con T-fuerte: menor
+     cobertura, registrada antes de implementar).
+     - Exclusiones E1–E8 y E9 aceptadas para esta etapa, sin certificar.
+     - La publicación sigue desactivada.
+     - Revisión diaria de las colas, sin N acordado.
+     - Autoría del conjunto final sin resolver.
+
+     Archivo: `docs/medidas/2026-10-23-catalogo-moderacion-propuesto.md`
+     (con el título del contrato v1).
+     **Implementación local del contrato v1 (24/10, `7e6e5cd`; reglas
+     `2026-10-24.1`, sin conectar):**
+     - referencias Unicode 18.0.0 incorporadas (`e42b8de`), con huellas
+       calculadas por Claude y todavía no verificadas por Codex;
+     - F1–F4, S1–S5 y H1–H3, ámbito, tabla `regla → familia`, generador
+       determinista (2091 casos al 100 %) y evaluador del contrato
+       (`banco/evaluar-contrato.ts`);
+     - `lib/comunidad`: 99 de 99; `tsc` 0 errores; `npm test` 2348 pruebas,
+       2330 pasan, 0 fallan y 18 omitidas (exigen builds no hechos);
+     - regresiones conocidas, **no independientes**: reservado 3 con C1 0/116,
+       C2 99/99 y C3 1/160;
+     - el contrato aplicado literalmente produce falsos positivos (importe +
+       "número", "4K" + "tele", "M3GAN" + "pidan", diálogos con S2). Hay
+       cambios propuestos y **no aplicados**, pendientes de decisión.
+
+     Informe: `docs/medidas/2026-10-24-informe-claude-contrato-v1.md`.
+     **Corrección de los cinco hallazgos de `bbb8fc7` (24/10, `3ff1643`;
+     reglas `2026-10-24.2`):**
+     - el evaluador mide sólo lo independiente y valida largos, contextos y
+       formato;
+     - la excepción de amenazas quedó acotada al propio fragmento;
+     - el generador tiene 2871 casos, con una prueba de inventario contra el
+       contrato y Unicode 18.0.0;
+     - el salto de línea es fin de oración.
+
+     Resultados: `lib/comunidad` 115 de 115; `tsc` 0 errores; `npm test` 2364
+     pruebas, 2346 pasan, 0 fallan y 18 omitidas. Versión candidata y huellas
+     en `docs/medidas/2026-10-24-informe-claude-correccion-contrato-v1.md`.
+     **Cierre de la revisión local (24/10;
+     `docs/medidas/2026-10-24-auditoria-focalizada-3ff1643.md`):** Codex
+     verificó cuatro correcciones. El caso pendiente de A3 ("…un tiro la
+     rompe esta peli", sin puntuación, se publica) queda como **riesgo
+     residual aceptado por el dueño**: lo atienden las denuncias y su revisión
+     diaria, y no se vuelve a corregir el filtro por ese ejemplo. **La
+     validación independiente sigue pendiente; E1 no está aprobada.** El
+     dueño autorizó **E2a local** mientras tanto, sin publicación.
+     **E2a local (24/10, `1d045f3`; sólo `supabase start`, sin Producción):**
+     - `011_comunidad_esquema.sql` (+ down): esquema privado `comunidad`
+       con 11 tablas e invariantes (FK compuestas, autoevaluación, texto
+       80–600 NFC, únicos parciales, transiciones y vigencia diferida).
+       Revoke explícito a PUBLIC, `anon`, `authenticated` y `service_role`,
+       RLS sin policies y fuera de PostgREST. Interruptores apagados;
+       límites guardados como hipótesis;
+     - `022_cerrar_user_reviews.sql`: quita las dos policies y los permisos
+       de `anon`/`authenticated`, sin tocar filas; su down no reabre.
+       **Aplicada sólo en local**; en Producción, después de E0 y con
+       autorización;
+     - `db-local.mjs` aplica 007, 011 y 022; TOTP encendido en
+       `supabase/config.toml` (sólo local); `.env.comunidad-local` ignorado
+       por Git;
+     - resultados: permisos 25/25 (tres barreras por separado, 616 pedidos
+       REST sin un 2xx, `is_admin_mfa()` real con dos TOTP: AAL1 `false`,
+       AAL2 `true`); invariantes 81/81; up→down→up 11/11 con volcados
+       idénticos; salas 37 en verde; `tsc` 0; `npm test` 2346 pasan, 0
+       fallan, 18 omitidas;
+     - se corrigió en la misma entrega un `alter default privileges … in
+       schema` que no cerraba nada (comprobado): cada entrega repite su
+       revoke;
+     - **no verificado:** privilegios por defecto de Producción (E0 Q5).
+       Con 022, `scripts/prueba-eliminar-cuenta.mjs` deja de poblar
+       `user_reviews` (no se cambió).
+
+     Informe: `docs/medidas/2026-10-24-informe-claude-e2a.md`; salidas:
+     `docs/medidas/2026-10-24-e2a-salidas.txt`.
+     Las cifras de arriba son **corridas de Claude**.
+     **Auditoría focalizada de E2a (24/10, Codex sobre `74e46af`;
+     `docs/medidas/2026-10-24-auditoria-e2a-74e46af.md`, copiada sin cambios,
+     SHA-256 `4c22c7bc…26cb91`):** sin defectos bloqueantes en las
+     migraciones locales. Las corridas propias de Codex no fueron completas:
+     invariantes 80/81 y permisos 22/25. Los fallos coincidieron con falta de
+     memoria del proceso (`VirtualAlloc … errno=1455`) y no con rechazos SQL.
+     Codex repitió aislados el caso y los controles interrumpidos, y pasaron.
+     Codex no declara un 81/81 ni un 25/25 propios y no repitió el ciclo
+     destructivo up/down/up. Pidió dos ajustes del arnés para E2b:
+     - **A1:** que la prueba heredada de eliminación no convierta un permiso
+       denegado en cero filas;
+     - **A2:** que el guardián local mire el contexto efectivo de Docker y no
+       sólo `DOCKER_HOST`.
+     El dueño autorizó **E2b local** con esos dos ajustes.
+     **E2b local y ajustes A1/A2 (24/10; `6e0e1d1`, `9cea2ea`, `c6c6ba5`;
+     sólo `supabase start` y la app local en el puerto 3100, sin
+     Producción):**
+     - A2: el guardián de Docker resuelve el contexto efectivo (precedencia
+       del CLI, contrastada con `docker context show`) y fija ese endpoint
+       en cada `docker`. Pruebas con contextos remotos simulados;
+     - A1: `scripts/prueba-eliminar-cuenta.mjs` ya no convierte errores en
+       cero, exige cantidades exactas y es sólo local: el dueño de la base
+       prepara las fixtures heredadas. Destapó dos fallas que escondía:
+       sin permisos de fila locales y `platforms` con el tipo equivocado;
+     - `012_comunidad_baja.sql` (+ down), sólo en local:
+       - marcador con origen, copia de la sanción y cancelación;
+       - `resolver_participante`, con K_CORTE → K_CUENTA y el rechazo
+         `CB001`;
+       - paso 1 idempotente, que cierra tramos, borra lo propio,
+         desvincula y conserva suspensiones;
+       - red de seguridad en el borrado de Auth;
+       - cuatro funciones de API, sólo para `service_role`;
+     - app: el flujo hace contraseña → paso 1 → `deleteUser` →
+       reconciliación con `getUserById` (`ok`, `baja-parcial` o
+       `baja-sin-verificar`; nunca `ok` sin confirmar). Hay ruta nueva
+       `GET /api/cuenta/estado-baja`, y Configuración muestra "Eliminación
+       pendiente" con reintento. El runbook está en
+       `docs/MANTENIMIENTO.md`;
+     - resultados (corridas de Claude, en secuencia):
+       - `pruebas-baja` 26/26, con B2, B3, B8, B10 y B14 como
+         preliminares;
+       - permisos 27/27, invariantes 81/81 y up/down/up 14/14 (mismos
+         hashes de E2a sin 012);
+       - salas 37 en verde y la prueba heredada con 0 fallas;
+       - `tsc` 0 errores; `npm test` 2362 pasan, 0 fallan, 16 omitidas;
+       - el recorrido visible quedó registrado con capturas;
+     - observado y distinto del plan:
+       - dos `deleteUser` simultáneos responden 200 los dos en el GoTrue
+         local; el camino "404 → reconciliar" se probó aparte;
+       - un ciclo blando de B8 no aborta; el deadlock real (40P01) y el
+         `lock_timeout` (55P03) abortan Auth entera, y el reintento
+         termina;
+     - ⚠️ la ruta de eliminación ahora depende de 011 y 012. Desplegar este
+       código sin esas migraciones deja la eliminación en `fallo-borrado`
+       sin borrar nada;
+     - no verificado: privilegios por defecto y GoTrue de Producción (E0),
+       y Android.
+
+     Informe: `docs/medidas/2026-10-24-informe-claude-e2b.md`; salidas:
+     `docs/medidas/2026-10-24-e2b-salidas.txt`.
+     **Auditoría focalizada de E2b (24/10, Codex sobre `f650725`;
+     `docs/medidas/2026-10-24-auditoria-e2b-f650725.md`, copia sin cambios,
+     SHA-256 `d768cb80…`):**
+     - Codex verificó el flujo de baja: 26/26, prueba heredada con 0
+       fallas y 57/57 focalizadas, en corridas propias.
+     - Cerró los ajustes A1 y A2 del arnés de E2a.
+     - Quedaba un hallazgo de presentación (A1 de E2b): tras
+       `baja-sin-verificar`, el aviso afirmaba que la cuenta existía.
+     - **Corregido en `8646586`:**
+       - el estado propio "Eliminación sin confirmar" es neutral y no
+         afirma existencia ni eliminación;
+       - el comentario quedó corregido;
+       - hay una regresión con la respuesta de Auth perdida y la
+         reconciliación fallida, que comprueba el diálogo y el aviso;
+       - se quitó la línea vacía final del log.
+     - No se repitió la batería de E2b. Control visual: con
+       `baja-parcial` el aviso sigue en "pendiente". El estado
+       `sin-verificar` no se puede provocar en el servidor real sin un
+       gancho de prueba; lo cubre la regresión del núcleo.
+     **Conciliación documental de E2b (24/10):**
+     - B4: los dos borrados simultáneos de Auth pueden responder éxito. El
+       camino 404 → reconciliar sigue probado.
+     - Suspensiones: el vínculo de la sanción con la cuenta se borra con la
+       baja. Los intervalos históricos seudónimos se conservan para el
+       ranking, sin plazo decidido (P3).
+     - Denuncias recibidas que caen en cascada con la reseña: discrepancia
+       con la tabla de retención, **pendiente de resolver antes de E4, E8 y
+       la publicación**. El comportamiento no se cambió.
+     - Orden de despliegue: las migraciones van antes del código.
+     Todo esto está en la revisión §5 y en el plan.
+     **E2c local (24/10, `a306cb8`; sólo `supabase start`, sin
+     Producción):**
+     - `013_comunidad_protocolo.sql` (+ down) trae las primitivas del
+       protocolo de §2.2.4:
+       - una por paso: `proto_cuenta` (reusa `resolver_participante` de
+         E2b) → participantes → reseña → versiones → votos y tramos →
+         suspensiones → contadores → `proto_marca`;
+       - `proto_corte_exclusivo` para la consolidación, que sólo corre en
+         READ COMMITTED;
+       - `corte_de_mes`, `rige_antes_de` y `mes_ar`;
+       - el orden se hace cumplir: CB002 si se piden fuera de orden;
+       - nada ejecutable por la API;
+     - `pruebas-concurrencia.mjs`, con sesiones psql reales:
+       - casos 1–5 (voto/retiro, edición/voto, dos ediciones,
+         `id_intento`, suspensión/voto), 6, 7a/7b (frente a la
+         consolidación) y 11 (igualdad exacta en T(M));
+       - deadlock 40P01 al violar el orden;
+       - `lock_timeout` 55P03 y error tras escrituras parciales, ambos sin
+         cambios a medias;
+       - **20/20 en cinco corridas seguidas**, sin restos;
+     - **Todo preliminar.** Las operaciones son fixtures sobre las
+       primitivas reales, con gate en E3a (1–4), E4 (5) y E7 (6–11). Los
+       casos 8–10 quedan para E7 y E8;
+     - otras verificaciones:
+       - up/down/up 15/15; sin 013 da el mismo volcado que E2b;
+       - salas: 37 en verde;
+       - `tsc`: 0 errores;
+       - `npm test`: 2364 pasan, 0 fallan, 16 omitidas;
+     - la primera corrida falló por memoria de Windows (`VirtualAlloc …
+       errno=1455`). Se corrigió en el arnés: un observador persistente y
+       una sola sesión de control. Además se detuvo el servidor de la app
+       del puerto 3100.
+
+     Informe: `docs/medidas/2026-10-24-informe-claude-e2c.md`; salidas:
+     `docs/medidas/2026-10-24-e2c-salidas.txt`.
+     **Auditoría focalizada de E2c (24/10, Codex sobre `cd62577`;
+     `docs/medidas/2026-10-24-auditoria-e2c-cd62577.md`, copia sin cambios,
+     SHA-256 `20e341a0…`):**
+     - **Cerrada la corrección del aviso de E2b.**
+     - **E2c seguía pendiente** por el hallazgo A1 (P1). `proto_cuenta`,
+       vía `resolver_participante` (012), bloqueaba la fila del actor antes
+       del bloqueo ordenado de `proto_participantes`. Dos actores cruzados
+       que seguían el protocolo hacían 40P01; Codex lo reprodujo dos veces.
+       Codex también pidió precisar que, en el deadlock deliberado, la
+       víctima observada no es una garantía.
+     **Corrección de A1 (24/10; regresión `7b33702`, corrección `b4aa75b`;
+     sólo local):**
+     - 013 redefine `resolver_participante` para que sólo **lea** el
+       participante, sin `FOR UPDATE`. `K_CUENTA` ya da la serialización
+       por cuenta, la relectura del marcador, la creación única de identidad
+       y la exclusión con la baja; la fila se bloquea en el nivel 2, en
+       orden. 013_down restaura literalmente la definición de 012;
+     - regresión con A y B evaluando la reseña del otro, coordinados
+       después del paso de cuenta:
+       - **antes, 3/3 fallan**: filas `A=bloqueada, B=bloqueada` y
+         `deadlock detected`;
+       - **después, 3/3 pasan**: filas libres, los dos confirman y no hay
+         CB002;
+     - corridas posteriores:
+       - concurrencia **21/21 en cinco corridas seguidas**;
+       - baja 26/26, con el servidor local sólo para esa corrida;
+       - up/down/up 15/15, y sin 013 el volcado sigue idéntico al de E2b;
+     - en esas cinco corridas, la víctima del deadlock deliberado fue la
+       sesión fuera de orden en 4 y **la sesión en orden en 1**. No hay
+       garantía de víctima;
+     - las operaciones siguen siendo fixtures: todo es preliminar.
+
+     Informe: `docs/medidas/2026-10-24-informe-claude-e2c-a1.md`; salidas:
+     `docs/medidas/2026-10-24-e2c-a1-salidas.txt`.
+     **Auditoría focalizada de la corrección A1 (24/10, Codex sobre `f67ff90`;
+     `docs/medidas/2026-10-24-auditoria-e2c-a1-f67ff90.md`, copia sin
+     cambios, SHA-256 `6547a056…`):** el fallo de actores cruzados quedó
+     corregido y **E2c está cerrada en local**, sin hallazgos bloqueantes
+     nuevos.
+     - Codex repitió la regresión cruzada (1/1, `A=libre, B=libre`).
+     - Controló, en una transacción revertida, la identidad, la baja, la
+       sanción y la cancelación.
+     - Comparó el SQL: la de 013_down es idéntica a 012.
+     - No hace falta una entrega previa de inventario automático. El
+       inventario de uso del protocolo se cierra en cada entrega que crea
+       funciones.
+     - Las operaciones de concurrencia de E2c siguen siendo fixtures, con
+       gates en E3a, E4 y E7.
+     - El dueño autorizó **E3a local**, integrando las reglas candidatas de
+       E1 sólo en local y con los interruptores apagados. Eso no aprueba E1
+       ni habilita contenido real.
+     **E3a local (24/10; `64daf53`, `c2bf84a`, `5ee5133`; sólo `supabase
+     start` y la app local; interruptores apagados al terminar):**
+     - `014_comunidad_escritura.sql` (+ down):
+       - términos versionados (texto **borrador local**, sin aprobar) y la
+         tabla `intentos` (idempotencia por id_intento y hash del pedido);
+       - publicar, editar, borrar, votar, retirar voto y aceptar términos,
+         sólo `service_role`. Cada una usa las primitivas de 013 en orden,
+         sin bloquear antes la fila del actor, relee lo bloqueado y no
+         escribe nada antes de la marca;
+       - matriz A/B (§2.1.2) y tabla §3.4.1 de ediciones; los votos se
+         reinician una sola vez;
+       - lectura provisional mínima de un título (la reemplaza E5a);
+     - app:
+       - cinco rutas con Bearer y CORS;
+       - normalización y cuenta compartidas entre pantalla, servidor y base;
+       - en la ficha, un acordeón cerrado con los términos, el editor (con
+         aviso y confirmación de reinicio, borrado con confirmación,
+         reintento sin duplicar y "No sabemos si se guardó") y la
+         evaluación;
+     - resultados (corridas de Claude, en secuencia):
+       - escritura 37/37: gates 1–4, B3a/B3b y cruzados con las funciones
+         reales, matriz, §3.4.1, idempotencia, límites con carreras, rutas
+         y acceso directo;
+       - up/down/up 16/16; sin 014, el volcado es el de E2c;
+       - permisos 27/27, invariantes 81/81, baja 26/26 y concurrencia
+         21/21;
+       - `tsc` 0 errores; `npm test` 2387 pasan, 0 fallan, 16 omitidas;
+     - recorrido en navegador, en escritorio y con 375 px, con 15
+       capturas en `docs/medidas/2026-10-24-e3a-recorrido/`;
+     - hallazgos y correcciones dentro de la entrega:
+       - los triggers diferidos de 011 corrían al confirmar con el rol de
+         la sesión: `set constraints all immediate` en publicar y editar;
+       - un emoji con ZWJ pasaba el contador pero el CHECK de 011 lo
+         rechaza: ahora el editor lo avisa antes de enviar;
+       - el mensaje se perdía al volver a montar el editor;
+       - el botón deshabilitado no se veía como tal;
+     - ⚠️ la ruta y la interfaz dependen de 011–014: las migraciones van
+       antes del código;
+     - no verificado:
+       - la ficha real con TMDB (en local se usó
+         `/revision-local/comunidad`, el mismo componente);
+       - Android;
+       - lo de E3b (admisión, duplicados, revisión de rechazos).
+
+     Informe: `docs/medidas/2026-10-24-informe-claude-e3a.md`; salidas:
+     `docs/medidas/2026-10-24-e3a-salidas.txt`.
+   **Falta:**
+   - **Auditoría focalizada de E3a (24/10, Codex sobre `faabf5a`;
+     `docs/medidas/2026-10-24-auditoria-e3a-faabf5a.md`, copia sin cambios,
+     SHA-256 `98c619f9…`):** E3a quedó ampliamente verificada (Codex:
+     40/40 tests, `tsc` limpio, batería 37/37 con restos `0|0|0|0|false`,
+     catálogo cerrado). **Sigue pendiente de dos correcciones P2:**
+     - A1: una respuesta RPC perdida después del commit se informaba como
+       "No se pudo guardar". Codex lo reprodujo con una publicación real;
+     - A2: una recarga remota descartaba el borrador en edición y adoptaba
+       en silencio otra versión esperada. Lo encontró por lectura.
+   - **Correcciones A1/A2 de E3a (25/10, local; `98eba43` copia de la
+     auditoría, `8bdfe3f` A1, `d66244b` A2): hechas y cerradas por Codex**
+     (25/10, sobre `f9be491`; `docs/medidas/2026-10-25-auditoria-e3a-a1a2-f9be491.md`,
+     copia sin cambios, SHA-256 `6e8eee47…`). Codex repitió A1 real 6/6
+     (restos `0|0|0|0|false`), 37/37 tests de escritura y editor, y `tsc`.
+     Sin recorrido propio en navegador: las capturas son evidencia de Claude.
+     **E3a local queda cerrada** con sus límites (lectura provisional,
+     términos sin aprobar, admisión y defensas de E3b pendientes). No
+     aprueba E1 ni habilita publicación, Producción ni E3b.
+     - A1: los errores de `supabase.rpc` salen clasificados. Un SQLSTATE o
+       PGRST es un rechazo confirmado: "error". Una confirmación perdida
+       (fetch caído, 5xx sin código, cuerpo ilegible, conexión perdida)
+       se repite una vez con el mismo `id_intento`; si tampoco se confirma
+       queda `sin_confirmar` (503, "No sabemos si se guardó"). Lo mismo
+       para votar, retirar, borrar y aceptar términos.
+       Pruebas reales con la respuesta descartada tras el commit: 6/6
+       (0/6 sobre `faabf5a`). §3.4.1 9/9, idempotencia 5/5, gates 1–4
+       5/5, rutas 3/3;
+     - A2: el editor guarda la versión base y el borrador. Una versión o un
+       borrado remoto muestran un aviso con decisión explícita; sin
+       decidir, el envío sale contra la base original y vuelve el conflicto.
+       El editor se monta por cuenta y título, y una recarga fallida ya no
+       desmonta el editor. 8 regresiones puras y un recorrido en navegador
+       con el "antes" reproducido sobre `faabf5a`
+       (`docs/medidas/2026-10-25-e3a-a1a2-recorrido/`);
+     - `tsc` 0; `lib/comunidad` 37/37; `npm test` 2399 pasan, 0 fallan,
+       18 omitidas (con el `.next` de `next dev` apartado: con él, dos
+       pruebas de bundle de producción fallan por entorno);
+     - interruptores apagados y límites 5/10/100 al terminar;
+     - no probado: una caída real de conexión a mitad del commit; el cambio
+       directo de cuenta A→B con el editor montado (cubierto por la `key`);
+       la ficha con TMDB; Android.
+     Informe: `docs/medidas/2026-10-25-informe-claude-e3a-a1a2.md`;
+     salidas: `docs/medidas/2026-10-25-e3a-a1a2-salidas.txt`.
+   - **Pulgares en la evaluación (25/10, pedido visual del dueño en la
+     auditoría de A1/A2):** "Me sirvió" / "No me sirvió" pasan a ser
+     pulgar arriba y pulgar abajo, con el conteo encima ("285 de 481
+     encontraron útil esta opinión"; singular "1 de 4 encontró…"; sin
+     evaluaciones "Todavía nadie evaluó esta opinión."). Nombres accesibles,
+     `aria-pressed`, foco visible, 44×44 de superficie y el elegido relleno
+     en naranja. Misma lógica de voto, cambio y retiro; la propia sólo
+     muestra el conteo. Verificado en navegador local en escritorio y a
+     375 px con conteos reales; capturas en
+     `docs/medidas/2026-10-25-e3a-pulgares/`, informe en
+     `docs/medidas/2026-10-25-informe-claude-e3a-pulgares.md`. Se limpiaron
+     además los seis espacios finales del log de A1/A2 que señaló la
+     auditoría (sólo espacios). **Cerrado por Codex** (25/10, sobre
+     `0af5f49`; `docs/medidas/2026-10-25-auditoria-pulgares-0af5f49.md`,
+     copia sin cambios en `7698e7a`, SHA-256 `db132d89…`): sin hallazgos
+     bloqueantes; Codex repitió 38/38 y `git diff --check` y comparó la
+     captura a 375 px con la referencia del dueño (cumple; usa el estilo de
+     botones de Yump). Sin recorrido propio de Codex en navegador, teléfono,
+     tema claro, TMDB, Android ni lector de pantalla. El dueño confirmó que
+     el rótulo "Reseña de la comunidad" pasa a ser el nombre comunitario del
+     autor en E6, sin mostrar correos ni datos privados;
+   - **E3b local (25/10, autorizada por el dueño; `2e2d00e`; sólo `supabase
+     start` y la app local; interruptores apagados y límites restaurados al
+     terminar). Auditada por Codex sobre `64d940e`
+     (`docs/medidas/2026-10-25-auditoria-e3b-64d940e.md`, copia sin
+     cambios): dos P2 de interfaz, A1 y A2, sin defectos en el SQL, la
+     concurrencia ni los permisos ejercitados. A1/A2 corregidas por Claude
+     (ver abajo). **CERRADA por Codex** sobre `ce26526`
+     (`docs/medidas/2026-10-25-auditoria-e3b-a1a2-ce26526.md`, copia sin
+     cambios, SHA-256 `ccb5cce4…`): sin hallazgos bloqueantes; no aprueba
+     E1, parámetros de lanzamiento ni publicación. Codex corrió 98/98 de
+     núcleos y una sonda del diálogo real; no repitió baterías de base,
+     navegador, teléfono ni TMDB.**
+     - **A1 (aislamiento por cuenta):** `/cuenta/bloqueados`, las reseñas de
+       la ficha (aviso de bloqueo, diálogos, mensajes) y la fila de
+       Configuración montan su estado por cuenta; una frontera
+       (`lib/comunidad/frontera-cuenta.ts`) descarta respuestas de cuentas
+       anteriores, de instancias desmontadas y cargas superadas, y los
+       pedidos sólo salen si la sesión sigue siendo de la cuenta que los
+       inició. Una recarga fallida de la misma cuenta conserva datos y
+       borrador (E3a intacta);
+     - **A2 (denuncia recibida, bloqueo pendiente):** el diálogo conserva la
+       denuncia y ofrece "Reintentar el bloqueo" sólo contra la ruta de
+       bloqueos (no reenvía la denuncia ni suma excedente); incierto y error
+       confirmado tienen mensajes distintos; un rechazo definitivo deja sólo
+       "Cerrar". Hallazgo del recorrido, corregido: con el bloqueo aplicado
+       pero la respuesta perdida, la recarga quitaba la reseña y el
+       reintento; ahora la recarga espera al cierre del diálogo;
+     - 21 regresiones focalizadas (preliminares: núcleos y modelos), 77/77
+       vecinas, `npm test` 2445 pasan, 0 fallan, 16 omitidas, `tsc` 0;
+       recorrido real en navegador (escritorio y 375 px) con demoras y
+       respuestas perdidas simuladas en la página; 12 capturas en
+       `docs/medidas/2026-10-25-e3b-a1a2-recorrido/`. Sin baterías de base:
+       no cambió SQL ni rutas;
+     - se mantiene documentado: **50 es el tope de ADMISIÓN, no una cota
+       absoluta de retenidos**; la corroboración por regla puede superarlo
+       (comportamiento sin cambios);
+     - no verificado: la fila de Configuración en navegador (sólo código y
+       barrido), teléfono real, Android, tema claro, TMDB, lector de
+       pantalla. Informe: `docs/medidas/2026-10-25-informe-claude-e3b-a1a2.md`;
+       salidas: `docs/medidas/2026-10-25-e3b-a1a2-salidas.txt`.
+     - `015_comunidad_moderacion_datos.sql` (+ down):
+       - límites nuevos en `config`, todos **hipótesis** (P6, ninguno
+         aprobado): admisión por autor 2 y global 50, 50 filas de denuncia
+         por versión, 100 denuncias por hora;
+       - protocolo con dos niveles nuevos antes de la marca (8 hash de
+         texto, 9 cola de retenidos o de denuncias; la marca pasa a 10):
+         los topes y el conteo entre cuentas se cumplen bajo concurrencia;
+       - huellas HMAC de duplicados (texto plegado y shingles de 3
+         palabras, sólo hex por CHECK; el secreto es del servidor:
+         `COMUNIDAD_HMAC_DUPLICADOS`, en local uno de prueba que se rechaza
+         en producción);
+       - publicar/editar con duplicados, admisión a la cola (lo limpio se
+         publica igual; lo retenible que no entra no se guarda; nada se
+         publica por vencimiento) y "Pedir revisión"
+         (`revision_solicitada`, pasa por la admisión y el límite);
+       - denunciar (fila C; no oculta; la cantidad sólo ordena la cola
+         interna para E4), corroboración por regla, bloquear y desbloquear
+         (fila D); la lectura provisional oculta al bloqueado sólo para
+         quien bloquea;
+     - app: rutas `denuncias`, `bloqueos` y `revision`; menú de la reseña
+       (denunciar con categorías, confirmación y bloqueo en el mismo paso,
+       bloquear, reintento sin duplicar, mensajes honestos con la cola
+       llena); "Pedir revisión" en el editor con la confirmación de que la
+       publicada deja de verse; `/cuenta/bloqueados` y su fila en
+       Configuración;
+     - resultados (corridas de Claude, en secuencia): moderación E3b 46/46
+       (con compuertas psql que observan la espera de los locks 7303/7304;
+       las 5 de concurrencia de topes, 3 veces), up/down/up de 015 5/5,
+       permisos 27/27, escritura 43/43, concurrencia 21/21, baja 26/26,
+       invariantes 81/81, unitarias 67/67, `npm test` 2424 pasan, 0 fallan,
+       16 omitidas, `tsc` 0 errores;
+     - recorrido en navegador local en escritorio y a 375 px, con 19
+       capturas en `docs/medidas/2026-10-25-e3b-recorrido/`;
+     - interpretaciones a auditar (informe, "Decisiones a auditar"):
+       duplicado propio = de otra reseña; "3 o más cuentas" literal (la 4.ª
+       se retiene); denunciar y bloquear crean la identidad sin términos;
+       la corroboración cierra tramos y no pasa por la admisión (Codex: no
+       son hallazgos; conservar en E4 que 50 limita la admisión, no el total
+       retenido);
+     - `pruebas-permisos.mjs` no borraba sus cuentas: se borraron sólo las
+       de las tres corridas de Claude del 25/10 y ahora limpia lo suyo (las
+       del 24/10 quedan). El up/down/up completo de 011 no se repitió:
+       borra el esquema de la base compartida;
+     - no verificado: teléfono real y Android, tema claro, ficha con TMDB,
+       lectores de pantalla reales, caída real de red a mitad del commit.
+     Informe: `docs/medidas/2026-10-25-informe-claude-e3b.md`; salidas:
+     `docs/medidas/2026-10-25-e3b-salidas.txt`.
+   - **E4 local: moderación administrativa (25/10, autorizada por el dueño;
+     sólo `supabase start`, la app local y datos ficticios; interruptores,
+     publicación y muestreo apagados al terminar).** Auditada por Codex sobre
+     `9340da9` (`docs/medidas/2026-10-25-auditoria-e4-9340da9.md`): dos P2,
+     A1 y A2, corregidas por Claude el 25/10 (detalle al final de este
+     bloque). **E4 CERRADA COMO ENTREGA LOCAL por Codex el 26/10**
+     (`docs/medidas/2026-10-26-auditoria-e4-a1a2-1fb85cb.md`), sin habilitar
+     la publicación. ⚠️ **Límite de verificación:** Codex cerró por revisión
+     de código, sus pruebas focalizadas (64/64, `tsc` 0) y la evidencia de
+     Claude; **no pudo repetir las pruebas de base** porque Docker Desktop
+     respondía 500 después del reinicio. Las corridas 38/38, 5/5, 28/28,
+     26/26, 85/85 y 46/46 siguen siendo evidencia de Claude. El 26/10 Claude
+     volvió a levantar Docker Desktop (sin borrar volúmenes ni recrear
+     contenedores) y comprobó la base tal como había quedado: 6
+     participantes, 2 versiones, 42 cuentas, 2 suspensiones ajenas, 0
+     decisiones, interruptores y muestreo apagados, `SELECT` de `profiles`
+     revocado, sin locks. Codex marcó un espacio final en la línea 22 de
+     `docs/medidas/2026-10-25-e4-a1a2-salidas.txt` (el fallo histórico): no
+     se tocó, para no alterar la salida histórica.
+     - `016_comunidad_admin.sql` (+ down generado con copias literales de
+       011, 012 y 015):
+       - registro de decisiones (admin, acción, versión o participante o
+         cuenta, motivo, estado previo; sin texto; idempotente por intento);
+       - acciones `comunidad_admin_*` y `comunidad_quitar_marcador_baja`,
+         ejecutables SÓLO por `authenticated` con `is_admin_mfa()`
+         comprobado adentro antes de cualquier lock (como el Top). Son
+         publicar o rechazar retenidos, retirar y restaurar, descartar o
+         cerrar denuncias, suspender y levantar, quitar el marcador de baja
+         y pausar o reanudar la publicación;
+       - lecturas del panel (resumen, colas con cursor, cuentas, registro y
+         muestreo apagado);
+       - `proto_admin`: K_CORTE compartido y, al quitar un marcador, el
+         K_CUENTA de esa cuenta;
+       - retirar cierra tramos; publicar y restaurar los reabren sólo para
+         votos positivos vigentes que ya tenían tramo, con su mes original;
+       - invariantes: `rechazada → reemplazada` (el autor puede corregir) y
+         una suspensión con fin futuro se puede acortar (nunca alargar ni
+         llevar al pasado).
+     - **Denuncias recibidas en la baja (pendiente de E2b):** la baja ahora
+       las cierra en `comunidad.denuncias_cerradas` con lo mínimo
+       (denunciante seudónimo, categoría, estado final `cerrada_por_baja`,
+       fechas), SIN texto, comentario ni autor. Se borran con la baja de
+       quien denunció. **El texto denunciado se sigue borrando con la cuenta:
+       conservarlo es una excepción de preservación que decide el dueño con
+       P3** (propuesta A/B/C en el informe). Ningún plazo nuevo.
+     - app: `/admin/moderacion` en la navegación del dashboard; ruta
+       `/api/admin/moderacion` con `adminDeToken` y la sesión del admin (sin
+       CORS, como `admin/top`); motivo obligatorio, efecto antes de
+       confirmar, "No sabemos si se aplicó" con reintento del mismo
+       intento, aislamiento por cuenta (frontera de E3b). El autor ve
+       "Rechazada por moderación".
+     - resultados (corridas de Claude, en secuencia):
+       - `pruebas-admin` 32/32 (nueva): permisos por API y por RPC directo
+         con TOTP reales; decisiones atadas a versión (vieja, borrada,
+         baja); simultáneas; reintentos y respuesta perdida; caso 5 con las
+         funciones de producto; B10 y B14 con la función real; pausa;
+         paginación; muestreo;
+       - up/down/up de 016 5/5;
+       - por dependencia modificada: permisos 28/28, invariantes 85/85,
+         baja 26/26, moderación E3b 46/46, escritura 43/43;
+       - unitarias 13/13, `npm test` 2458 pasan, 0 fallan, 16 omitidas,
+         `tsc` 0;
+       - concurrencia (E2c) no se repitió: las primitivas no cambiaron y el
+         caso 5 está en la batería nueva.
+     - recorrido real en navegador local (escritorio y 375 px; respuesta
+       perdida y demora simuladas en la página): 12 capturas en
+       `docs/medidas/2026-10-25-e4-recorrido/`.
+     - ⚠️ entorno local: `supabase start` no da `SELECT` de
+       `public.profiles` a `authenticated` (la ruta del admin respondía
+       503; al Top le pasa igual en local). Se concede sólo mientras corren
+       la batería y el recorrido, y se revoca. No es un cambio de esquema.
+     - decisiones a auditar (informe): la suspensión no cierra tramos (el
+       cómputo al corte la excluye por intervalo); reapertura de tramos;
+       las dos invariantes ampliadas; publicar no toca denuncias abiertas;
+       la pausa no frena una escritura que ya leyó la configuración;
+       suspensión sin plazo; muestreo sin interruptor en el panel.
+     - no verificado: teléfono, Android, tema claro, lector de pantalla,
+       ficha con TMDB, una caída real de red, TOTP tecleado en
+       `/admin/mfa`, Producción.
+     Informe: `docs/medidas/2026-10-25-informe-claude-e4.md`; salidas:
+     `docs/medidas/2026-10-25-e4-salidas.txt`.
+     - **Corrección A1/A2 (25/10, Claude; cerrada por Codex el 26/10, ver arriba):**
+       - A1, restaurar desde el panel:
+         - la base suma dos lecturas, sólo para admin con MFA:
+           `comunidad_admin_retiradas` (retiradas vigentes de reseñas vivas,
+           con cursor) y `comunidad_admin_version` (situación actual);
+         - el panel suma la pestaña **Retiradas** y «Ver situación actual»
+           en el Registro. Restaurar se ofrece sólo si la versión sigue
+           retirada y vigente, con el aviso de los votos que vuelven (los
+           que `reabrir_tramos` reabre);
+         - restaurar sigue siendo la misma función, que rechaza una versión
+           reemplazada, borrada o eliminada;
+       - A2, bajas simultáneas:
+         - `limpiar_participante` bloquea, al final de sus locks, las
+           denuncias hechas y recibidas, por id;
+         - la segunda baja espera y relee, así el historial de quien
+           denunció ya no reaparece después de su baja;
+         - regresión determinista con las funciones reales: falla antes,
+           pasa después, en ambos órdenes y con denuncias cruzadas, sin
+           deadlock;
+         - las denuncias de cuentas activas se conservan;
+       - documentación: el diseño §2.2.2 concilia la suspensión (intervalo,
+         no cierra tramos, efecto exacto en el cómputo); el plan suma a E7
+         el gate con el cómputo real. El ranking no se tocó;
+       - resultados reales en secuencia:
+         - `pruebas-admin` 38/38 (A1 3, A2 3);
+         - up/down/up de 016 5/5;
+         - permisos 28/28, baja 26/26, invariantes 85/85, moderación 46/46;
+       - unitarias y tipado: `npm test` 2460 pasan, 0 fallan, 16 omitidas;
+         `tsc` 0;
+       - no repetidas: escritura y concurrencia, porque sus funciones no
+         cambiaron;
+       - recorrido en navegador local, escritorio y 375 px, sesión AAL2
+         real:
+         - retirar → recargar → Retiradas → restaurar;
+         - decisión tardía sobre una retirada que el autor editó: «No se
+           aplicó»;
+         - Registro con reemplazada, borrada y eliminada sin botón;
+         - la edición concurrente la disparó un script (simulado el
+           momento, real la función);
+         - 8 capturas;
+       - limpieza: base con 6 participantes, 2 versiones y 42 cuentas, 0
+         locks, suspensiones ajenas intactas, interruptores y muestreo
+         apagados, `SELECT` local de `profiles` revocado;
+       - no verificado: teléfono, Android, tema claro, lector de pantalla,
+         Producción.
+       Informe: `docs/medidas/2026-10-25-informe-claude-e4-a1a2.md`; salidas:
+       `docs/medidas/2026-10-25-e4-a1a2-salidas.txt`; capturas:
+       `docs/medidas/2026-10-25-e4-a1a2-recorrido/`.
+   - **E5a local: lectura protegida y "Recientes" (26/10, autorizada por el
+     dueño; sólo `supabase start`, la app local y datos ficticios;
+     interruptores, publicación y muestreo apagados al terminar).** Auditada
+     por Codex sobre `b7ba962` (`docs/medidas/2026-10-26-auditoria-e5a-b7ba962.md`):
+     un P2, A1, corregida por Claude el 26/10 (detalle al final de este
+     bloque). **E5a CERRADA COMO ENTREGA LOCAL por Codex el 26/10**
+     (`docs/medidas/2026-10-26-auditoria-e5a-a1-367cf25.md`): A1 cerrada, sin
+     hallazgos nuevos; sin publicación. **Sigue pendiente de integración la
+     comparación de `/api/title` en ejecución** (un barrido de fuente no la
+     reemplaza; puede hacerse con fixtures locales de TMDB, sin servicio real
+     ni credenciales de Producción).
+     - entorno: Docker Desktop estaba detenido tras el reinicio (la distro
+       WSL `docker-desktop` parada). Lo inicié; el motor respondió en 25 s y
+       los contenedores volvieron solos. No borré volúmenes ni recreé nada;
+     - `017_comunidad_lectura.sql` (+ down con la lectura provisional de 015,
+       copia literal):
+       - `comunidad_resenas` reemplaza a la lectura provisional (que se
+         borra). La ejecuta SÓLO `authenticated` y lee al lector de
+         `auth.uid()`; no tiene `p_uid`;
+       - "Recientes" con cursor por clave (primera publicación desc, id desc),
+         de a 5 (tope 20);
+       - visibilidad recalculada en cada página: reseña viva, versión vigente
+         publicada, no propia, autor no bloqueado por quien lee ni
+         suspendido;
+       - la primera página trae la propia, el estado de la cuenta y el total;
+       - "utiles" → 22023 (E5b);
+       - `comunidad_modulo_activo` (sólo `service_role`) para la ruta;
+     - ruta `GET /api/comunidad/resenas/lista` (desvío del plan: la envoltura
+       CORS admite un método por ruta):
+       - Bearer → sesión del lector, nunca `service_role`;
+       - sin sesión, 401 `{resultado, activo}` (sólo el interruptor);
+       - `private, no-store`;
+     - ficha: una sola sección RESEÑAS:
+       - la de Yump primero; el módulo editorial no se tocó;
+       - sin sesión, invitación a registrarse, también en un título sin
+         reseñas y sin número en el encabezado;
+       - con sesión, cinco reseñas y "Cargar más" (cursor confirmado, fallo
+         con reintento desde el mismo punto, sin duplicados);
+       - selector con "Más útiles" deshabilitado;
+       - se conservan editor, pulgares, conteos, denuncias, bloqueos y
+         revisión;
+       - sin nombre del autor hasta E6;
+     - suspensión: desde E5a la lectura oculta las reseñas del autor
+       suspendido mientras rige (diseño §2.3). Se cambió el texto del
+       diálogo de E4, que decía lo contrario;
+     - resultados reales en secuencia:
+       - `pruebas-lectura` 11/11 (nueva): sin sesión nada por RPC ni ruta;
+         214 visibles en 43 páginas, exactas, con un empate de 12; cambios
+         entre páginas (retiro, borrado, edición, bloqueo y suspensión, con
+         funciones reales): 0 repetidas, 0 salteadas; bloqueo personal;
+         suspensión y levantamiento;
+       - up/down/up de 017 5/5;
+       - por dependencia modificada (usaban la lectura provisional o el
+         inventario): permisos 29/29, escritura 43/43,
+         moderación 46/46, admin 38/38;
+     - unitarias: `npm test` 2471 pasan, 0 fallan, 16 omitidas; `tsc` 0;
+     - recorrido real en navegador local, escritorio y 375 px, 12 capturas:
+       - invitación con y sin reseñas; cinco + Cargar más;
+       - fallo y reintento; voto sin achicar la lista; bloqueo;
+       - cambio de cuenta, cierre de sesión y cambio de título con una tanda
+         pendiente (la tardía no se pinta);
+       - estado vacío; fallo y demora simulados con un interceptor de
+         `fetch`;
+     - corregido en el recorrido: abrir la sección mientras se resolvía la
+       sesión la volvía a cerrar. Ahora el abierto/cerrado vive por título;
+     - pendiente: comparar `/api/title` en ejecución (sin TMDB en local; lo
+       fija un barrido de fuente), teléfono, Android, tema claro, lector de
+       pantalla, Producción.
+     Informe: `docs/medidas/2026-10-26-informe-claude-e5a.md`; salidas:
+     `docs/medidas/2026-10-26-e5a-salidas.txt`; capturas:
+     `docs/medidas/2026-10-26-e5a-recorrido/`.
+     - **Corrección A1 (26/10, Claude; cerrada por Codex el 26/10):**
+       - el problema: la lista ignoraba los resultados idempotentes del voto
+         recuperado (`sin_cambios`, `sin_efecto`). La base quedaba bien, pero
+         la pantalla no, y el siguiente toque volvía a votar;
+       - la corrección (`lib/comunidad/lista-nucleo.ts`, sólo el núcleo):
+         - `votoConfirmado` toma también los idempotentes;
+         - `trasVoto` aplica el estado confirmado por diferencia, sin contar
+           dos veces y sin recargar la lista;
+         - `sin_confirmar` no cambia nada y deja el aviso;
+       - regresión unitaria: falla antes (`[null,2,3]` contra
+         `["util",3,4]`) y pasa después;
+       - regresión real `pruebas-voto-lista`: 3/10 con el núcleo anterior,
+         11/11 con la corrección. Cubre positivo, negativo, cambio y retiro;
+         la primera respuesta perdida; la pérdida de ambas y el reintento.
+         El siguiente toque actúa sobre el voto real y la lista conserva sus
+         dos páginas. La pérdida es simulada;
+       - focalizadas 78/78; `tsc` 0;
+       - navegador local, escritorio y 375 px, 5 capturas: incierto →
+         reintento → reflejado, con la lista de dos o tres páginas intacta;
+       - sin cambios en la base, la ruta ni el componente. No se repitieron
+         baterías generales;
+       - quité la línea vacía extra de `components/ResenasSeccion.tsx`;
+       - sigue pendiente: `/api/title` en ejecución, teléfono, Android,
+         tema claro, lector de pantalla, Producción.
+       Informe: `docs/medidas/2026-10-26-informe-claude-e5a-a1.md`; salidas:
+       `docs/medidas/2026-10-26-e5a-a1-salidas.txt`; capturas:
+       `docs/medidas/2026-10-26-e5a-a1-recorrido/`.
+   - **E5b local: orden "Más útiles" (26/10, Claude, autorizada por el
+     dueño; sólo `supabase start`, la app local y datos ficticios).
+     CERRADA COMO ENTREGA LOCAL por Codex el 26/10**
+     (`docs/medidas/2026-10-26-auditoria-e5b-662e247.md`): sin hallazgos
+     bloqueantes; no habilita publicación. Pendientes de integración
+     conservados: `/api/title` en ejecución, tema claro, teléfono/Android,
+     lector de pantalla y Producción; la purga y la cuota siguen para E8.
+     - **Qué entró:**
+       - `018_comunidad_utilidad.sql` + down;
+       - Wilson al 95 % (z = 1,96), con 0 positivos o sin votos = 0, y
+         desempate por primera publicación desc → id desc. La copia
+         `lib/comunidad/wilson.ts` coincide **bit a bit** con la base en
+         1.890 pares;
+       - **orden congelado compartido por título** (`ordenes_utiles` y
+         `ordenes_utiles_tramos`):
+         - filas de 100 ids;
+         - un generador por título con lock consultivo y doble búsqueda;
+         - reutilización de 10 min y vigencia de 2 h;
+         - **sin datos de quien lee**;
+       - cada página revalida como máximo 50 posiciones y devuelve hasta 5;
+         con muchas ocultas, menos, y el cursor avanza;
+       - un orden vencido responde `orden_actualizado`;
+       - `comunidad_resenas` pasa a `volatile` con `lock_timeout = 5s`;
+       - interfaz:
+         - "Más útiles" es el orden por defecto, sin perder "Recientes";
+         - cinco iniciales y "Cargar más";
+         - "Orden actualizado" con UN solo reinicio, sin duplicar;
+         - votar actualiza el conteo y no reordena.
+     - **Corregido en el camino:** Wilson de 0/n en SQL daba ~1e-17 en vez
+       de 0 y salteaba el desempate por fecha. Lo detectó la batería.
+     - **Pruebas reales:**
+       - `pruebas-utiles` 14/14: 20 lectores concurrentes → 1 orden;
+         recorrido de 237 sin duplicar ni saltear; cambios entre páginas con
+         funciones reales; muchas ocultas con ≤ 50 posiciones; vencimiento
+         y reinicio con el núcleo real; permisos y privacidad;
+       - up/down/up de 018 5/5;
+       - **repetidas porque 018 redefine `comunidad_resenas`:** lectura
+         11/11 y permisos 29/29 (las dos con la batería actualizada por los
+         cambios de contrato intencionales), voto-lista 11/11, escritura
+         43/43, moderación 46/46 y admin 38/38;
+       - `npm test` 2480 pasan, 0 fallan, 16 omitidas; `tsc` 0.
+     - **Mediciones** (100, 1.000 y 10.000 reseñas sintéticas):
+       - generar el orden: 92,6 / 274,2 / 2.073,2 ms;
+       - página con cursor: ~10–17 ms y 312–635 buffers, que **no crece
+         con el total**;
+       - primera página: 15,3 / 34,1 / 139,5 ms, porque el contador visible
+         crece con N, igual que en "Recientes";
+       - TOAST 0 B, 864 B por fila de 100 ids;
+       - más de unas 25.000 reseñas por título podrían superar el
+         `lock_timeout` al generar (extrapolación, **no medida**);
+       - la purga de E8: sin datos reales para decidir; no programé nada.
+     - **Simulado:** el paso del tiempo, las reseñas sintéticas, "muchas
+       ocultas" por SQL, y la respuesta perdida y el error de red en el
+       navegador.
+     - **Navegador local, escritorio y 375 px, 13 capturas:**
+       - los dos órdenes y "Cargar más";
+       - falla de tanda y reintento;
+       - voto perdido → `sin_cambios`, sin reordenar;
+       - vencimiento → reinicio sin repetir; un segundo vencimiento sin otro
+         reinicio.
+     - **Limpieza:**
+       - 6 participantes, 2 versiones, 42 cuentas y 2 suspensiones ajenas;
+       - 0 órdenes y 0 locks;
+       - interruptores, publicación y muestreo apagados; `SELECT` de
+         `profiles` revocado;
+       - borré 2 órdenes que había dejado mi primera corrida de lectura.
+     - **Sigue pendiente:**
+       - `/api/title` en ejecución (de E5a);
+       - teléfono, Android, tema claro, lector de pantalla y Producción.
+     Informe: `docs/medidas/2026-10-26-informe-claude-e5b.md`; mediciones:
+     `docs/medidas/2026-10-26-e5b-mediciones.md`; salidas:
+     `docs/medidas/2026-10-26-e5b-salidas.txt`; capturas:
+     `docs/medidas/2026-10-26-e5b-recorrido/`.
+   - **E6 local: nombre comunitario y perfil mínimo del autor (27/10,
+     Claude, autorizada por el dueño sólo en local; `supabase start`, la app
+     local y datos ficticios).** Auditada por Codex sobre `8cbe0cd`
+     (`docs/medidas/2026-10-27-auditoria-e6-8cbe0cd.md`): dos P2, A1 y A2.
+     Corrección A1/A2 hecha por Claude el 27/10 (detalle al final de este
+     bloque). **E6 CERRADA COMO ENTREGA LOCAL por Codex el 27/10**
+     (`docs/medidas/2026-10-27-auditoria-e6-a1a2-43117a2.md`): A1 y A2
+     cerradas, sin hallazgos nuevos; no habilita publicación. Pendientes de
+     integración conservados: `/api/title` en ejecución, TMDB, tema claro,
+     teléfono/Android y lector de pantalla.
+     - **Qué entró** (`019_comunidad_perfiles.sql` + down):
+       - `comunidad_cambiar_nombre`, sólo service_role:
+         - reglas de nombre de E1 en la ruta;
+         - fila A y límite de 3 por día;
+         - escribe sólo `participantes.nombre_comunitario`;
+         - `profiles.display_name` no participa;
+       - `comunidad_perfil`, sólo authenticated y con el lector de
+         `auth.uid()`:
+         - nombre, avatar del catálogo, reseñas visibles y "Me sirvió"
+           recibidos, de a 5 con cursor;
+         - `bloqueado` y `eliminada` sin nombre, avatar ni reseñas;
+         - autor suspendido: sin reseñas para los demás;
+       - `avatar_publico`: nunca la semilla guardada (mismo mapeo que
+         `resolverAvatar`, 337 casos sin diferencias);
+       - `item_lectura` suma el autor (id de participante y nombre);
+       - rutas `/api/comunidad/nombre` (POST) y `/api/comunidad/perfil` (GET,
+         Bearer, `private, no-store`);
+       - en la ficha, el nombre del autor con enlace al perfil;
+       - página `/u/?id=` (`noindex`, igual en web y contenedor, incluida en
+         la exportación nativa; sin AAB ni versión);
+       - en Mi perfil, "Nombre en la comunidad", separado de "Nombre para
+         mostrar";
+       - el comentario de la ruta de lectura ahora ejemplifica los dos
+         órdenes.
+     - **Decisión a auditar:** un nombre que E1 retendría (odio) **no se
+       guarda**: no hay cola de revisión de nombres. Cuenta para el límite y
+       se informa "Ese nombre no se puede usar".
+     - **Pruebas reales:**
+       - `pruebas-perfiles` 19/19 (rutas y base): permisos por ruta, REST y
+         RPC; ningún atajo a la validación; `display_name` sin efecto;
+         paginación; cambios entre páginas; cuenta y respuestas tardías;
+         bloqueo, suspensión y baja reales;
+       - up/down/up de 019 5/5;
+       - regresiones afectadas: permisos 29/29, lectura 11/11, voto-lista
+         11/11, utilidad 14/14 y moderación 46/46;
+       - focalizadas 137/137; `npm test` en verde tras corregir el barrido de
+         DiceBear sobre la batería nueva; `tsc` 0.
+     - **Simulado o fixture:**
+       - el límite de reseñas, subido mientras corre;
+       - `display_name` y el avatar escritos por SQL (el SELECT local de
+         `profiles` está revocado);
+       - la pérdida de respuestas y el cambio de cuenta, con el núcleo del
+         cliente.
+     - **Navegador local, escritorio y 375 px, 11 capturas:**
+       - del nombre en la reseña al perfil;
+       - "Cargar más" hasta 7 de 7;
+       - nombre rechazado (contacto) y aceptado;
+       - cambio de cuenta y perfil propio.
+     - **Limitaciones:**
+       - el perfil no muestra el nombre del título (es dato de TMDB);
+       - la lista de bloqueados sigue sin nombres comunitarios;
+       - ZWJ prohibido también en nombres (decisión pendiente abajo).
+     - **Limpieza:** la base quedó como al empezar, con 019 aplicada:
+       - 6 participantes, 2 versiones, 42 cuentas y 2 suspensiones;
+       - 0 órdenes, locks y decisiones;
+       - límites intactos;
+       - interruptores apagados;
+       - `SELECT` de `profiles` revocado.
+       Docker Desktop estaba detenido: lo inicié sin tocar volúmenes.
+     - **Sigue pendiente:**
+       - `/api/title` en ejecución;
+       - teléfono, Android y Capacitor para `/u/`;
+       - tema claro, lector de pantalla y Producción.
+     Informe: `docs/medidas/2026-10-27-informe-claude-e6.md`; salidas:
+     `docs/medidas/2026-10-27-e6-salidas.txt`; capturas:
+     `docs/medidas/2026-10-27-e6-recorrido/`.
+     - **Corrección A1/A2 (27/10, Claude; cerrada por Codex el 27/10):**
+       - **A1:** el cambio de nombre usa la idempotencia de publicar y editar
+         (`comunidad.intentos`, acción `'nombre'`):
+         - `id_intento` del cliente y hash del pedido;
+         - relectura bajo los locks y registro de todo resultado en la misma
+           transacción que su efecto;
+         - un reintento devuelve lo resuelto sin escribir ni consumir cupo,
+           y no pisa un nombre posterior de otra sesión;
+         - el intento no guarda ningún nombre y su hash es un HMAC con el
+           secreto del servidor;
+         - la firma de la función cambió (019 borra la anterior); el down
+           restaura el CHECK de 014;
+       - **A2:** reductor puro de la vista del perfil
+         (`lib/comunidad/perfil-nucleo.ts`):
+         - "Cargar más" aplica `bloqueado`, `eliminada` o el módulo apagado,
+           retira lo anterior e invalida los pedidos pendientes;
+         - una falla real conserva las páginas;
+         - una respuesta superada o de otra cuenta o perfil no toca nada;
+       - **regresiones reales:**
+         - `pruebas-nombre-intento` 5/5 (antes 0/4 con `8cbe0cd`);
+         - `pruebas-perfiles` 25/25 (antes 22/25 con el manejador anterior);
+         - up/down/up 5/5, permisos 29/29 y escritura 43/43;
+         - **`npm test` completo: 2500 pasan, 0 fallan, 16 omitidas**;
+           `tsc` 0;
+       - **navegador local con los componentes reales**, escritorio y
+         375 px, 11 capturas:
+         - bloqueo en otra sesión, baja, módulo apagado, falla de red y
+           reintento;
+         - respuesta tardía tras un bloqueo desde el menú;
+         - nombre con `id_intento`;
+       - **simulado:** pérdida de respuestas, red, demora y "otra sesión"
+         (script con funciones reales);
+       - **limpieza:** la base quedó como al empezar (6/2/42/2, 0 órdenes,
+         locks, decisiones e intentos de nombre; límites e interruptores
+         intactos).
+       Informe: `docs/medidas/2026-10-27-informe-claude-e6-a1a2.md`; salidas:
+       `docs/medidas/2026-10-27-e6-a1a2-salidas.txt`; capturas:
+       `docs/medidas/2026-10-27-e6-a1a2-recorrido/`.
+   - **E7 local: Top Yumpers mensual (27/10, Claude, autorizada por el dueño
+     sólo en local; `supabase start`, la app local y datos ficticios).
+     E7 CERRADA COMO ENTREGA LOCAL por Codex el 27/10**
+     (`docs/medidas/2026-10-27-auditoria-e7-ed6a791.md`, copiada sin cambios
+     el 27/10; SHA-256 `188a22f4…`, igual al original): sin hallazgos
+     bloqueantes; no habilita publicación. Precisión de la auditoría: las 14
+     fronteras del caso 11 son 6 de tramo, 6 de suspensión del autor y 2 de
+     suspensión del evaluador. Pendientes de integración conservados:
+     `/api/title` en ejecución, TMDB, tema claro, teléfono/Android y lector
+     de pantalla.
+     - **Qué entró** (`020_comunidad_top.sql` + down):
+       - `puntos_al_corte`: el cómputo de §2.2.2 (pares distintos;
+         primera positiva del mes; tramo y suspensiones con la misma
+         condición al corte; la suspensión es intervalo y no cierra tramos);
+       - `consolidar_mes`: comprobación rápida sin lock → exclusivo
+         (`proto_corte_exclusivo`) → nueva comprobación → una sentencia;
+         posición densa y huérfanos sin id;
+       - `comunidad_top_yumpers` (authenticated): último mes cerrado,
+         consolida en la primera lectura, proyección con nombre y avatar de
+         E6; "Cuenta eliminada" y "Usuario bloqueado" sin identidad;
+       - ruta `/api/comunidad/top-yumpers` (Bearer, `private, no-store`);
+       - selector en `/top`: "Top semanal plataformas" (el manual de
+         siempre, público, con su toggle) y "Top Yumpers" (con sesión, sin
+         toggle, sin `sessionStorage` ni caché compartida). Con los
+         interruptores apagados, `/top` es el de antes;
+       - sin cron ni purga (E8).
+     - **Hallazgo propio corregido:** una FK de `top_resultados` a
+       `participantes` hacía que la consolidación tomara KEY SHARE sobre los
+       autores (lock implícito) y entrara en ciclo con la red de seguridad de
+       Auth: abortada 5 de 5 en B8. Sin la FK, 0 de 5.
+     - **Pruebas reales:**
+       - `pruebas-top` 10/10: fórmula; caso 11 con 14 fronteras exactas;
+         suspensión como intervalo; caso 10; reproducibilidad; proyección;
+         bloqueo; permisos; ruta;
+       - `pruebas-top-concurrencia` 6/6 en **cinco corridas seguidas**:
+         casos 6 y 7; 50 lecturas con un solo cálculo y reutilización sin
+         exclusivo; B8 real;
+       - up/down/up de 020 5/5; permisos 29/29; unitarias 55/55;
+       - **`npm test` 2509 pasan, 0 fallan, 16 omitidas**; `tsc` 0.
+     - **Fixture declarado:** el reloj de `proto_marca`
+       (`scripts/comunidad/solo-local-reloj.sql`), instalado y quitado en
+       cada corrida con la definición comparada. En el navegador fueron
+       simulados el error de red y el vacío.
+     - **Navegador local, escritorio y 375 px, 9 capturas:**
+       - selector e invitación sin sesión;
+       - ranking real de septiembre con eliminada, bloqueado y posición
+         propia;
+       - perfil desde el ranking; error y reintento; vacío;
+       - vuelta a plataformas con toggle; interruptores apagados.
+     - **Limitaciones:** la primera lectura de un mes espera el exclusivo; el
+       ranking muestra 50 filas sin paginar; la purga queda para E8.
+     - **Limpieza:** la base quedó como al empezar, con 020 aplicada:
+       - 6 participantes, 2 versiones, 42 cuentas y 2 suspensiones;
+       - 0 tramos y 0 meses consolidados; sin `solo_local`;
+       - límites e interruptores intactos.
+     Informe: `docs/medidas/2026-10-27-informe-claude-e7.md`; salidas:
+     `docs/medidas/2026-10-27-e7-salidas.txt`; capturas:
+     `docs/medidas/2026-10-27-e7-recorrido/`.
+   - **E8 local: retención y purga (27/10, Claude, autorizada por el dueño
+     sólo en local; `supabase start` y datos ficticios; `a730934`).**
+     Auditada por Codex sobre `95c09b2`
+     (`docs/medidas/2026-10-27-auditoria-e8-95c09b2.md`, copiada sin
+     cambios): **pendiente de A1 (P2)**; el resto, revisado sin hallazgos.
+     Corrección A1 hecha por Claude el 28/10 (`d37563a`; detalle al final
+     de este bloque). **E8 CERRADA COMO ENTREGA LOCAL por Codex el 28/10**
+     (`docs/medidas/2026-10-28-auditoria-e8-a1-c9ba130.md`, copiada sin
+     cambios; SHA-256 `78224a71…`, igual al original): A1 corregida, sin
+     hallazgos bloqueantes nuevos; no habilita publicación, cron ni
+     Producción. Observación menor no bloqueante: un espacio final en la
+     línea 28 del log histórico de la reproducción (no se alteró).
+     - **Plazos (informado por el dueño, 27/10; decisiones de producto, NO
+       validadas legalmente: P3 sigue abierto para la validación):** reseñas
+       y votos vigentes, sin plazo; órdenes de Más útiles al vencer sus 2 h;
+       intentos 7 días; reemplazadas y textos retirados 30 días salvo
+       denuncia pendiente; retenidos y denuncias abiertas hasta resolverlos,
+       nunca por antigüedad; denuncias resueltas 30 días desde el cierre;
+       decisiones 12 meses; rankings 12 meses; historial de puntos después de
+       consolidar el mes + 30 días. Sin configurar: huellas antispam (siguen
+       cayendo con su versión y con la baja), rechazadas, retenidas, votos
+       retirados y el resto sin plazo. **Sigue pendiente** conservar el texto
+       denunciado tras borrar una cuenta: identificado
+       (`conservar_texto_denunciado_baja`) y bloqueado por un CHECK.
+     - **Interpretaciones a confirmar** (informe): "textos retirados" incluye
+       el borrado del autor (`plazo_borradas`); "resueltas" = cerradas,
+       también `denuncias_cerradas`; 12 meses del ranking desde el corte;
+       suspensiones con las dos reglas (12 meses desde el fin y meses del
+       corte liberados).
+     - **Qué entró** (`021_comunidad_purga.sql` + down):
+       - `comunidad.purga_config` (una fila) con `purga_activa` APAGADO y
+         los plazos; `comunidad.purga_ejecuciones`, registro mínimo
+         (cantidades y SQLSTATE, sin textos ni ids);
+       - `comunidad.purgar(alcance, ahora)`: PROCEDIMIENTO que confirma
+         cada lote ('hora' = órdenes; 'dia' = el resto), idempotente, una
+         corrida por vez, se detiene si se apaga; no espera locks de filas
+         (nowait / skip locked);
+       - protecciones: vigentes, retenidas, rechazadas, denunciadas, casos
+         abiertos, mes sin consolidar; un tramo por par mientras la versión
+         pueda volver a votarse o restaurarse (mes de la primera positiva);
+         huérfanos sólo sin referencias;
+       - ventana del Top Yumpers: un mes fuera de la conservación no se lee
+         ni se consolida (no se reconstruye vacío). El down devuelve
+         `consolidar_mes` y la lectura exactamente a 020;
+       - `supabase/cron-comunidad.sql`: cada hora y diario, `unschedule`
+         idempotente, SQL puro en Supabase. **NO ejecutado**: `cron.job`
+         sigue con sólo `sala-barrido`.
+     - **Hallazgos propios corregidos:** una variable `t` del lote anulaba
+       los alias `t` (tramos, rankings y participantes fallaban; unitaria
+       nueva); `decisiones` iba antes del contenido y la corrida diaria no
+       era idempotente (reordenado).
+     - **Pruebas reales:** `pruebas-purga` 27/27 (cada categoría antes, en
+       y después; protecciones; lotes; interrupción; `ocupada`; apagado en
+       curso; `lock_timeout`; voto, borrado, edición, baja, generador y
+       consolidación en vuelo; meses fuera de la conservación; permisos);
+       up/down/up de 021 6/6 (sin 021 = volcado de E7); permisos 29/29;
+       regresiones `pruebas-top` 10/10 con la ruta, `pruebas-top-concurrencia`
+       6/6, `pruebas-utiles` 14/14, `pruebas-baja` 26/26; unitarias 47/47;
+       **`npm test` 2518 pasan, 0 fallan, 16 omitidas**; `tsc` 0.
+     - **Fixture declarado:** reloj de `proto_marca`; `ahora` de la purga;
+       UPDATE de `intentos.creado_en`, `top_meses.consolidado_en` y
+       `denuncias_cerradas.cerrada_en` de filas propias; plazo de rankings
+       cambiado sólo dentro de algunas pruebas y restaurado.
+     - **Limitaciones / decisiones para el dueño:** una reseña borrada con
+       una retenida o rechazada adentro no se purga nunca (el admin no la
+       puede resolver); purgar versiones baja la cobertura de
+       `duplicado_propio` (las huellas caen con su versión); el peso de quien
+       denuncia cuenta sólo descartadas de 30 días; un mes que nadie leyó
+       conserva su historial hasta salir de la conservación (no hay job de
+       consolidación mensual); sin probar pg_cron, backups, escala ni
+       Producción.
+     - **Limpieza:** la base quedó como al empezar, con 021 aplicada:
+       6/2/42/2, todo lo demás en 0, límites e interruptores intactos,
+       **purga apagada**, `SELECT` de `profiles` revocado, sin `solo_local`
+       ni locks. Docker Desktop estaba detenido: lo inicié sin tocar
+       volúmenes.
+     Informe: `docs/medidas/2026-10-27-informe-claude-e8.md`; salidas:
+     `docs/medidas/2026-10-27-e8-salidas.txt`.
+     - **Corrección A1 (28/10, Claude, sólo local; `d37563a`):**
+       - **Problema:** la ventana del ranking dependía del plazo de hoy;
+         ampliarlo o dejarlo en null rehabilitaba un mes ya purgado, que se
+         reconstruía vacío. **Reproducido antes de corregir:** enero de
+         2026 (2 puntos) purgado con plazo de 8 meses → con 12 meses, la
+         lectura real dio 200 con `autores: 0`.
+       - **Corrección:** `comunidad.meses_sin_historial`, una marca
+         PERMANENTE por mes, escrita en la misma transacción en que la purga
+         borra su ranking, un tramo de ese mes o una suspensión que cruza su
+         corte; no depende de ningún plazo y cubre meses nunca consolidados.
+         `consolidar_mes` rechaza un mes marcado (`mes_invalido`, 400 por la
+         ruta) antes y después del exclusivo; un ranking ya consolidado y
+         conservado se sigue leyendo. Tramos y suspensiones toman K_CORTE
+         compartido, como rankings. Plazos, fórmula y lectura de E7 sin
+         cambios.
+       - **Pruebas reales:** prueba A1 nueva (purgar → 12 meses y sin plazo;
+         mes nunca consolidado; conservado sin historial legible igual;
+         historial completo consolida; otros meses sin cambios):
+         `pruebas-purga` 27/28 antes y **28/28 después**; up/down/up 6/6;
+         permisos 29/29; `pruebas-top` 10/10 con la ruta;
+         `pruebas-top-concurrencia` 6/6; unitarias 36/36; **`npm test` 2519
+         pasan, 0 fallan, 16 omitidas**; `tsc` 0.
+       - **Límites:** conservadora por mes (un tramo purgado basta para
+         bloquear la reconstrucción de ese mes); un borrado manual por SQL no
+         marca; el volcado "sin 021" cambió respecto del 27/10 por las
+         particiones diarias de Realtime (dentro de la corrida, antes de
+         subir = después de bajar).
+       - **Limpieza:** base como al empezar (6/2/42/2; 0 tramos, meses,
+         marcas, ejecuciones; purga e interruptores apagados; plazo de
+         rankings en 12 meses; sólo `sala-barrido` en cron). Docker Desktop
+         estaba detenido: lo inicié sin tocar volúmenes.
+       Informe: `docs/medidas/2026-10-28-informe-claude-e8-a1.md`; salidas:
+       `docs/medidas/2026-10-28-e8-a1-salidas.txt`.
+   - **E9a, PARTE LOCAL: integración y pruebas de la web (28/10, Claude,
+     autorizada por el dueño sólo en local; `supabase start`, la app local
+     y datos ficticios). Auditada por Codex sobre `187be15`
+     (`docs/medidas/2026-10-28-auditoria-e9a-187be15.md`): pendiente de A1/A2
+     en las herramientas de prueba, corregidos abajo y **CERRADOS** por Codex
+     el 29/10 (`docs/medidas/2026-10-29-auditoria-e9a-a1-residual-6a6a42e.md`).
+     NO cierra E9a**:
+     el plan exige E0, cuyas consultas a Producción no están autorizadas, y
+     faltan el secreto HMAC de Producción, aplicar 011–022 allá, las cuotas
+     con datos reales, el deploy y la prueba del dueño. Teléfono real y
+     Android son E9b.
+     - 🔴 **Incidente en la base local compartida (Claude):** corrí
+       `scripts/comunidad/up-down-up.mjs` sin revisarlo. Es el arnés de
+       011–014: baja la 011 (borra el esquema `comunidad` con sus filas) y
+       sólo sube hasta la 014. **Borró los 6 participantes, 2 versiones y 2
+       suspensiones ajenas** que las entregas conservaban, y dejó el esquema
+       a medias. Volví a aplicar 011–022 en el orden de `db-local.mjs`, con
+       la configuración en los mismos valores. Verifiqué: permisos 29/29,
+       invariantes 85/85 y la 021 6/6. **Esas filas no se recuperaron**: no
+       hay copia y no las recreé. El freno de `e7f0661` sólo miraba la 016;
+       el de A2 (abajo) lo reemplaza y protege también `up-down-up-020.mjs`,
+       que no se corrió. **Línea base
+       local desde E9a:** 0 participantes, 0 versiones, 0 suspensiones y 42
+       cuentas `@comunidad.test`.
+     - **Comprobado en navegador** (ficha real con TMDB, escritorio y
+       375 px, 38 capturas):
+       - registro, términos, publicar, editar, rechazo y revisión, borrar;
+       - votos sin reordenar, órdenes, "Cargar más" y los pulgares;
+       - denunciar, bloquear y desbloquear;
+       - perfil, nombre comunitario y Top Yumpers;
+       - panel con TOTP real (rechazar, retirar, descartar, registro);
+       - cambio de cuenta y respuestas tardías (12 s simulados), sin restos;
+       - baja de cuenta.
+     - **Todo apagado:** la rama frente a la base `52c7ae7`, con la misma
+       base local, comparó **12 pares** de innerText (Home, ficha, `/top`,
+       cuenta, configuración y el diálogo de baja; 1280 y 375 px): 10
+       idénticos en la primera corrida y 2 que difirieron (el Home de la
+       base en 1280 todavía cargando; el banner «Instalá Yump» en la ficha
+       de la base en 375), idénticos en las dos vueltas de un control
+       alternado. El informe decía «14»: error de conteo, corregido sin
+       repetir el recorrido. La baja con todo apagado funcionó.
+     - **`/api/title` en ejecución (pendiente desde E5a): CERRADO**, con
+       8/8 fichas idénticas byte a byte contra la base, TMDB real, y la
+       editorial incluida. El token de lectura de TMDB salió de
+       `../streamingcentral/.env.sala-local` (uso local ya previsto en el
+       plan de salas), cargado como variable y sin copiarlo; no se leyó
+       `.env.local`.
+     - **Controles reales:** las 15 baterías de reseñas en verde, salas 37,
+       `npm test` 2519/0/16, scripts 41/41, `tsc` 0 y `npm run build` sin
+       avisos.
+     - **Corregido:** el plural del panel («1 denuncia abierta queda
+       resuelta»), con test que falla antes.
+     - **Observación para el dueño, no cambiada:** el diálogo de eliminar
+       cuenta no menciona las reseñas de la comunidad, aunque la baja las
+       borra.
+     - **Entorno local, no son defectos:**
+       - la base de `supabase start` no da permisos de API sobre `public`;
+         el recorrido los concede mientras dura y los revoca (en Producción,
+         sin verificar: E0);
+       - `providers` está vacía;
+       - `/api/upcoming` da 500 (falta la columna de la 008 en local).
+     - **Para la prueba del dueño:** `scripts/comunidad/recorrido-e9a.mjs`
+       (`preparar | codigo | estado | limpiar`) y la guía
+       `docs/medidas/2026-10-28-e9a-prueba-duenio.md`. **No realizada.**
+     - **Limpieza:** las 13 cuentas del recorrido, sus datos y la editorial
+       ficticia, borrados; permisos temporales revocados; interruptores,
+       purga y muestreo apagados; sin servidores ni temporales.
+     Informe: `docs/medidas/2026-10-28-informe-claude-e9a.md`; salidas:
+     `docs/medidas/2026-10-28-e9a-salidas.txt`; capturas:
+     `docs/medidas/2026-10-28-e9a-recorrido/`.
+     - **Corrección A1/A2 de la auditoría de E9a (28/10, Claude, local;
+       CERRADA por Codex el 29/10):**
+       - **A1, limpieza del recorrido:** `recorrido-e9a.mjs` ya no deduce
+         propiedad por fecha, por participante sin cuenta ni por mes nuevo.
+         `preparar` instala un registro (`recorrido-e9a-registro.sql`, esquema
+         `recorrido_e9a` y tres triggers que sólo insertan ahí) con las
+         cuentas `@recorrido.test` que nacen durante el recorrido, también
+         las del dueño, el participante que nace vinculado a ellas (sigue
+         registrado después de una baja) y sus versiones. `limpiar` guarda
+         los objetivos en el archivo antes de borrar, borra sólo esos ids y
+         lo que los referencia, borra un ranking sólo si todo lo que lo forma
+         es propio, y ante una discrepancia sale con 1 sin borrar el archivo
+         ni el registro. Las órdenes «Más útiles» que mezclan versiones
+         propias y ajenas se conservan y se informan.
+       - **A2, frenos:** `frenos-arneses.mjs` lee el estado con una consulta
+         de sólo lectura y deriva lo admitido de los archivos de migración.
+         `up-down-up.mjs` admite sólo «sin esquema» u objetos de 011–014 sin
+         filas ni `config` cambiada (rechaza 015 sin 016 y el estado actual);
+         `up-down-up-020.mjs` rechaza 021 y meses consolidados antes de
+         reaplicar 020.
+       - **Pruebas:** frenos 19/19 sin base (incluye correr los dos arneses
+         REALES con un `local.mjs` falso que bloquea toda escritura: los
+         rechazos salen con 2 después de leer el estado y antes de cualquier
+         mutación); núcleo de la limpieza 6/6; aislamiento en la base local
+         real 13/13 (`pruebas-recorrido-e9a.mjs`): identidad ajena dada de
+         baja y ranking ajeno de agosto sobreviven; lo propio, también la
+         cuenta registrada a mano y dada de baja, se limpia; dos cortes y
+         el reintento con los mismos objetivos; un voto ajeno en septiembre
+         detiene la limpieza antes de borrar. Ninguna bajada se ejecutó.
+         Scripts 41/41 en `comunidad` y 7/7 en `sala`, `tsc` 0.
+       - **Base al terminar:** 0 participantes, 0 versiones, 0
+         suspensiones, 42 cuentas `@comunidad.test`, 0 `@recorrido.test`,
+         24 tablas, todo apagado, `cron` sólo `sala-barrido`, sin registro,
+         reloj, archivo de estado ni servidores. La prueba del dueño sigue
+         pendiente.
+       Informe: `docs/medidas/2026-10-28-informe-claude-e9a-a1a2.md`;
+       salidas: `docs/medidas/2026-10-28-e9a-a1a2-salidas.txt`.
+     - **Revisión de Codex sobre `092aceb`** (`docs/medidas/2026-10-28-auditoria-e9a-a1a2-092aceb.md`):
+       A2 CERRADA. A1 con un residual: un voto ajeno sobre una reseña del
+       recorrido en un mes SIN consolidar no frenaba la limpieza, que lo
+       borraba. **Corregido (28/10, Claude, local; CERRADO por Codex el 29/10):**
+       `limpiar` cuenta la actividad ajena que el borrado de lo propio
+       arrastraría, en cualquier mes (votos y tramos, denuncias, bloqueos y
+       decisiones de otro admin), y se detiene antes del primer borrado,
+       conservando archivo y registro. Pruebas: núcleo 8/8; aislamiento real
+       15/15 (dos votos ajenos en octubre, sin consolidar: nada borrado;
+       retirada sólo esa fixture por id, el reintento limpia lo propio;
+       recorrido normal y ranking consolidado siguen); scripts 50/50, `tsc` 0.
+       Base al terminar en la línea base, sin datos preparados ni servidores.
+       Informe: `docs/medidas/2026-10-28-informe-claude-e9a-a1-residual.md`;
+       salidas: `docs/medidas/2026-10-28-e9a-a1-residual-salidas.txt`.
+     - **Cierre de A1/A2 (Codex, 29/10, sobre `6a6a42e`):** sin hallazgos
+       bloqueantes; Codex no pudo reconsultar la base porque el motor de
+       Docker devolvía 500. **Entorno de la prueba del dueño (29/10, Claude):**
+       Docker respondió y Supabase local está arriba (el contenedor auxiliar
+       `vector`, que sólo recoge logs para Studio, se reinicia en bucle sin
+       afectar a la app: no se tocó). Línea base confirmada por consulta
+       antes de preparar (0/0/0, 42 cuentas antiguas, sin archivo, registro
+       ni reloj). **`preparar` FALLÓ** al crear la primera cuenta: la API
+       local (`127.0.0.1:54321`) rechaza conexiones porque Windows reservó el
+       rango TCP 54234–54933 (`netsh interface ipv4 show excludedportrange`,
+       típico de WinNAT/Hyper-V) y Docker no publica 54321–54323 (los
+       contenedores muestran el puerto sin mapeo; reiniciar Kong no alcanzó).
+       Queda el registro de recuperación (`.recorrido-e9a.local.json`, fase
+       `preparando`): registro instalado, 19 permisos temporales, editorial
+       ficticia e interruptores encendidos; 0 cuentas creadas, reloj quitado.
+       No se limpió ni se levantó la web. Liberar las reservas exige un
+       cambio de sistema con permisos de administrador (por ejemplo,
+       reiniciar el servicio `winnat`): lo decide y ejecuta el dueño.
+       **Deshecho el 29/10** con `limpiar` (sólo la base local, sin tocar la
+       red): limpieza verificada, 0 cuentas, interruptores y permisos
+       restaurados, registro quitado; línea base intacta (0/0/0, 42 cuentas).
+       Copia del archivo de recuperación fuera del repo. La reserva de
+       puertos sigue: la prueba local del dueño no está disponible hasta que
+       se resuelva.
+     - **E0 de reseñas y preparación del lanzamiento web (29/10, Claude,
+       autorizado: sólo lectura de Producción; NADA aplicado):** por catálogo,
+       Producción tiene 001–010 y **no tiene 011–021 ni la 022**;
+       `user_reviews` (0 filas) sigue abierta a escritura propia por la API;
+       Producción usa los privilegios por defecto VIEJOS de Supabase (la
+       batería local de permisos no prueba lo mismo: verificación de
+       permisos efectivos preparada para después de aplicar); las 41 cuentas
+       se confirmaron al instante (sugiere autoconfirmación; Auth no consultado); sin copias automáticas ni PITR; base
+       de 27 MB. Android 1.2.0 compatible con el servidor nuevo **si 011–022
+       van antes del deploy**. Fusión de prueba con `origin/main` (`ca02c4f`,
+       con «Elegidas para vos»): sólo ESTADO en conflicto. Vercel sin acceso
+       (sesión de la CLI vencida): variables, protección de Previews y uso,
+       pendientes. Orden de lanzamiento, reversión, prueba del dueño en una
+       Preview y autorizaciones: `docs/medidas/2026-10-29-informe-claude-e0-lanzamiento-web.md`;
+       evidencia: `docs/medidas/2026-10-29-e0-resenas-salidas.txt`.
+       **Pendiente de auditoría de Codex y de autorización del dueño.**
+     - **Correcciones de la auditoría sobre `35235d4` (29/10, Claude):**
+       `022_down` no reabre nada (informe corregido, SQL intacto); sin
+       autopublicación en `user_reviews` (trigger `user_reviews_protect_estado`
+       habilitado en Producción, consulta de sólo lectura); `purga.test.ts`
+       independiente del salto de línea (21 archivos de test con SQL: 319/319
+       en LF y en CRLF simulado con `scripts/crlf-sql.mjs`; CRLF real 10/10).
+       Vercel sigue sin sesión: una acción del dueño (iniciar sesión en el
+       panel de navegador). Checklist remoto de la Preview, listo para
+       autorizar: `docs/medidas/2026-10-29-informe-claude-preview-resenas.md`
+       (vigente; el de E0 queda como antecedente).
+   - decidir si el CHECK de 011 sigue prohibiendo U+200D (ZWJ), que
+     bloquea los emojis compuestos. Es una restricción de E2a que no se
+     reabrió;
+   - denuncias recibidas en la baja: E4 (local, pendiente de auditoría) las
+     cierra sin texto en `denuncias_cerradas`; desde A2, ese historial
+     también se borra cuando la baja de quien denunció corre a la vez que la
+     del autor. Que esté implementado NO equivale a aceptar la opción A.
+     Queda para el dueño, con P3 y
+     antes de la publicación, si se conserva el TEXTO denunciado
+     después de una baja (opciones A/B/C del informe de E4): E8 lo deja
+     identificado y desactivado, sin archivo de textos. El plazo de los
+     intervalos seudónimos lo fijó el dueño el 27/10 (historial de puntos:
+     consolidado + 30 días; ver E8). Huellas, excedentes y corroboraciones
+     siguen cayendo en cascada con la versión;
+   - la validación independiente de E1 (protocolo, autoría y ejecutor, no
+     preparados);
+   - la decisión sobre los cambios opcionales del contrato (por ahora no se
+     aplican; los falsos positivos cuentan en C3/C4);
+   - la autoría del conjunto final y el ejecutor del reservado 4 (no
+     preparados);
+   - las decisiones de producto P-1 a P-4 (alcance residual, condición para
+     publicar, disponibilidad aproximada y autoría de la parte sensible).
+
+     Recién después se autorizan cambios y una estrategia de validación;
+   - P5: autorización de sólo lectura para E0 (no está autorizada; las
+     consultas están en el plan y no se ejecutaron);
+   - preguntas al dueño P3, P4 y P6 (revisión §1.4): plazos de retención,
+     prueba de buzón sólo si E0 lo exige, y la carga de revisión que acepta
+     (propuesta: colas de retenidos y denuncias más un muestreo de hasta 5
+     publicaciones por sesión; **no aceptada**). No bloquean construir con
+     fixtures; sí activar lo que depende de ellas (plan §1).
+   Viaja en el mismo AAB que 3c.
+   **MFA de la reseña editorial:** trabajo separado. Confirmado en código,
+   no en la configuración efectiva de Producción.
 4. **Issue #24:** el primer cruce mensual de supresiones tenía fecha prevista
    el **20/10/2026** (`proximaRevision: "2026-10-20"` en
    `lib/supresiones-disponibilidad.ts`). **Al 20/10/2026 no hay evidencia de
@@ -214,6 +1553,705 @@ reusa su diseño, no se mergea.
   **Siguiente paso:** prueba del dueño en Producción (descartar 3-4,
   recargar, ver que vuelve a 20), en web y en Android 1.2.0.
 
+- **Reseñas de usuarios y Top Yumpers — diseño de Codex registrado y
+  preparación de Claude (2026-10-21). Sólo documentación: SIN código, SQL,
+  migraciones, servicios pagos, consultas a Producción, push, merge, deploy
+  ni AAB.** Rama local `docs/resenas-comunidad` (worktree
+  `wt-resenas-comunidad`), desde `integracion/yumpea-compartir` (`52c7ae7`).
+  El diseño de Codex
+  (`docs/superpowers/specs/2026-10-21-resenas-comunidad-design.md`) se copió
+  sin cambios del checkout principal, donde era un archivo sin seguimiento;
+  no se tocó ningún otro archivo de ese checkout. La revisión está en
+  `docs/superpowers/specs/2026-10-21-resenas-comunidad-revision.md`.
+
+  **Reservado 3 híbrido, ejecutado una vez (23/10): NO CUMPLE C1 NI C2.
+  E1 sigue pendiente de cierre.** Informe:
+  `docs/medidas/2026-10-23-informe-claude-reservado-3.md`. Resultado del
+  ejecutor: `docs/medidas/2026-10-23-e1-reservado-3-resultado.md` y `.json`.
+  - **Enmienda** (`scripts/comunidad/banco-reservado-3/ENMIENDA-1.md`,
+    aceptada por el dueño antes de escribir, sellar y evaluar): la parte
+    sensible (36 casos) la escribió Claude, **no independiente**. La parte
+    general (340 casos, 124 reseñas de abuso) es del agente separado. No es
+    validación independiente integral.
+  - **Sello** `48cb2f7`, antes de ejecutar. Código congelado
+    `2026-10-22.5`, sin cambios.
+  - **Criterios (agregado = parte general):**
+    - C0: 0/376 errores;
+    - **C1: 24/116 claros sin detectar;**
+    - **C2: 69/99 ofuscadas detectadas;**
+    - C3 y C4: 0/160 legítimas rechazadas o retenidas.
+  - **Familias sin detectar:** emojis de tecla, dígitos en inglés o de otros
+    alfabetos, separadores fuera de la clase, instrucciones de armado,
+    enlaces con espacios o "dot/slash", redes fuera de la lista (Discord,
+    snap, face, "tt") y correo indirecto sin alias escrito.
+  - **Sin umbral, informativo:**
+    - odio 3/12 frenados (reseñas y nombres);
+    - amenaza 4/8;
+    - datos personales 7/8;
+    - spam 7/12;
+    - perfil 2/4;
+    - fuera de capacidad 0/8.
+  - **No se ajustó nada:** no se corrigieron reglas, no se repite el conjunto
+    como inédito y no se preparó otro. **Dictamen de Codex (`4183d37`): E1
+    no cumple.** Siguiente paso: la propuesta de alcance del 23/10 y las
+    decisiones del dueño (ver arriba).
+
+  **Antecedente: la detención previa del reservado 3 (23/10).** Informe:
+  `docs/medidas/2026-10-23-e1-reservado-3-detenido.md`.
+  - **Hecho, en este orden (comprobado en Git):**
+    - auditoría de `a8e973a` copiada;
+    - congelamiento del código (`2026-10-22.5`, `b6e1f33`, huellas en
+      `docs/medidas/2026-10-23-e1-reservado-3-congelamiento.md`);
+    - protocolo en `scripts/comunidad/banco-reservado-3/PROTOCOLO.md`, antes
+      de cualquier caso;
+    - ejecutor `scripts/comunidad/correr-reservado-3.mjs`, probado con datos
+      ajenos antes de encargar los casos.
+  - **Autoría:**
+    - un agente separado escribió `reservado.json` completo: 340 casos,
+      forma correcta, sin leer y sin evaluar, guardado con su huella;
+    - el agente de `reservado-sensible.json` (odio, amenaza, datos personales
+      y fuera de capacidad) fue frenado por un clasificador de seguridad y no
+      escribió nada.
+  - **No se selló ni se evaluó.** Reglas sin cambios.
+  - **Falta:** decisión del dueño, con revisión de Codex, entre:
+    - que una persona ajena a las reglas escriba lo sensible;
+    - que lo escriba Claude como enmienda declarada, no independiente;
+    - o enmendar el protocolo para medir sin esa parte, lo que baja el abuso a
+      124, por debajo del mínimo de 150.
+
+    Se fija en Git antes de sellar.
+
+  **Segunda corrección de E1.2 — inicio de ruta y criterio único de alias
+  (22/10), en local, pendiente de auditoría. E1 sigue pendiente de cierre.**
+  Auditoría de `251f3d0` copiada sin cambios
+  (`docs/medidas/2026-10-22-auditoria-e12-correccion-251f3d0.md`). Informe:
+  `docs/medidas/2026-10-22-informe-claude-e12-correccion-2.md`.
+  - **Correcciones (comprobado en código y pruebas locales):**
+    - A1 (`contacto.enlace` v5): la ruta vuelve a admitir al principio los
+      caracteres de v3 (`/_demo`, `/-x`, `/?id=1`), con la terminación de
+      2–63 letras; v4 había dejado de detectar `ejemplo.xy/_demo`;
+    - A2 (`contacto.email_indirecto` v2): un solo criterio de alias para los
+      dos recorridos; "soy 88cine" y "soy cine8fan" se retienen. Sigue sin
+      rechazar.
+    - `VERSION_REGLAS` `2026-10-22.5`.
+  - **Pruebas conocidas, no validación independiente:**
+    - banco de desarrollo de 506 casos: C0 0/506, C1 0/182, C2 177/177,
+      C3 0/211, C4 1/211;
+    - regresiones de los reservados 1 y 2 iguales que antes;
+    - ninguna regresión observada.
+  - **Falsos positivos conocidos:**
+    - un título alfanumérico ("Se7en") con correo y pedido cerca se retiene;
+    - "Buenísima.Recomendada/obligatoria" se sigue rechazando; Codex no lo
+      considera bloqueante.
+  - **Pruebas:** `lib/comunidad` 73 de 73; `tsc` 0 errores; `npm test` 2322
+    pruebas, 2304 pasan, 0 fallan y 18 omitidas (exigen builds no hechos).
+  - **Reservados:** intactos; no se preparó ni ejecutó un reservado 3.
+  - **Siguiente paso:** auditoría de Codex. Después, decidir una única
+    medición independiente con código y alcance congelados antes de escribir
+    los casos. No se avanza a E2.
+
+  **Corrección de E1.2 — enlaces con terminación larga y correo indirecto
+  (22/10), en local. Antecedente: auditada en `251f3d0`, ver la segunda
+  corrección arriba.**
+  Auditoría de `40288f6` copiada sin cambios
+  (`docs/medidas/2026-10-22-auditoria-e12-40288f6.md`). Informe:
+  `docs/medidas/2026-10-22-informe-claude-e12-correccion.md`.
+  - **Correcciones (comprobado en código y pruebas locales):**
+    - A1 (`contacto.enlace` v4): la dirección con ruta acepta terminaciones
+      alfabéticas de 2 a 63 letras; E1.2 sólo cubría de 2 a 6, aunque su
+      informe decía "cualquier terminación". `ejemplo.photography/demo` se
+      rechaza;
+    - A2 (`contacto.email_indirecto` v1, nueva, **sólo retiene**):
+      autoatribución de correo con alias, o pedido de correo con alias con
+      forma de usuario. `R2-RA-042` ya no figura como fuera de alcance: se
+      **retiene**, aunque su etiqueta dice "rechazar" (no se cambió).
+    - `VERSION_REGLAS` `2026-10-22.4`.
+  - **Pruebas conocidas, no validación independiente:**
+    - banco de desarrollo de 498 casos: C0 0/498, C1 0/180, C2 173/173,
+      C3 0/207, C4 1/207 (el retenido conocido `D-RG-17-B`);
+    - regresiones del reservado 1 y 2 sin abusos sin detectar.
+  - **Falso positivo conocido de A1:** un texto sin espacio después del
+    punto y con una barra ("Buenísima.Recomendada/obligatoria") se rechaza.
+    No aparece en ninguna legítima de los bancos.
+  - **Pruebas:** `lib/comunidad` 71 de 71; `tsc` 0 errores; `npm test` 2320
+    pruebas, 2302 pasan, 0 fallan y 18 omitidas (exigen builds no hechos).
+  - **Reservados:** intactos; no se preparó ni ejecutó un reservado 3.
+  - **Siguiente paso:** auditoría de Codex. No se avanza a E2.
+
+  **E1.2 — huecos mecánicos y familias divulgadas (22/10), en local,
+  pendiente de auditoría. E1 NO está cerrada.** Auditoría de `1f475e3`
+  copiada sin cambios (`docs/medidas/2026-10-22-auditoria-e11-1f475e3.md`).
+  Informe: `docs/medidas/2026-10-22-informe-claude-e12.md`.
+  - **Correcciones (comprobado en código y pruebas locales):**
+    - A1: las comillas ya no eximen. Un pedido con destinatario se rechaza
+      con o sin comillas; entre comillas o atribuido, sin destinatario, se
+      retiene;
+    - A2: dígitos de cualquier sistema Unicode, separadores por clase de
+      signo, números dictados 16–99 y lectura amplia (coma, letras sueltas)
+      sólo con señal fuerte;
+    - A3: dirección con ruta y TLD de 2 a 6 letras (el informe decía
+      "cualquier TLD"; corregido después, ver arriba), más TLD y acortadores;
+      "las punto com" ya no es dominio;
+    - familias del reservado 2: alias de redes, spam por familias, correo en
+      nombres, partido con colgante, amenaza espaciada y DNI con espacios.
+    - `VERSION_REGLAS` `2026-10-22.3`.
+  - **Pruebas conocidas, no validación independiente:**
+    - los 6 ejemplos de la auditoría dan lo esperado;
+    - regresión del reservado 1 y del reservado 2 verdes, con
+      `R2-RA-042` (correo descripto con paráfrasis) **detenido para
+      revisión** (después retenido; ver la corrección arriba);
+    - banco de desarrollo de 488 casos;
+    - transformaciones de comillas, separadores, 8 formas de dígitos,
+      confusables y contacto repartido.
+  - **Falsos positivos nuevos:** diálogos legítimos con un pedido de red
+    entre comillas pasan a retenerse (`D-RG-17-B`, `R2-RL-105`).
+  - **Pruebas:** `lib/comunidad` 69 de 69; `tsc` 0 errores; `npm test` 2318
+    pruebas, 2300 pasan, 0 fallan y 18 omitidas (exigen builds no hechos).
+  - **Reservados:** no se preparó ni ejecutó un reservado 3. Ambos
+    reservados, sus sellos y sus informes siguen intactos. Errata: el
+    archivo sensible del reservado 2 tiene 26 reseñas y 4 nombres, no "30 +
+    4" como dice su `SELLO.md` (no se modificó).
+  - **Siguiente paso:** auditoría de Codex de E1.2; si se acuerda, una
+    medición independiente con alcance sellado de antemano. No se avanza a
+    E2.
+
+  **E1.1 — corrección de reglas y evaluador (22/10), en local. NO cumplió
+  C1 ni C2 (antecedente; ver E1.2 arriba).** Auditoría de Codex sobre `ffa5061`
+  copiada sin cambios (`docs/medidas/2026-10-22-auditoria-e1-ffa5061.md`).
+  Informe para Codex: `docs/medidas/2026-10-22-informe-claude-e11.md`.
+  - **Correcciones (comprobado en código y pruebas locales):**
+    - A1: teléfonos con forma de año, importe o fecha cuentan si hay una
+      señal fuerte de contacto; letras por dígitos;
+    - A2: correo "usuario en/de proveedor" y confusables ampliados (no es
+      Unicode completo);
+    - A3: `contacto.red` exige evidencia acotada; el diálogo entre comillas
+      no dispara;
+    - A4: el evaluador declara `no_evaluable` un banco inválido o 0/0, y los
+      errores no cuentan como detección;
+    - `VERSION_REGLAS` `2026-10-22.2`; odio, amenazas y datos personales sin
+      cambios.
+  - **Regresiones:** 18 pares benigno/malicioso con los casos divulgados, y
+    el reservado 1 como regresión conocida. **El reservado 1, su sello y su
+    informe fallido siguen intactos** y no se presentan como medición nueva.
+  - **Reservado 2:**
+    - especificación commiteada antes (`44bd6bd`) y sello antes de ajustar
+      (`a24df81`);
+    - 330 casos de un agente separado que no leyó las reglas, más 34
+      sensibles (odio, amenazas, datos) escritos por Claude sobre reglas no
+      modificadas, informados aparte;
+    - corrido **una vez**: evaluable; C0, C3 (1/150) y C4 (0/150) cumplen;
+      **C1 12/124 y C2 102/117 (87,2 %) no cumplen**. Resultado por caso en
+      `docs/medidas/2026-10-22-e11-banco-reservado-2.md`.
+  - **Fallos por familia:**
+    - palabras-número compuestas y separadores tipográficos;
+    - letras sueltas sin dígitos y dígitos no ASCII;
+    - correo descripto sin nombrar el proveedor;
+    - acortador con TLD no listado;
+    - "tik tok"/"tg" y red descripta en palabras;
+    - spam fuera del vocabulario (6 de 12);
+    - contacto partido sin números;
+    - 1 falso positivo: "las punto com".
+  - **Pruebas:** `lib/comunidad` 56 de 56; `tsc` 0 errores; `npm test` 2305
+    pruebas, 2287 pasan, 0 fallan y 18 omitidas (exigen builds no hechos);
+    sin llamadas externas.
+  - **Comparación con E1:** no se puede leer como mejora o empeoramiento. El
+    reservado 2 es más grande y más independiente. Los fallos divulgados ya
+    se detectan, pero un banco escrito sin conocer las reglas sigue
+    encontrando huecos.
+  - **Siguiente paso:** auditoría de Codex de E1.1. Otra corrección, si se
+    autoriza, necesitaría un reservado 3 nuevo y sellado. No se avanza a
+    E2.
+
+  **E1 — reglas propias y banco sintético (22/10), implementada en local;
+  no cumple su aceptación (auditoría de `ffa5061`).** Rama `feat/resenas-reglas` desde
+  `docs/resenas-comunidad` (`a029259`). Informe para Codex:
+  `docs/medidas/2026-10-22-informe-claude-e1.md`.
+  - **Comprobado en código y pruebas locales:**
+    - `lib/comunidad/reglas/`: plegado en dos pasadas, 19 reglas con `id` y
+      versión, y decisión publicar/retener/rechazo/error, donde ningún fallo
+      publica;
+    - contexto explícito para el contacto partido;
+    - **no está conectado** a rutas, pantallas, Supabase ni publicaciones.
+  - **Reservado sellado antes de escribir las reglas** (commit `3437578`,
+    SHA-256 LF `9975c60c…62c4ec79`) y corrido **una vez** al cierre:
+    - C0, C3 y C4 cumplen;
+    - **C1 no cumple: 3 de 50 contactos claros publicados.** Letras O dentro
+      de un número, correo dicho "juanperez en gmail" y una `м` cirílica en
+      el TLD;
+    - **C2 no cumple: 40 de 43 ofuscadas frenadas (93 %);**
+    - 1 legítima retenida: una dirección ficticia de la trama.
+    - No se modificó el conjunto ni se volvió a correr. Resultado por caso
+      en `docs/medidas/2026-10-22-e1-banco-reservado.md`.
+  - **Banco de desarrollo:** 406 casos; todos los casos dan lo esperado y
+    cumple C0–C4.
+  - **Pruebas:**
+    - `lib/comunidad`: 42 de 42;
+    - `npx tsc --noEmit`: 0 errores;
+    - `npm test`: 2291 pruebas, 2273 pasan, 0 fallan y 18 omitidas. Las
+      omitidas exigen un build web o de Capacitor, que no se hizo por estar
+      fuera de E1.
+    - Dependencias instaladas en el worktree con `npm ci --prefer-offline`
+      desde el mismo lockfile.
+  - **Limitaciones:**
+    - mide reglas contra casos sintéticos, no seguridad en uso real;
+    - el reservado lo escribió el mismo autor de las reglas, así que el
+      resultado es probablemente optimista;
+    - menores sólo con combinaciones mínimas;
+    - duplicados y límites por cuenta quedan para E3b;
+    - listas y umbrales son hipótesis.
+  - **Siguiente paso:** auditoría de Codex de E1. Ajustar o no las reglas
+    por los fallos del reservado, y si hace falta un conjunto nuevo sellado,
+    queda a criterio de esa auditoría y del dueño. No se avanza a E2.
+
+  **Plan corregido tras la auditoría de Codex sobre `9450006` (22/10).**
+  Informe copiado sin cambios
+  (`docs/medidas/2026-10-22-auditoria-plan-resenas-9450006.md`, SHA-256
+  `BBF24038…993A3AAC`). Correcciones puntuales, resumen en el plan §0:
+  - tareas de interfaz por recorrido;
+  - pruebas preliminares separadas de los gates de integración;
+  - MFA real en local, sin stub;
+  - E0 en bloques independientes con privilegios efectivos (sin ejecutar);
+  - E9c sin revisión obligatoria de todo;
+  - barreras del esquema privado probadas por separado;
+  - casos de baja B12–B14;
+  - rollback que conserva el cierre de `user_reviews`.
+
+  **Plan de implementación (22/10) — preparado, pendiente de auditoría y
+  autorización.** Sólo documentación; nada ejecutado.
+  - Auditoría de Codex sobre `e34c53e`
+    (`docs/medidas/2026-10-22-auditoria-resenas-e34c53e.md`, copiada sin
+    cambios, SHA-256 `E52E997D…21ADB2DEA4`).
+  - **Contrato de baja cerrado** (revisión §2.2.3): marcador persistente
+    `bajas_en_curso` mientras Auth tiene la cuenta; lock por cuenta que
+    impide recrear participante y rechaza escrituras en vuelo; reintento y
+    reconciliación con `getUserById`; el mensaje distingue "se borraron tus
+    datos de comunidad" de "se eliminó la cuenta"; sin cancelación del
+    usuario y sin restauración; procedimiento técnico para bajas desde el
+    panel. **No hay atomicidad entre los dos pasos**; los textos que la
+    afirmaban quedaron conciliados.
+  - Plan en `docs/superpowers/plans/2026-10-22-resenas-comunidad.md`: E0
+    (consultas de sólo lectura escritas, **no ejecutadas**), E1 reglas, E2a
+    esquema y permisos, E2b baja (temprana, casos B1–B11), E2c locks, E3a
+    escritura, E3b colas y denuncias, E4 moderación, E5a lectura, E5b
+    utilidad, E6 perfiles, E7 Top Yumpers, E8 purga, E9a web apagada, E9b
+    Android (mismo AAB que salas), E9c activación.
+  - Pruebas de permisos, concurrencia y cascadas en Supabase local con roles
+    reales y REST/RPC directo, sobre el banco de salas.
+  - **Siguiente paso:** auditoría de Codex del plan. Después, autorización
+    del dueño entrega por entrega.
+
+  **Versión 3.1 (21/10) — correcciones puntuales tras la auditoría de Codex
+  sobre `97cf4d7`** (`docs/medidas/2026-10-21-auditoria-resenas-97cf4d7.md`,
+  copiada sin cambios del checkout principal, SHA-256 `099CAB0E…68BBA595`).
+  No reescribe la revisión; cambia sólo las secciones afectadas (tabla al
+  inicio del documento). Todo sigue **propuesto, no aprobado**:
+  - **Autorización por operación (§2.1.2):** publicar/editar/evaluar exigen
+    no estar suspendido, publicación encendida, términos y correo. Retirar
+    voto, borrar reseña, bloquear y gestionar/eliminar cuenta **no dependen**
+    de pausa, suspensión, términos, correo ni filtro. Denunciar no depende de
+    suspensión ni pausa, y sí exige correo, como fija el diseño.
+  - **Denuncias (§3.3.2):** ninguna oculta por la categoría elegida; retiene
+    sólo la corroboración por las reglas vigentes o el admin; lo demás se
+    prioriza y quien denuncia puede bloquear al instante. Sin umbral fijo de
+    cantidad. "No me sirvió" no afecta moderación.
+  - **Saturación (§3.3):** colas separadas de retenidos y denuncias. La
+    admisión a retenidos está acotada por autor y en total: lo que iría a la
+    cola no se admite cuando está llena. Lo que pasa las reglas se sigue
+    publicando. La pausa total es sólo manual. **Se retira** el "sólo
+    retener" automático de v3 y la retención por cantidad de rechazos.
+  - **Revisión de rechazos (§3.3.3):** el autor puede enviar a revisión el
+    texto rechazado por una regla de contenido. Queda retenido con id,
+    `version_reglas` y regla; nunca se publica sin el admin. No se guardan
+    todos los rechazos.
+  - **Ediciones (§3.4.1):** un rechazo, un fallo o un conflicto no tocan la
+    versión anterior ni los votos. Los votos se reinician una sola vez, al
+    persistir un texto nuevo. Los reintentos son idempotentes con
+    `id_intento`.
+  - **Concurrencia (§2.2.2–§2.2.4):**
+    - orden de locks fijo: `K_CORTE` compartido, luego entidades en orden
+      estable, relectura y recién después la marca;
+    - consolidación en `READ COMMITTED`, con el cálculo en una sentencia
+      posterior al lock exclusivo;
+    - mismo lado del corte para tramos y suspensiones;
+    - baja en dos pasos desde la ruta (`baja_comunitaria` antes de
+      `deleteUser`) y red de seguridad documentada para Auth;
+    - 11 casos verificables con sesiones concurrentes.
+  - **Carga del dueño (§3.5, P6):** se retira la lectura diaria de todo. Se
+    propone muestreo acotado más las colas; no certifica eficacia.
+  - **Precisiones:**
+    - snapshots en filas de 100 ids, con la cota física distinta de la
+      lógica;
+    - plegado en dos pasadas, con confusables ambiguos como clases;
+    - nombres sin reglas de texto anómalo;
+    - hashes de shingles con clave, en vez de fragmentos;
+    - el avatar ya no se describe como "sin riesgo";
+    - Vercel y Supabase siguen tratando el texto;
+    - umbrales como hipótesis.
+
+  **Versión 3 (21/10) — decisión del dueño: SIN gastos adicionales.**
+  (Sus puntos sobre autorización común, denuncia grave que retiene,
+  "sólo retener" automático, lectura diaria de lo publicado, snapshot en un
+  solo `bigint[]` y baja por trigger quedan corregidos por la v3.1.)
+  Auditoría de Codex sobre `68bd773`
+  (`docs/medidas/2026-10-21-auditoria-resenas-68bd773-presupuesto.md`) y el
+  diseño actualizado por Codex con esa decisión, copiados sin cambios del
+  checkout principal. Al diseño sólo se le agregó una nota de registro que
+  remite a la revisión, sin cambiar sus reglas.
+  - **Superado por la decisión del dueño:** proveedor y clasificador externo,
+    configuración de modelos, costos de API, tope de USD 10, banco pago y
+    retención de proveedores (v2 §3, §4, §5.1; P1, P2). Tampoco se sustituye
+    por una API gratuita.
+  - **Propuesto en v3, no aprobado:**
+    - **Moderación por reglas propias** en la ruta del servidor, para enlaces,
+      contactos, ofuscación, duplicados y spam:
+      - rechazo de enlaces y contactos claros, con motivo;
+      - retención de señales de spam, odio u amenaza explícita y datos
+        personales;
+      - publicación automática del resto;
+      - un fallo nunca aprueba;
+      - cola con pausa automática.
+      - Las mismas reglas valen para ediciones y nombres comunitarios, con
+        las vías de elusión revisadas.
+      - No entiende contexto: acoso sin términos de lista, ironía y
+        difamación dependen de denuncias y revisión.
+      - Pruebas sintéticas locales con suite de falsos positivos.
+    - Escritura sólo por funciones ejecutables por `service_role`.
+    - Autoevaluación impedida con autor redundante, FK compuesta y `CHECK`
+      de la misma fila.
+    - Baja de cuenta: participante comunitario con `on delete set null` y
+      sin estado "no reconstruible". (Lo de "atómica" quedó superado: desde
+      el 22/10 es una baja en dos pasos con marcador persistente, sin
+      atomicidad entre los pasos; ver revisión §2.2.3.)
+    - Corte mensual para todas las operaciones por bloqueo consultivo
+      compartido/exclusivo con marca `clock_timestamp()` posterior al
+      bloqueo. **Reemplaza el margen de 15 min de v2.**
+    - Snapshots `bigint[]` con un solo generador por título, cota de
+      almacenamiento y revalidación de 50 posiciones por página.
+  - **Cuotas.** Panel (dueño, 18-19/09): Supabase Free, PostgreSQL 17.6,
+    `pg_cron` 1.6.4; Vercel 19K de 1M invocaciones a 30 días. Hay que
+    actualizarlas en E0; no se promete costo cero.
+  - **Entregas:** E0–E9, sin elección de proveedor ni pruebas pagas.
+
+  **Versión 2 (21/10), corregida tras la auditoría de Codex sobre `f64a659`**
+  (sus partes de proveedor, costos, tope y el margen de 15 min quedan
+  SUPERADAS por la v3)
+  (`docs/medidas/2026-10-21-auditoria-preparacion-resenas.md`, copiada sin
+  cambios del checkout principal). Correcciones, detalle en la revisión §0:
+  - **Permisos (A1):** la escritura por RPC `security invoker` de `f64a659`
+    dejaba escribir directo y saltear límites. Ahora:
+    - sin permisos de tabla para `anon`/`authenticated`;
+    - funciones `security definer` acotadas;
+    - invariantes en la base;
+    - matriz de permisos por rol en E2.
+  - **Cierre mensual (A2):** la idempotencia sola no reconstruía el corte.
+    Ahora:
+    - tramos con validez temporal y cómputo a la fecha del corte argentino;
+    - seudonimización (no cascada) con la baja de cuenta;
+    - purga sólo después de consolidar;
+    - margen de 15 min.
+  - **Paginación (A3):** el tope de 200 se retira. "Recientes" usa cursor
+    por clave. "Más útiles" usa un orden congelado compartido, sin datos del
+    lector, y revisa la visibilidad en cada página.
+  - **Correo (A4):** la recuperación de contraseña (#22) se separa de la
+    confirmación del alta. Con Confirm email apagado, `email_confirmed_at`
+    no prueba posesión del buzón. **#22 ya no figura como dependencia.**
+  - **Modelos y costos (A5):**
+    - razonamiento desactivado ≠ esfuerzo bajo;
+    - gpt-5-nano retirado como candidato (Deprecated);
+    - costo estimado, medido y tope separados;
+    - incluye nombres, ediciones y la cota de reintentos (Haiku 5.5:
+      estimado USD 2,21 y cota USD 6,30 para 10.000 análisis; tope
+      propuesto USD 10/mes).
+  - **Planificador (A6):** **corrige la afirmación anterior** de que el
+    único job era `tmdb-sync`. El repo también programa `sala-barrido` por
+    `pg_cron` (`009_salas.sql:815`), que es el patrón propuesto. Los jobs
+    efectivos de Producción siguen sin verificar.
+  - **Otras precisiones:**
+    - "ninguna API de toxicidad detecta…" pasa a "las APIs examinadas no
+      tienen categoría para…";
+    - retención de proveedores con excepciones, y una clasificación de Yump
+      no es una marca de abuso del proveedor;
+    - el banco compara opciones, no certifica seguridad.
+  - **Se retiran:** la espera de 24 h para cuentas nuevas (no aprobada), el
+    replanteo de los nombres del selector (ya decididos) y la lista de once
+    decisiones del dueño. Quedan P1–P5 (producto, gasto, privacidad). Las
+    tablas nuevas frente a adaptar `user_reviews` pasan a ser una elección
+    técnica justificada.
+
+  **Comprobado en código (`52c7ae7`); lo efectivo en Producción no se
+  comprobó:**
+  - `user_reviews`: el SQL deja leer aprobadas a `anon` y conserva el estado
+    al editar;
+  - la reseña editorial se escribe con `is_admin()`, que no comprueba AAL2
+    (sólo el Top usa `is_admin_mfa()`). Es trabajo separado: no se implementa
+    acá ni se tocan cuentas, factores o permisos;
+  - `profiles` no guarda correo y sólo deja leer la fila propia;
+  - `display_name` sin reglas en la base;
+  - sin limitador de tasa;
+  - la ficha no está en el bundle nativo;
+  - CORS sólo admite GET/POST.
+
+  **Siguiente paso:** ver el bloque "Plan de implementación (22/10)" de
+  arriba. Mientras no haya autorización no se escribe código ni SQL.
+
+- **Integración de Yumpeá: "Compartir invitación" + ícono del resultado
+  (2026-10-21) — desarrollo y prueba local TERMINADOS; rama local
+  `integracion/yumpea-compartir`, SIN push, SIN merge a `main`, SIN deploy,
+  SIN AAB.** Autorizada por el dueño sólo para integrar en una rama aparte;
+  merge y deploy siguen pendientes de su autorización.
+  **Cierre (decisiones del dueño, 21/10):** (1) su prueba local queda
+  APROBADA y no se repite; (2) la prueba con sala real deja de ser requisito:
+  queda sólo como verificación adicional opcional; (3) Android: estos cambios
+  se publican en el MISMO AAB que el futuro sistema de reseñas de usuarios —
+  no hay release separada y la versión y el `versionCode` NO se fijan ahora.
+  **Auditoría de Codex sobre `298555a` (informada por el dueño, 21/10):**
+  revisó el código combinado sin defectos bloqueantes identificados; `npm
+  test` **2249 / 2249**, sin omitidas; tipos sin errores; diff sin problemas
+  de formato. Codex NO repitió las compilaciones ni las pruebas visuales.
+  **Estado previo (Git, 21/10):** `origin/main` = `915ef2e` (`git ls-remote`);
+  ninguna de las dos ramas existe en el remoto; `feat/compartir-invitacion` =
+  `06f3c59` (sobre `88c5120`), `fix/icono-compartir-match` = `f49ff65` (sobre
+  `915ef2e`); el `main` local (`06bdfd1`) está viejo y no se usó. No se
+  tocaron otros checkouts, sus cambios pendientes ni los stashes.
+  **Cómo se integró:** desde `origin/main`, dos merges `--no-ff` (sin
+  cherry-pick: ningún commit duplicado): `b0d089f` (lobby, trae también
+  `88c5120`, sólo documentación del deploy del Top) y `7b1f2cf` (ícono). Único
+  conflicto: este archivo; se conservaron los dos registros y el cierre del
+  Top de `88c5120` (deploy re-comprobado: 7210383316, `success`). La
+  anotación "Pruebas OK" del Top que traía `06f3c59` volvió a PENDIENTE (ver
+  3b del resumen): no hay confirmación explícita del dueño en esta sesión.
+  **Diff contra `origin/main` (código):** `components/sala/Lobby.tsx`,
+  `lib/sala/invitacion.ts`, `components/sala/CompartirMatch.tsx`,
+  `app/globals.css` (`.sala-compartir` y `.sala-compartir-match svg`, 18×18)
+  y tres archivos de prueba. `lib/compartir-accion.ts` (la acción común,
+  incluida la cancelación sin WhatsApp) **no cambia**. Sin servidor, base ni
+  migraciones.
+  **Verificación (Claude):** `tsc --noEmit` 0; `npm run build` OK y
+  `build-capacitor` no release (`--api-base=https://ejemplo.invalid`) OK,
+  los dos con variables FALSAS; los dos bundles traen "Compartir invitación" y
+  `sala-compartir-match`. `npm test` **2249 / 2249**, 0 fallos, **0 omitidos**
+  (con los dos builds presentes).
+  **Navegador — build de Producción local (`next start`, `localhost:3200`)
+  contra un Supabase FALSO local (`:3301`, responde `sala_estado`/`sala_unirse`
+  para tres salas inventadas; ninguna petición a la base real, el build no
+  contiene el host real). NO es un recorrido con una sala real.** Se usaron
+  las pantallas reales (`SalaView`: `Lobby`, `ResultadoMatch` y
+  `ResultadoEmpate` desempatado). Lobby, con `navigator.share` y
+  `window.open` simulados: doble toque con la hoja abierta = 1 llamada;
+  payload `{title: "Yump", text: "¡Sumate a mi sala de Yumpeá! Elegimos juntos
+  qué ver:", url: https://app.yump.ar/sala/<uuid>?organizador=Juan%20P%C3%A9rez}`;
+  cancelar (AbortError) no abre nada y el botón vuelve a funcionar; un error
+  que no es cancelación y la falta de Web Share abren `wa.me` con texto +
+  salto de línea + enlace; "Copiar enlace" copia la MISMA url y pasa a
+  "Copiado". Resultado: "Compartir" comparte "¡Nuestro match!" con la ficha
+  `https://app.yump.ar/titulo/movie/<id>`; cancelar no abre nada. **Medidas:**
+  a 1280 px y a 375 px (emulación móvil), ícono del lobby **18×18**, ícono del
+  match y del empate resuelto **18×18** a la izquierda del texto, sin
+  desborde horizontal ni elementos fuera de pantalla; capturas revisadas.
+  **No probado:** Supabase real, Realtime, una sala real, la hoja real del
+  sistema (Windows, Android, iOS), WhatsApp de verdad, un teléfono y el
+  contenedor Android.
+  **Backend del build de prueba (comprobado 21/10, sólo nombres de host):** el
+  `.env.local` del checkout principal y la web pública `app.yump.ar` usan el
+  MISMO proyecto de Supabase (`aibqqebwlladjjkeqllo`; en la web, leído de sus
+  chunks públicos). Por eso un build local con ese `.env.local` crea salas
+  REALES en la base de Producción y el enlace público
+  `app.yump.ar/sala/<uuid>` lleva a la MISMA sala: **el recorrido completo
+  (compartir → invitado entra → votan → resultado) se puede probar sin
+  desplegar.** Lo que ese recorrido NO comprueba: lo que ve el invitado sale
+  del código de Producción (sin estos cambios; para él, el ícono del
+  resultado sigue invisible hasta el deploy), y un teléfono no puede abrir
+  `localhost` (por la IP de la red local no es contexto seguro: no hay Web
+  Share y cae a WhatsApp), así que la hoja nativa del lobby nuevo se prueba
+  en la computadora o después del deploy/AAB. La worktree tiene hoy un
+  `.env.local` FALSO (ignorado por Git) y su `.next` se compiló con él.
+  **Prueba local del dueño: APROBADA (informado por el dueño, 21/10: "todo
+  OK").** En el panel del navegador de la app, el mismo build local contra el
+  Supabase SIMULADO (lobby, match y empate resuelto de las salas inventadas).
+  Alcance exacto: no incluye salas reales, WhatsApp real, teléfono ni
+  Producción.
+  **Verificación adicional OPCIONAL — no es requisito de cierre (crea datos
+  reales en Producción):**
+  1. En `D:\DESARROLLO\stream central\wt-integracion-compartir`, reemplazar
+     el `.env.local` falso por el real: `copy ..\streamingcentral\.env.local
+     .env.local`.
+  2. RECOMPILAR (las `NEXT_PUBLIC_*` quedan fijas en el build): `npm run
+     build` y después `npx next start -p 3200`.
+  3. En Chrome de la computadora, `http://localhost:3200`, entrar con la
+     cuenta personal o la adicional (la sesión de `app.yump.ar` no se
+     comparte con `localhost`; si el método de ingreso redirige a
+     `app.yump.ar`, usar uno que no lo haga).
+  4. `/sala/nueva` → crear la sala → lobby "Sala de <nombre>".
+  5. "Compartir invitación": aparece la hoja de Windows; elegir WhatsApp (o
+     copiar) y comprobar el texto "¡Sumate a mi sala de Yumpeá! Elegimos
+     juntos qué ver:" con el enlace `https://app.yump.ar/sala/<uuid>?organizador=…`
+     abajo. Si no aparece hoja, abre WhatsApp Web con el mismo mensaje.
+  6. Tocar de nuevo y cerrar la hoja sin elegir nada: no se abre WhatsApp.
+     Doble clic rápido: una sola hoja.
+  7. "Copiar enlace" → pegarlo: es la misma url del mensaje; el botón dice
+     "Copiado".
+  8. Abrir ese enlace en el celular (o en una ventana privada): es la web de
+     Producción. Pide el nombre, entra, y en el lobby de `localhost` aparece en
+     "Quiénes están".
+  9. Empezar la tanda desde `localhost` y votar las dos partes para llegar a
+     "¡Hay match!" (o a un empate y "Desempatar"). En `localhost`, "Compartir"
+     muestra el ícono a la izquierda del texto; tocarlo y cancelar no abre
+     nada. En el celular (Producción) el ícono sigue invisible: es lo esperado
+     hasta el deploy.
+  10. Al terminar, "Cerrar sala" (las salas vencen solas). Opcional: borrar el
+      `.env.local` real de la worktree.
+  **Android — sin release propia (decisión del dueño, 21/10):** el lobby y el
+  resultado viajan en el bundle local, así que la 1.2.0 instalada no muestra
+  ninguno de los dos hasta un AAB nuevo. Ese AAB es el MISMO que llevará el
+  futuro sistema de reseñas de usuarios: salas y reseñas se publican juntas.
+  No se prepara un AAB separado para estos arreglos y la versión y el
+  `versionCode` se deciden recién con esa release (la regla general sigue: el
+  `versionCode` nuevo tiene que ser mayor que el último subido, hoy 4). Al
+  armar esa release conviene verificar en el paquete "Compartir invitación" y
+  `sala-compartir-match`, y probar en teléfono la hoja nativa del lobby y el
+  ícono del resultado. No hace falta ningún plugin nuevo (`@capacitor/share`
+  ya viaja). El procedimiento de AAB `5 (1.3.0)` que figuraba en esta entrada
+  y en la de "Compartir invitación" queda REEMPLAZADO por esta decisión.
+- **Ícono del botón "Compartir" del resultado de Yumpeá (2026-10-21) —
+  corregido en `fix/icono-compartir-match`; integrado el 21/10 en la rama
+  local `integracion/yumpea-compartir` (entrada de arriba), NO desplegado, sin
+  AAB.** **Problema:** `components/sala/CompartirMatch.tsx` (usado por
+  `ResultadoMatch.tsx` y `ResultadoEmpate.tsx`) dibuja un `<svg viewBox="0 0
+  24 24">` sin width/height y ninguna regla de CSS le daba tamaño; dentro de
+  `.sala-acciones.sala-acciones-resultado` medía **0×0**: el botón y su texto
+  funcionaban, el ícono no se veía. **Cambio:** el botón suma la clase
+  `sala-compartir-match` y `app/globals.css` la regla
+  `.sala-compartir-match svg{width:18px;height:18px;flex:none}`, la misma
+  medida que `.sala-compartir svg` del lobby (`2d260e6`, en
+  `feat/compartir-invitacion`). Sin cambios de lógica, servidor ni base.
+  **Verificación (Claude):** `lib/sala/compartir-match-icono.test.ts` (2:
+  clase en el botón y regla en el CSS); suite **2223 / 2241** pasan, 0 fallos,
+  18 omitidos (los de artefactos: sin `out-capacitor` ni build web en la
+  worktree); `tsc --noEmit` 0; `git diff --check` limpio. **Navegador**
+  (`next dev` local con variables FALSAS, una página temporal —no
+  commiteada— que renderizaba el `CompartirMatch` real dentro de
+  `.sala-resultado.sala-match > .sala-acciones.sala-acciones-resultado`): a
+  1024 px el ícono mide **18×18**; quitándole la clase en el mismo DOM vuelve a
+  **0×0** (reproduce el hallazgo); a 375 px, 18×18, ícono visible a la
+  izquierda de "Compartir" y sin desborde horizontal.
+  **No probado:** la pantalla real "¡Hay match!" / empate con una sala de
+  verdad, un teléfono, Producción y el contenedor Android.
+  *(Histórico, superado el 21/10: la prueba del dueño quedó cubierta por su
+  prueba local aprobada de la integración —ver la entrada de arriba—; lo de
+  abajo ya no es un paso pendiente.)* Prueba del dueño propuesta entonces:
+  terminar una sala con match (o empate resuelto) y comprobar que "Compartir"
+  muestra el ícono de compartir a la izquierda del texto, en el celular y en
+  la computadora.
+- **"Compartir invitación" en el lobby de Yumpeá (2026-10-20) —
+  implementado en `feat/compartir-invitacion` (`f0fc85c` + `2d260e6`); integrado el
+  21/10 en la rama local `integracion/yumpea-compartir` (ver esa entrada), NO
+  desplegado, sin AAB.** Base: `88c5120` (= `origin/main` `915ef2e` + el
+  registro del deploy del Top, sólo documentación, también sin push).
+  **Qué cambia:** en "Invitá a alguien" la acción principal es "Compartir
+  invitación" y debajo sigue el enlace con "Copiar enlace" (antes "Copiar").
+  El botón usa la acción de siempre (`compartir` de `lib/compartir-accion.ts`:
+  plugin nativo en Android, Web Share en la web, WhatsApp si no hay ninguno, y
+  cerrar la hoja no abre nada) con el mensaje nuevo `mensajeInvitacion`
+  (`lib/sala/invitacion.ts`): título "Yump", texto "¡Sumate a mi sala de
+  Yumpeá! Elegimos juntos qué ver:" y, APARTE, la url de
+  `enlaceDeInvitacion` —la misma que se copia: `https://app.yump.ar/sala/<uuid>`
+  con `?organizador=` para la vista previa—. Se arma sólo con el id y el
+  nombre: la credencial de participante no entra. Un doble toque no abre una
+  segunda hoja (con Web Share, una segunda llamada rechaza con un error que no
+  es cancelación y caería a WhatsApp). Se corrigió el comentario del lobby que
+  prometía la función "para la Etapa 5". Sin cambios de servidor, base ni
+  migraciones.
+  **Verificación (Claude):** `lib/sala/invitacion-compartir.test.ts` (8:
+  texto exacto, url idéntica a la copiada para nombres válidos e inválidos,
+  sólo el parámetro `organizador` y nunca la credencial, WhatsApp con texto y
+  enlace, Web Share y plugin con campos separados, cancelar sin WhatsApp en web
+  y nativo, cableado del botón y de "Copiar enlace", comentario corregido); el
+  inventario de `lib/plugins-nativos.test.ts` suma el lobby a los
+  consumidores de la acción; los caminos de la acción siguen cubiertos por
+  `lib/compartir.test.ts`. Tres mutaciones detectadas (url sin organizador,
+  lobby sin la acción compartida, cancelar que abre WhatsApp). Suite **2247 /
+  2247**, 0 fallos, 0 omitidos (con build web y export nativo presentes);
+  `tsc --noEmit` 0; `git diff --check` limpio; `npm run build` y
+  `build-capacitor` (no release, `--api-base=https://ejemplo.invalid`) OK; el
+  chunk nativo de `/s` trae "Compartir invitación" y el texto nuevo.
+  **Navegador (build de Producción local, `localhost:3200`, contra un
+  Supabase FALSO local que respondía `sala_unirse` y `sala_estado`; ningún
+  dato real):** entrada como invitado con el formulario → lobby "Sala de Juan
+  Pérez"; con `navigator.share` simulado recibió `{title: "Yump", text: <el
+  texto>, url: https://app.yump.ar/sala/<uuid>?organizador=Juan%20P%C3%A9rez}`;
+  cancelar (AbortError) no abrió nada; doble toque con la hoja abierta = 1
+  llamada; sin Web Share abrió `wa.me` con texto + salto de línea + enlace;
+  "Copiar enlace" copió la misma url y pasó a "Copiado"; ícono 18×18; a 375 px
+  de ancho sin desbordes. La metadata de `/sala/<uuid>?organizador=Juan%20Pérez`
+  sigue dando "Juan Pérez te invitó a yumpear." y `og:url` sin el nombre.
+  **No probado:** la hoja real del sistema (Android, Chrome móvil, iOS),
+  WhatsApp de verdad, la vista previa generada por WhatsApp, un organizador
+  real con cuenta, Realtime, y el contenedor Android (requiere AAB nuevo).
+  ⚠️ **Hallazgo aparte (corregido el 21/10 en `fix/icono-compartir-match`, ver
+  arriba):** el ícono del botón "Compartir" del
+  resultado (`components/sala/CompartirMatch.tsx`) no tiene tamaño en CSS; al
+  reproducir su marcado dentro de `.sala-acciones-resultado` en el navegador
+  medía **0×0** (invisible; el botón y su texto funcionan). No se verificó en
+  Producción ni en teléfono.
+  *(Histórico, superado el 21/10 por la entrada de integración: la prueba
+  local del dueño está APROBADA, la prueba con sala real es opcional y el
+  procedimiento de AAB `5 (1.3.0)` de más abajo quedó REEMPLAZADO por la
+  decisión de publicar salas y reseñas de usuarios en el mismo AAB. Nada de
+  este párrafo es una instrucción vigente.)* Prueba manual del dueño
+  propuesta el 20/10: con la rama en local o en un Preview. (1) Con su cuenta, crear una sala desde `/sala/nueva`. (2) En el
+  lobby tocar "Compartir invitación": en el celular aparece la hoja del
+  sistema; elegir WhatsApp y comprobar que el mensaje es el texto nuevo con el
+  enlace abajo (en la computadora sin hoja, abre WhatsApp Web). (3) Tocar de
+  nuevo y cerrar la hoja sin elegir nada: no tiene que abrirse WhatsApp. (4)
+  Abrir el enlace recibido en otro dispositivo o en una ventana privada, sin
+  sesión: pide el nombre, entra y aparece en "Quiénes están" de la sala
+  correcta (mismo organizador). (5) "Copiar enlace" y pegarlo: es la misma url
+  del mensaje. ⚠️ *(Corregido el 21/10: el build local con el `.env.local` real comparte la
+  base con Producción, así que el recorrido completo NO exige desplegar; ver
+  la entrada de integración.)* Un enlace a `app.yump.ar` abre PRODUCCIÓN: para probar la
+  rama de punta a punta, la sala tiene que crearse en Producción, así que la
+  prueba completa (WhatsApp → invitado entra) es la que se hace después del
+  deploy; en la rama se prueba el botón y el mensaje. **Android:** el lobby va
+  dentro del bundle local, así que la 1.2.0 instalada sigue mostrando sólo
+  "Copiar" hasta instalar un AAB nuevo. No hace falta ningún plugin nuevo
+  (`@capacitor/share` ya viaja desde la ficha). ~~**Procedimiento del AAB, sin
+  publicarlo**~~ *(REEMPLAZADO el 21/10: no habrá AAB `5 (1.3.0)` propio; ver
+  la entrada de integración)* (el mismo de la 1.2.0, entrada del 05/10): después del merge y
+  deploy, desde el commit desplegado; el dueño confirma en Play Console que el
+  mayor subido es 4; subir `android/app/build.gradle` a `versionCode 5` /
+  `versionName "1.3.0"` (funcionalidad visible nueva → MINOR) y actualizar
+  `lib/release-android.test.ts` y el historial de `CLAUDE.md`; `node
+  scripts/build-capacitor.mjs --release --api-base=https://app.yump.ar`; `npx
+  cap sync android`; `bundleRelease` con JBR 21 y `keystore.properties`
+  copiado con autorización del dueño y borrado al terminar; verificar el AAB
+  (firma de subida, `versionCode 5`, App Links, el texto "Compartir
+  invitación" en el paquete) y copiarlo a `releases/Yump-1.3.0-vc5.aab`.
+  Probar en teléfono con la hoja nativa antes de subirlo a un canal.
+- **Top exclusivamente manual: integración y deploy (2026-10-20).**
+  **Antes de integrar (Claude, sólo lectura):** remoto en `70757a4`, rama en
+  `915ef2e`, fast-forward posible. Publicaciones manuales vigentes (la última
+  de cada bloque; 66 en total), registradas para comparar: Películas —
+  `n` 35de5532, `d` f583da0c, `m` 52e97480, `at` a360f2c5, `p` 7d0a9d5e,
+  `cr` 595b5773; Series — `n` cfabb308, `d` ce2b3533, `m` f16b685c, `at`
+  6949b7e4, `p` 2461c403, `cr` fc3567b2 (prefijos de id). Captura del
+  09/10 y publicación del 19/10, salvo Crunchyroll (captura 02/09, publicada
+  el 20/09). `netflix_top10`, revisada por separado, SIN CAMBIOS (última
+  semana `2026-10-04`, última escritura 13/10, 0 filas posteriores): la
+  conclusión de cachés se mantiene y no se subió ninguna versión.
+  **Git:** push sin force `70757a4..915ef2e` a las 20:31 UTC; `git ls-remote`
+  lo confirmó. **Deploy:** GitHub registra el deployment **7210383316**
+  (Production) en `success` a las 20:32:33 UTC para `915ef2e`.
+  **Producción (Claude):** `/api/top` ya responde con el contrato nuevo (trae
+  `estado`); en Películas y Series los 6 bloques son `source: "manual"`,
+  `estado: "publicado"`, `fallos: 0`, y sus títulos, ids (tipo + tmdb_id),
+  orden y fecha de captura son IDÉNTICOS a la foto previa; los ids de las
+  publicaciones vigentes no cambiaron. `/api/cron/netflix-top10` → 404;
+  `vercel.json` no existe en `915ef2e`. `/`, `/top`, `/proximamente` y
+  `/admin/login` 200; `/api/health` `ok: true`. No se provocaron fallos ni se
+  tocaron rankings. **No verificado por Claude:** el panel de Vercel (el
+  token de la CLI está vencido): que el proyecto ya no declare el cron lo
+  tiene que confirmar el dueño; la prueba en la web de Producción y en el
+  teléfono.
 - **Top exclusivamente manual: auditoría de cachés y compatibilidad con
   Android 1.2.0 (2026-10-20, antes del merge; sin cambios de código).**
   **Cachés — comprobado por código:** la única puerta del ranking automático a

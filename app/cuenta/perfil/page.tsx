@@ -7,6 +7,7 @@ import BottomNav from "@/components/BottomNav";
 import AvatarPicker from "@/components/avatar/AvatarPicker";
 import { useAuth } from "@/components/AuthContext";
 import SobreYump from "@/components/legal/SobreYump";
+import NombreComunitario from "@/components/comunidad/NombreComunitario";
 
 export default function PerfilPage() {
   const { user, profile, ready, updateDisplayName, signOut } = useAuth();
@@ -56,6 +57,8 @@ export default function PerfilPage() {
             </button>
             <button className="btn ghost" onClick={signOut}>Cerrar sesión</button>
           </div>
+
+          <NombreComunitario key={user.id} uid={user.id} />
 
           <SobreYump />
         </div>

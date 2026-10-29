@@ -1,0 +1,457 @@
+# E2c local y cierre de E2b (A1): salidas de las corridas de Claude (24/10/2026)
+# Base: supabase start (supabase_db_streamingcentral), API 127.0.0.1:54321. Sin Producción.
+# En secuencia y en este orden. Servidor de la app detenido durante E2c (memoria).
+# Correos de cuentas ficticias reemplazados por '…'.
+
+### pruebas-concurrencia.mjs — corrida 1 de 5 (2026-10-24T16:25:39-03:00)
+docker: desktop-linux (config.json) → npipe:////./pipe/dockerDesktopLinuxEngine
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321
+inicio: 2026-10-24 19:25:44.566772+00
+
+— Permisos de las primitivas (SQL con SET ROLE) —
+✔ anon, authenticated y service_role no ejecutan ninguna primitiva de 013 (42501)
+✔ catálogo: ninguna función del esquema comunidad es ejecutable por PUBLIC ni por los roles de la API
+
+— El guardián del orden (nivel por transacción) —
+✔ fuera de orden → CB002 en el acto, sin esperar ningún lock: sin paso 1, nivel repetido, retroceso, lock tras la marca, paso 1 dos veces
+✔ la marca se toma DESPUÉS de los locks: una operación que esperó un lock marca después de que lo soltó quien lo tenía
+
+— Caso 1: dos sesiones sobre el mismo (evaluador, versión) (preliminar; gate en E3a) —
+✔ 1a · votar ‖ retirar, gana votar: B espera, relee el voto y lo retira; marcas monótonas; igual al serial votar→retirar
+✔ 1b · retirar ‖ votar, gana retirar (no hay voto: no-op); el voto entra después; igual al serial retirar→votar
+
+— Caso 2: edición y voto sobre la misma versión (preliminar; gate en E3a) —
+✔ 2a · la edición confirma primero: el voto esperó la fila del autor, relee, ve la versión reemplazada y se rechaza (CB003); no escribe nada
+✔ 2b · el voto confirma primero: la edición espera, relee y lo reinicia con su marca (posterior); cierra su tramo
+
+— Caso 3: dos ediciones con la misma versión esperada (preliminar; gate en E3a) —
+✔ 3 · la segunda espera, relee la vigente y da conflicto (CB003); hay UNA versión nueva
+
+— Caso 4: reintento con el mismo id_intento (preliminar; gate en E3a) —
+✔ 4 · dos envíos del mismo intento a la vez: UNA versión y UN reinicio de votos; el segundo devuelve la misma
+
+— Caso 5: suspensión y voto del suspendido (preliminar; gate en E4) —
+✔ 5a · la suspensión confirma primero: el voto espera la fila, relee la suspensión y se rechaza (CB004)
+✔ 5b · el voto confirma primero: la suspensión espera y su desde es POSTERIOR a la marca del voto
+
+— El orden importa: una sesión que lo viola produce el deadlock —
+   abortada: dl-fuera-de-orden
+✔ una sesión fuera del protocolo (versión → participante) contra una en orden: deadlock 40P01; la abortada no deja nada
+
+— Errores y tiempos de espera: nada a medias —
+✔ lock_timeout: una cuenta nueva espera la fila del autor más de 1 s → 55P03; tampoco queda el participante que creó el paso 1
+✔ error después de la marca y de escrituras parciales (texto inválido): la edición se revierte entera
+
+— Casos 6 y 7: frente a la consolidación (preliminar: consolidación de FIXTURE; gate en E7) —
+✔ 6 · operación con el compartido tomado y marca < T, que confirma DESPUÉS de T mientras la consolidación espera: la consolidación la ve y la cuenta
+✔ 7a · operación que llega con la consolidación CALCULANDO: espera; su marca es > L; el cómputo al corte L no la incluye
+✔ 7b · operación que llega con la consolidación ESPERANDO: no se cuela delante; marca > L; la anterior sí cuenta
+
+— Caso 11: igualdad exacta en T(M) (primitivas reales; cómputo de FIXTURE, gate en E7) —
+✔ 11 · corte_de_mes, mes_ar y rige_antes_de en T(M) y a 1 µs de cada lado
+✔ 11 · cómputo de FIXTURE sobre filas con marcas exactas: cuentan los pares cuyo tramo rige antes de T, con primera positiva en [T(M-1), T(M)) y sin suspensión vigente
+
+— Limpieza (base compartida) —
+   cuentas: 43, participantes: 40; restos (cuentas|participantes|sesiones|locks consultivos): 0|0|0|0
+   log de Postgres de esta corrida: 1 esperas registradas, 1 adquiridas tras esperar, 1 deadlock, 1 lock timeout
+
+20 de 20 pasaron.
+exit 0
+
+### pruebas-concurrencia.mjs — corrida 2 de 5 (2026-10-24T16:27:46-03:00)
+docker: desktop-linux (config.json) → npipe:////./pipe/dockerDesktopLinuxEngine
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321
+inicio: 2026-10-24 19:27:50.263633+00
+
+— Permisos de las primitivas (SQL con SET ROLE) —
+✔ anon, authenticated y service_role no ejecutan ninguna primitiva de 013 (42501)
+✔ catálogo: ninguna función del esquema comunidad es ejecutable por PUBLIC ni por los roles de la API
+
+— El guardián del orden (nivel por transacción) —
+✔ fuera de orden → CB002 en el acto, sin esperar ningún lock: sin paso 1, nivel repetido, retroceso, lock tras la marca, paso 1 dos veces
+✔ la marca se toma DESPUÉS de los locks: una operación que esperó un lock marca después de que lo soltó quien lo tenía
+
+— Caso 1: dos sesiones sobre el mismo (evaluador, versión) (preliminar; gate en E3a) —
+✔ 1a · votar ‖ retirar, gana votar: B espera, relee el voto y lo retira; marcas monótonas; igual al serial votar→retirar
+✔ 1b · retirar ‖ votar, gana retirar (no hay voto: no-op); el voto entra después; igual al serial retirar→votar
+
+— Caso 2: edición y voto sobre la misma versión (preliminar; gate en E3a) —
+✔ 2a · la edición confirma primero: el voto esperó la fila del autor, relee, ve la versión reemplazada y se rechaza (CB003); no escribe nada
+✔ 2b · el voto confirma primero: la edición espera, relee y lo reinicia con su marca (posterior); cierra su tramo
+
+— Caso 3: dos ediciones con la misma versión esperada (preliminar; gate en E3a) —
+✔ 3 · la segunda espera, relee la vigente y da conflicto (CB003); hay UNA versión nueva
+
+— Caso 4: reintento con el mismo id_intento (preliminar; gate en E3a) —
+✔ 4 · dos envíos del mismo intento a la vez: UNA versión y UN reinicio de votos; el segundo devuelve la misma
+
+— Caso 5: suspensión y voto del suspendido (preliminar; gate en E4) —
+✔ 5a · la suspensión confirma primero: el voto espera la fila, relee la suspensión y se rechaza (CB004)
+✔ 5b · el voto confirma primero: la suspensión espera y su desde es POSTERIOR a la marca del voto
+
+— El orden importa: una sesión que lo viola produce el deadlock —
+   abortada: dl-fuera-de-orden
+✔ una sesión fuera del protocolo (versión → participante) contra una en orden: deadlock 40P01; la abortada no deja nada
+
+— Errores y tiempos de espera: nada a medias —
+✔ lock_timeout: una cuenta nueva espera la fila del autor más de 1 s → 55P03; tampoco queda el participante que creó el paso 1
+✔ error después de la marca y de escrituras parciales (texto inválido): la edición se revierte entera
+
+— Casos 6 y 7: frente a la consolidación (preliminar: consolidación de FIXTURE; gate en E7) —
+✔ 6 · operación con el compartido tomado y marca < T, que confirma DESPUÉS de T mientras la consolidación espera: la consolidación la ve y la cuenta
+✔ 7a · operación que llega con la consolidación CALCULANDO: espera; su marca es > L; el cómputo al corte L no la incluye
+✔ 7b · operación que llega con la consolidación ESPERANDO: no se cuela delante; marca > L; la anterior sí cuenta
+
+— Caso 11: igualdad exacta en T(M) (primitivas reales; cómputo de FIXTURE, gate en E7) —
+✔ 11 · corte_de_mes, mes_ar y rige_antes_de en T(M) y a 1 µs de cada lado
+✔ 11 · cómputo de FIXTURE sobre filas con marcas exactas: cuentan los pares cuyo tramo rige antes de T, con primera positiva en [T(M-1), T(M)) y sin suspensión vigente
+
+— Limpieza (base compartida) —
+   cuentas: 43, participantes: 40; restos (cuentas|participantes|sesiones|locks consultivos): 0|0|0|0
+   log de Postgres de esta corrida: 1 esperas registradas, 1 adquiridas tras esperar, 1 deadlock, 1 lock timeout
+
+20 de 20 pasaron.
+exit 0
+
+### pruebas-concurrencia.mjs — corrida 3 de 5 (2026-10-24T16:30:36-03:00)
+docker: desktop-linux (config.json) → npipe:////./pipe/dockerDesktopLinuxEngine
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321
+inicio: 2026-10-24 19:30:46.961256+00
+
+— Permisos de las primitivas (SQL con SET ROLE) —
+✔ anon, authenticated y service_role no ejecutan ninguna primitiva de 013 (42501)
+✔ catálogo: ninguna función del esquema comunidad es ejecutable por PUBLIC ni por los roles de la API
+
+— El guardián del orden (nivel por transacción) —
+✔ fuera de orden → CB002 en el acto, sin esperar ningún lock: sin paso 1, nivel repetido, retroceso, lock tras la marca, paso 1 dos veces
+✔ la marca se toma DESPUÉS de los locks: una operación que esperó un lock marca después de que lo soltó quien lo tenía
+
+— Caso 1: dos sesiones sobre el mismo (evaluador, versión) (preliminar; gate en E3a) —
+✔ 1a · votar ‖ retirar, gana votar: B espera, relee el voto y lo retira; marcas monótonas; igual al serial votar→retirar
+✔ 1b · retirar ‖ votar, gana retirar (no hay voto: no-op); el voto entra después; igual al serial retirar→votar
+
+— Caso 2: edición y voto sobre la misma versión (preliminar; gate en E3a) —
+✔ 2a · la edición confirma primero: el voto esperó la fila del autor, relee, ve la versión reemplazada y se rechaza (CB003); no escribe nada
+✔ 2b · el voto confirma primero: la edición espera, relee y lo reinicia con su marca (posterior); cierra su tramo
+
+— Caso 3: dos ediciones con la misma versión esperada (preliminar; gate en E3a) —
+✔ 3 · la segunda espera, relee la vigente y da conflicto (CB003); hay UNA versión nueva
+
+— Caso 4: reintento con el mismo id_intento (preliminar; gate en E3a) —
+✔ 4 · dos envíos del mismo intento a la vez: UNA versión y UN reinicio de votos; el segundo devuelve la misma
+
+— Caso 5: suspensión y voto del suspendido (preliminar; gate en E4) —
+✔ 5a · la suspensión confirma primero: el voto espera la fila, relee la suspensión y se rechaza (CB004)
+✔ 5b · el voto confirma primero: la suspensión espera y su desde es POSTERIOR a la marca del voto
+
+— El orden importa: una sesión que lo viola produce el deadlock —
+   abortada: dl-fuera-de-orden
+✔ una sesión fuera del protocolo (versión → participante) contra una en orden: deadlock 40P01; la abortada no deja nada
+
+— Errores y tiempos de espera: nada a medias —
+✔ lock_timeout: una cuenta nueva espera la fila del autor más de 1 s → 55P03; tampoco queda el participante que creó el paso 1
+✔ error después de la marca y de escrituras parciales (texto inválido): la edición se revierte entera
+
+— Casos 6 y 7: frente a la consolidación (preliminar: consolidación de FIXTURE; gate en E7) —
+✔ 6 · operación con el compartido tomado y marca < T, que confirma DESPUÉS de T mientras la consolidación espera: la consolidación la ve y la cuenta
+✔ 7a · operación que llega con la consolidación CALCULANDO: espera; su marca es > L; el cómputo al corte L no la incluye
+✔ 7b · operación que llega con la consolidación ESPERANDO: no se cuela delante; marca > L; la anterior sí cuenta
+
+— Caso 11: igualdad exacta en T(M) (primitivas reales; cómputo de FIXTURE, gate en E7) —
+✔ 11 · corte_de_mes, mes_ar y rige_antes_de en T(M) y a 1 µs de cada lado
+✔ 11 · cómputo de FIXTURE sobre filas con marcas exactas: cuentan los pares cuyo tramo rige antes de T, con primera positiva en [T(M-1), T(M)) y sin suspensión vigente
+
+— Limpieza (base compartida) —
+   cuentas: 43, participantes: 40; restos (cuentas|participantes|sesiones|locks consultivos): 0|0|0|0
+   log de Postgres de esta corrida: 1 esperas registradas, 1 adquiridas tras esperar, 1 deadlock, 1 lock timeout
+
+20 de 20 pasaron.
+exit 0
+
+### pruebas-concurrencia.mjs — corrida 4 de 5 (2026-10-24T16:33:46-03:00)
+docker: desktop-linux (config.json) → npipe:////./pipe/dockerDesktopLinuxEngine
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321
+inicio: 2026-10-24 19:33:57.298633+00
+
+— Permisos de las primitivas (SQL con SET ROLE) —
+✔ anon, authenticated y service_role no ejecutan ninguna primitiva de 013 (42501)
+✔ catálogo: ninguna función del esquema comunidad es ejecutable por PUBLIC ni por los roles de la API
+
+— El guardián del orden (nivel por transacción) —
+✔ fuera de orden → CB002 en el acto, sin esperar ningún lock: sin paso 1, nivel repetido, retroceso, lock tras la marca, paso 1 dos veces
+✔ la marca se toma DESPUÉS de los locks: una operación que esperó un lock marca después de que lo soltó quien lo tenía
+
+— Caso 1: dos sesiones sobre el mismo (evaluador, versión) (preliminar; gate en E3a) —
+✔ 1a · votar ‖ retirar, gana votar: B espera, relee el voto y lo retira; marcas monótonas; igual al serial votar→retirar
+✔ 1b · retirar ‖ votar, gana retirar (no hay voto: no-op); el voto entra después; igual al serial retirar→votar
+
+— Caso 2: edición y voto sobre la misma versión (preliminar; gate en E3a) —
+✔ 2a · la edición confirma primero: el voto esperó la fila del autor, relee, ve la versión reemplazada y se rechaza (CB003); no escribe nada
+✔ 2b · el voto confirma primero: la edición espera, relee y lo reinicia con su marca (posterior); cierra su tramo
+
+— Caso 3: dos ediciones con la misma versión esperada (preliminar; gate en E3a) —
+✔ 3 · la segunda espera, relee la vigente y da conflicto (CB003); hay UNA versión nueva
+
+— Caso 4: reintento con el mismo id_intento (preliminar; gate en E3a) —
+✔ 4 · dos envíos del mismo intento a la vez: UNA versión y UN reinicio de votos; el segundo devuelve la misma
+
+— Caso 5: suspensión y voto del suspendido (preliminar; gate en E4) —
+✔ 5a · la suspensión confirma primero: el voto espera la fila, relee la suspensión y se rechaza (CB004)
+✔ 5b · el voto confirma primero: la suspensión espera y su desde es POSTERIOR a la marca del voto
+
+— El orden importa: una sesión que lo viola produce el deadlock —
+   abortada: dl-fuera-de-orden
+✔ una sesión fuera del protocolo (versión → participante) contra una en orden: deadlock 40P01; la abortada no deja nada
+
+— Errores y tiempos de espera: nada a medias —
+✔ lock_timeout: una cuenta nueva espera la fila del autor más de 1 s → 55P03; tampoco queda el participante que creó el paso 1
+✔ error después de la marca y de escrituras parciales (texto inválido): la edición se revierte entera
+
+— Casos 6 y 7: frente a la consolidación (preliminar: consolidación de FIXTURE; gate en E7) —
+✔ 6 · operación con el compartido tomado y marca < T, que confirma DESPUÉS de T mientras la consolidación espera: la consolidación la ve y la cuenta
+✔ 7a · operación que llega con la consolidación CALCULANDO: espera; su marca es > L; el cómputo al corte L no la incluye
+✔ 7b · operación que llega con la consolidación ESPERANDO: no se cuela delante; marca > L; la anterior sí cuenta
+
+— Caso 11: igualdad exacta en T(M) (primitivas reales; cómputo de FIXTURE, gate en E7) —
+✔ 11 · corte_de_mes, mes_ar y rige_antes_de en T(M) y a 1 µs de cada lado
+✔ 11 · cómputo de FIXTURE sobre filas con marcas exactas: cuentan los pares cuyo tramo rige antes de T, con primera positiva en [T(M-1), T(M)) y sin suspensión vigente
+
+— Limpieza (base compartida) —
+   cuentas: 43, participantes: 40; restos (cuentas|participantes|sesiones|locks consultivos): 0|0|0|0
+   log de Postgres de esta corrida: 1 esperas registradas, 1 adquiridas tras esperar, 1 deadlock, 1 lock timeout
+
+20 de 20 pasaron.
+exit 0
+
+### pruebas-concurrencia.mjs — corrida 5 de 5 (2026-10-24T16:36:25-03:00)
+docker: desktop-linux (config.json) → npipe:////./pipe/dockerDesktopLinuxEngine
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321
+inicio: 2026-10-24 19:36:33.780395+00
+
+— Permisos de las primitivas (SQL con SET ROLE) —
+✔ anon, authenticated y service_role no ejecutan ninguna primitiva de 013 (42501)
+✔ catálogo: ninguna función del esquema comunidad es ejecutable por PUBLIC ni por los roles de la API
+
+— El guardián del orden (nivel por transacción) —
+✔ fuera de orden → CB002 en el acto, sin esperar ningún lock: sin paso 1, nivel repetido, retroceso, lock tras la marca, paso 1 dos veces
+✔ la marca se toma DESPUÉS de los locks: una operación que esperó un lock marca después de que lo soltó quien lo tenía
+
+— Caso 1: dos sesiones sobre el mismo (evaluador, versión) (preliminar; gate en E3a) —
+✔ 1a · votar ‖ retirar, gana votar: B espera, relee el voto y lo retira; marcas monótonas; igual al serial votar→retirar
+✔ 1b · retirar ‖ votar, gana retirar (no hay voto: no-op); el voto entra después; igual al serial retirar→votar
+
+— Caso 2: edición y voto sobre la misma versión (preliminar; gate en E3a) —
+✔ 2a · la edición confirma primero: el voto esperó la fila del autor, relee, ve la versión reemplazada y se rechaza (CB003); no escribe nada
+✔ 2b · el voto confirma primero: la edición espera, relee y lo reinicia con su marca (posterior); cierra su tramo
+
+— Caso 3: dos ediciones con la misma versión esperada (preliminar; gate en E3a) —
+✔ 3 · la segunda espera, relee la vigente y da conflicto (CB003); hay UNA versión nueva
+
+— Caso 4: reintento con el mismo id_intento (preliminar; gate en E3a) —
+✔ 4 · dos envíos del mismo intento a la vez: UNA versión y UN reinicio de votos; el segundo devuelve la misma
+
+— Caso 5: suspensión y voto del suspendido (preliminar; gate en E4) —
+✔ 5a · la suspensión confirma primero: el voto espera la fila, relee la suspensión y se rechaza (CB004)
+✔ 5b · el voto confirma primero: la suspensión espera y su desde es POSTERIOR a la marca del voto
+
+— El orden importa: una sesión que lo viola produce el deadlock —
+   abortada: dl-fuera-de-orden
+✔ una sesión fuera del protocolo (versión → participante) contra una en orden: deadlock 40P01; la abortada no deja nada
+
+— Errores y tiempos de espera: nada a medias —
+✔ lock_timeout: una cuenta nueva espera la fila del autor más de 1 s → 55P03; tampoco queda el participante que creó el paso 1
+✔ error después de la marca y de escrituras parciales (texto inválido): la edición se revierte entera
+
+— Casos 6 y 7: frente a la consolidación (preliminar: consolidación de FIXTURE; gate en E7) —
+✔ 6 · operación con el compartido tomado y marca < T, que confirma DESPUÉS de T mientras la consolidación espera: la consolidación la ve y la cuenta
+✔ 7a · operación que llega con la consolidación CALCULANDO: espera; su marca es > L; el cómputo al corte L no la incluye
+✔ 7b · operación que llega con la consolidación ESPERANDO: no se cuela delante; marca > L; la anterior sí cuenta
+
+— Caso 11: igualdad exacta en T(M) (primitivas reales; cómputo de FIXTURE, gate en E7) —
+✔ 11 · corte_de_mes, mes_ar y rige_antes_de en T(M) y a 1 µs de cada lado
+✔ 11 · cómputo de FIXTURE sobre filas con marcas exactas: cuentan los pares cuyo tramo rige antes de T, con primera positiva en [T(M-1), T(M)) y sin suspensión vigente
+
+— Limpieza (base compartida) —
+   cuentas: 43, participantes: 40; restos (cuentas|participantes|sesiones|locks consultivos): 0|0|0|0
+   log de Postgres de esta corrida: 1 esperas registradas, 1 adquiridas tras esperar, 1 deadlock, 1 lock timeout
+
+20 de 20 pasaron.
+exit 0
+
+### Log de Postgres de las cinco corridas (esperas >1 s, deadlocks, timeouts)
+2026-10-24 19:20:45.408 UTC [30700] postgres@postgres LOG:  process 30700 acquired ExclusiveLock on advisory lock [5,7399,12,2] after 1732.501 ms
+2026-10-24 19:20:53.863 UTC [30797] postgres@postgres LOG:  process 30797 still waiting for ExclusiveLock on advisory lock [5,7399,13,2] after 1000.383 ms
+    [local] 2026-10-24 19:20:53.863 UTC [30797] postgres@postgres DETAIL:  Process holding the lock: 30776. Wait queue: 30797.
+2026-10-24 19:20:54.743 UTC [30797] postgres@postgres LOG:  process 30797 acquired ExclusiveLock on advisory lock [5,7399,13,2] after 1880.668 ms
+2026-10-24 19:21:03.230 UTC [30923] postgres@postgres LOG:  process 30923 still waiting for ExclusiveLock on advisory lock [5,7399,14,2] after 1000.447 ms
+    [local] 2026-10-24 19:21:03.230 UTC [30923] postgres@postgres DETAIL:  Process holding the lock: 30887. Wait queue: 30923.
+2026-10-24 19:21:04.558 UTC [30921] postgres@postgres LOG:  process 30921 still waiting for ExclusiveLock on advisory lock [5,7301,0,2] after 1000.193 ms
+    [local] 2026-10-24 19:21:04.558 UTC [30921] postgres@postgres DETAIL:  Process holding the lock: 30923. Wait queue: 30921, 30924.
+2026-10-24 19:21:04.916 UTC [30923] postgres@postgres LOG:  process 30923 acquired ExclusiveLock on advisory lock [5,7399,14,2] after 2686.388 ms
+2026-10-24 19:21:04.941 UTC [30921] postgres@postgres LOG:  process 30921 acquired ExclusiveLock on advisory lock [5,7301,0,2] after 1382.504 ms
+2026-10-24 19:24:35.337 UTC [32193] postgres@postgres ERROR:  deadlock detected
+    [local] 2026-10-24 19:24:35.337 UTC [32193] postgres@postgres DETAIL:  Process 32193 waits for ShareLock on transaction 143853; blocked by process 32192.
+    Process 32192 waits for ShareLock on transaction 143852; blocked by process 32193.
+2026-10-24 19:24:41.588 UTC [32261] postgres@postgres LOG:  process 32261 still waiting for ExclusiveLock on advisory lock [5,7399,11,2] after 1000.269 ms
+    [local] 2026-10-24 19:24:41.588 UTC [32261] postgres@postgres DETAIL:  Process holding the lock: 31690. Wait queue: 32261.
+2026-10-24 19:24:41.721 UTC [32260] postgres@postgres ERROR:  canceling statement due to lock timeout
+2026-10-24 19:24:41.797 UTC [32261] postgres@postgres LOG:  process 32261 acquired ExclusiveLock on advisory lock [5,7399,11,2] after 1209.276 ms
+2026-10-24 19:26:51.179 UTC [33683] postgres@postgres ERROR:  deadlock detected
+    [local] 2026-10-24 19:26:51.179 UTC [33683] postgres@postgres DETAIL:  Process 33683 waits for ShareLock on transaction 144102; blocked by process 33685.
+    Process 33685 waits for ShareLock on transaction 144101; blocked by process 33683.
+2026-10-24 19:26:58.564 UTC [33744] postgres@postgres LOG:  process 33744 still waiting for ExclusiveLock on advisory lock [5,7399,11,2] after 1000.307 ms
+    [local] 2026-10-24 19:26:58.564 UTC [33744] postgres@postgres DETAIL:  Process holding the lock: 33171. Wait queue: 33744.
+2026-10-24 19:26:58.801 UTC [33745] postgres@postgres ERROR:  canceling statement due to lock timeout
+2026-10-24 19:26:58.877 UTC [33744] postgres@postgres LOG:  process 33744 acquired ExclusiveLock on advisory lock [5,7399,11,2] after 1313.586 ms
+2026-10-24 19:28:58.805 UTC [35160] postgres@postgres ERROR:  deadlock detected
+    [local] 2026-10-24 19:28:58.805 UTC [35160] postgres@postgres DETAIL:  Process 35160 waits for ShareLock on transaction 144346; blocked by process 35161.
+    Process 35161 waits for ShareLock on transaction 144345; blocked by process 35160.
+2026-10-24 19:29:07.074 UTC [35229] postgres@postgres LOG:  process 35229 still waiting for ExclusiveLock on advisory lock [5,7399,11,2] after 1000.209 ms
+    [local] 2026-10-24 19:29:07.074 UTC [35229] postgres@postgres DETAIL:  Process holding the lock: 34654. Wait queue: 35229.
+2026-10-24 19:29:07.131 UTC [35230] postgres@postgres ERROR:  canceling statement due to lock timeout
+2026-10-24 19:29:07.228 UTC [35229] postgres@postgres LOG:  process 35229 acquired ExclusiveLock on advisory lock [5,7399,11,2] after 1154.939 ms
+2026-10-24 19:32:14.747 UTC [36701] postgres@postgres ERROR:  deadlock detected
+    [local] 2026-10-24 19:32:14.747 UTC [36701] postgres@postgres DETAIL:  Process 36701 waits for ShareLock on transaction 144648; blocked by process 36700.
+    Process 36700 waits for ShareLock on transaction 144647; blocked by process 36701.
+2026-10-24 19:32:23.913 UTC [36769] postgres@postgres LOG:  process 36769 still waiting for ExclusiveLock on advisory lock [5,7399,11,2] after 1000.273 ms
+    [local] 2026-10-24 19:32:23.913 UTC [36769] postgres@postgres DETAIL:  Process holding the lock: 36169. Wait queue: 36769.
+2026-10-24 19:32:24.057 UTC [36770] postgres@postgres ERROR:  canceling statement due to lock timeout
+2026-10-24 19:32:24.142 UTC [36769] postgres@postgres LOG:  process 36769 acquired ExclusiveLock on advisory lock [5,7399,11,2] after 1229.476 ms
+2026-10-24 19:35:18.268 UTC [38210] postgres@postgres ERROR:  deadlock detected
+    [local] 2026-10-24 19:35:18.268 UTC [38210] postgres@postgres DETAIL:  Process 38210 waits for ShareLock on transaction 144929; blocked by process 38211.
+    Process 38211 waits for ShareLock on transaction 144928; blocked by process 38210.
+2026-10-24 19:35:26.382 UTC [38277] postgres@postgres LOG:  process 38277 still waiting for ExclusiveLock on advisory lock [5,7399,11,2] after 1000.218 ms
+    [local] 2026-10-24 19:35:26.382 UTC [38277] postgres@postgres DETAIL:  Process holding the lock: 37704. Wait queue: 38277.
+2026-10-24 19:35:26.492 UTC [38278] postgres@postgres ERROR:  canceling statement due to lock timeout
+2026-10-24 19:35:26.572 UTC [38277] postgres@postgres LOG:  process 38277 acquired ExclusiveLock on advisory lock [5,7399,11,2] after 1190.256 ms
+2026-10-24 19:38:02.316 UTC [39716] postgres@postgres ERROR:  deadlock detected
+    [local] 2026-10-24 19:38:02.316 UTC [39716] postgres@postgres DETAIL:  Process 39716 waits for ShareLock on transaction 145198; blocked by process 39715.
+    Process 39715 waits for ShareLock on transaction 145197; blocked by process 39716.
+2026-10-24 19:38:11.486 UTC [39784] postgres@postgres LOG:  process 39784 still waiting for ExclusiveLock on advisory lock [5,7399,11,2] after 1000.281 ms
+    [local] 2026-10-24 19:38:11.486 UTC [39784] postgres@postgres DETAIL:  Process holding the lock: 39197. Wait queue: 39784.
+2026-10-24 19:38:11.765 UTC [39783] postgres@postgres ERROR:  canceling statement due to lock timeout
+2026-10-24 19:38:11.791 UTC [39784] postgres@postgres LOG:  process 39784 acquired ExclusiveLock on advisory lock [5,7399,11,2] after 1305.328 ms
+
+### up-down-up.mjs (2026-10-24T16:39:44-03:00)
+base: supabase_db_streamingcentral
+
+   volcado 00-con-013: 12174 líneas, sha256 c16e231f2fe3c27c…
+   volcado 00b-sin-013: 11801 líneas, sha256 49e76e46bd1da271…
+   volcado 00c-sin-013-otra-vez: 11801 líneas, sha256 49e76e46bd1da271…
+   volcado 00d-con-013: 12174 líneas, sha256 c16e231f2fe3c27c…
+   volcado 00e-con-013-repetida: 12174 líneas, sha256 c16e231f2fe3c27c…
+   volcado 00f-sin-013: 11801 líneas, sha256 49e76e46bd1da271…
+✔ 013 (E2c): up → down → up da el mismo volcado; down no agrega nada y quita sus funciones; repetidas, inocuas
+   volcado 0-con-011-y-012: 11801 líneas, sha256 49e76e46bd1da271…
+✔ estado de partida: 011 y 012 aplicadas (repetibles)
+   volcado 1-con-011: 11404 líneas, sha256 2121d0f00b453587…
+   volcado 1-con-011-sin-comunidad: 10413 líneas, sha256 6aa727421a1a8b08…
+✔ 012_down: quita sólo lo de 012 (funciones, triggers y columnas del marcador)
+   volcado 1b-con-012: 11801 líneas, sha256 49e76e46bd1da271…
+   volcado 1c-con-012-repetida: 11801 líneas, sha256 49e76e46bd1da271…
+   volcado 1d-sin-012: 11404 líneas, sha256 2121d0f00b453587…
+   volcado 1e-sin-012-otra-vez: 11404 líneas, sha256 2121d0f00b453587…
+✔ 012 up → down → up: mismos volcados; repetida, inocua
+   volcado 2-sin-011: 10413 líneas, sha256 6aa727421a1a8b08…
+✔ down: el esquema desaparece y el resto queda idéntico a lo que había con 011
+   volcado 2b-sin-011-otra-vez: 10413 líneas, sha256 6aa727421a1a8b08…
+✔ down repetido: inocuo
+   volcado 3-con-011: 11404 líneas, sha256 2121d0f00b453587…
+✔ up: vuelve exactamente al volcado con 011
+   volcado 4-sin-011: 10413 líneas, sha256 6aa727421a1a8b08…
+   volcado 5-con-011: 11404 líneas, sha256 2121d0f00b453587…
+✔ segunda vuelta down → up: mismos volcados
+   volcado 6-con-011-repetida: 11404 líneas, sha256 2121d0f00b453587…
+✔ up repetido sobre sí mismo: no cambia el volcado
+   volcado 6b-con-011-y-012: 11801 líneas, sha256 49e76e46bd1da271…
+✔ vuelta a 012: 011 + 012 dan el mismo volcado del principio
+   volcado 7a-antes-de-022: 12188 líneas, sha256 11950e5e4c371850…
+   volcado 7b-despues-de-022: 12174 líneas, sha256 c16e231f2fe3c27c…
+   quitado por 022:
+     -- Name: user_reviews el autor gestiona la suya; Type: POLICY; Schema: public; Owner: postgres
+     CREATE POLICY "el autor gestiona la suya" ON public.user_reviews USING ((auth.uid() = user_id)) WITH CHECK ((auth.uid() = user_id));
+     -- Name: user_reviews lectura publica aprobadas; Type: POLICY; Schema: public; Owner: postgres
+     CREATE POLICY "lectura publica aprobadas" ON public.user_reviews FOR SELECT USING ((estado = 'aprobada'::text));
+✔ 022 sólo cambia policies y permisos de user_reviews (schema.sql re-crea las policies, como en db-local)
+   volcado 7-con-022: 12174 líneas, sha256 c16e231f2fe3c27c…
+✔ 022 aplicada: user_reviews sin policies ni permisos para anon/authenticated, RLS activa
+   volcado 8-tras-022-down: 12174 líneas, sha256 c16e231f2fe3c27c…
+✔ 022_down conservador: no cambia el volcado ni reabre nada, y las filas siguen
+✔ tras 022_down, anon por REST sigue sin leer user_reviews (401/403, nunca 200)
+   volcado 9-con-022-repetida: 12174 líneas, sha256 c16e231f2fe3c27c…
+✔ 022 repetida: inocua
+
+volcados en C:\Users\CUNO\AppData\Local\Temp\comunidad-volcados-1792870788442
+
+15 de 15 pasaron.
+exit 0
+
+### auxiliares y unidades afectadas (2026-10-24T16:41:53-03:00)
+✔ con marcador, la pantalla queda en 'pendiente'; sin marcador, 'sin-baja' (5.4888ms)
+✔ un error de la consulta NUNCA se lee como 'no hay baja pendiente' (1.7757ms)
+✔ la respuesta de OTRA cuenta se descarta (cambio de cuenta en el medio) (3.7562ms)
+✔ una respuesta vieja de la MISMA cuenta tampoco pisa a la nueva (0.966ms)
+✔ cerrar sesión limpia el estado y descarta lo que estaba en camino (1.8432ms)
+✔ tras un intento parcial pasa a pendiente; sin verificar, a un estado propio (2.0071ms)
+✔ los textos del contrato, literales (3.1574ms)
+✔ los textos de antes no cambiaron (0.9418ms)
+✔ REGRESIÓN A1: Auth borró, la respuesta se perdió y la reconciliación falló → ni el diálogo ni el aviso afirman nada (20.9743ms)
+✔ los avisos de cada estado: pendiente sí afirma que existe (lo sabe); el resto, nada (1.6545ms)
+✔ las plataformas SE CONSERVAN: la persona sigue como invitada (15.0839ms)
+✔ las preferencias del dispositivo se conservan (0.866ms)
+✔ el estado personal se borra (0.8279ms)
+✔ lo que la ruleta ya te mostró es PERSONAL, aunque parezca paginación (0.7628ms)
+✔ la sesión de Supabase se borra aunque su clave dependa del proyecto (1.8361ms)
+✔ una mezcla real deja exactamente lo que corresponde (3.7135ms)
+✔ con el storage vacío no rompe (6.7623ms)
+✔ sin intentos previos no hay bloqueo (3.0804ms)
+✔ bloquea recién al llegar al máximo (7.8223ms)
+✔ la ventana corre desde el PRIMER fallo, no desde el último (2.8852ms)
+✔ pasada la ventana, se empieza de cero (3.5238ms)
+✔ dice cuántos minutos faltan, no solo que está bloqueado (0.8658ms)
+✔ nunca dice 0 minutos estando bloqueado (0.6947ms)
+✔ SIN service role: la contraseña correcta y la incorrecta dan EXACTAMENTE lo mismo (2.3633ms)
+✔ SIN service role NO se ejecuta validarPassword (0.7202ms)
+✔ SIN service role NO se ejecuta el borrado (0.9695ms)
+✔ SIN service role el pedido NO suma al límite de intentos (1.0668ms)
+✔ CON service role, una contraseña mal SÍ suma al límite y no borra (1.2885ms)
+✔ el camino feliz: configuración → contraseña → comunidad → deleteUser, en ese orden (1.514ms)
+✔ con la contraseña mal NO se toca lo comunitario (0.7463ms)
+✔ si el paso comunitario falla (o lanza), no se llama a deleteUser: fallo-borrado, no suma intentos (1.4928ms)
+✔ B1: deleteUser falla y la cuenta EXISTE → baja-parcial, con el fallo registrado (1.4339ms)
+✔ B1: si registrar el fallo también falla, la respuesta sigue siendo baja-parcial (0.9566ms)
+✔ B4/B5: deleteUser falla o lanza (respuesta perdida, otro pedido ganó) y la cuenta NO existe → ok (1.0939ms)
+✔ B12: deleteUser falla y getUserById falla o lanza → baja-sin-verificar, NUNCA ok (1.0721ms)
+✔ ningún camino devuelve ok: true si getUserById encuentra la cuenta o falla (7.909ms)
+✔ .env.comunidad-local está ignorado por Git (y .env.local también) (410.6297ms)
+✔ urlLocal acepta sólo 127.0.0.1 y localhost (3.8347ms)
+✔ ningún `docker` de las baterías ni de db-local sale sin el endpoint verificado (181.5341ms)
+✔ las ayudas sólo locales nunca van en una migración (plan §4) (93.6865ms)
+✔ las baterías no leen .env.local ni mencionan un host de Supabase remoto (22.8613ms)
+✔ projectIdDe lee el project_id del config.toml real del repo (23.038ms)
+✔ elige exactamente supabase_db_<project_id>, aunque haya otros proyectos corriendo (1.1217ms)
+✔ falla si el contenedor del proyecto no está, y nombra los que sí están (6.1127ms)
+✔ falla si la selección no es inequívoca o falta el project_id (1.291ms)
+✔ un prefijo parecido NO alcanza: 'streamingcentral2' no es 'streamingcentral' (1.4135ms)
+✔ las cargas del catálogo van en orden numérico y sólo si se pidieron (7.6994ms)
+✔ aplica 007 (is_admin_mfa) y las migraciones de reseñas, en orden y sin los rollbacks (1.5598ms)
+ℹ tests 48
+ℹ pass 48
+ℹ fail 0
+
+### tsc --noEmit (2026-10-24T16:41:56-03:00)
+exit 0
+
+### npm test (2026-10-24T16:42:31-03:00)
+ℹ tests 2380
+ℹ suites 0
+ℹ pass 2364
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 16
+ℹ todo 0
+
+### sala/pruebas-rls.mjs (2026-10-24T16:44:17-03:00)
+✔ 17. el barrido elimina la sala completa (seis tablas) 5 min después del estado terminal
+
+Todo verde (37 pruebas)

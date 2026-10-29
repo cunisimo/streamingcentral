@@ -246,6 +246,11 @@ const EXCEPCIONES = new Map([
     motivo: "app/admin NO viaja en el artefacto nativo: el staging lo excluye",
     debeContener: "/api/admin/top",
   }],
+  // E4: la moderación de reseñas, otra pantalla de `app/admin`. Mismo criterio.
+  ["app/admin/moderacion/page.tsx", {
+    motivo: "app/admin NO viaja en el artefacto nativo: el staging lo excluye",
+    debeContener: "/api/admin/moderacion",
+  }],
 ]);
 
 // ---------------------------------------------------------------- canarios

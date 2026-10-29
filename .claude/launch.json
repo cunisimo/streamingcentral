@@ -21,6 +21,31 @@
         "3111"
       ],
       "port": 3111
+    },
+    {
+      "name": "comunidad-local",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "--env-file=.env.comunidad-local",
+        "node_modules/next/dist/bin/next",
+        "dev",
+        "-p",
+        "3100"
+      ],
+      "port": 3100
+    },
+    {
+      "name": "e9a-local",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "--env-file-if-exists=../streamingcentral/.env.sala-local",
+        "--env-file=.env.comunidad-local",
+        "node_modules/next/dist/bin/next",
+        "dev",
+        "-p",
+        "3100"
+      ],
+      "port": 3100
     }
   ]
 }

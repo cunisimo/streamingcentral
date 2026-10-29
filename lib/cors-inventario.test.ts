@@ -100,6 +100,9 @@ const EXCLUIDAS = new Map([
   // además escribe: darle CORS sería abrirla al contenedor sin necesidad.
   ["app/api/admin/top/route.ts",
    "sólo la consume app/admin, que NO viaja en el artefacto nativo: habilitarla sería innecesario"],
+  // E4, mismo motivo: la consume `app/admin/moderacion`, que no viaja en el APK.
+  ["app/api/admin/moderacion/route.ts",
+   "sólo la consume app/admin, que NO viaja en el artefacto nativo: habilitarla sería innecesario"],
 ]);
 
 // ============================================================================
@@ -170,7 +173,7 @@ test("toda ruta está clasificada: integrada o excluida, sin pendientes", () => 
     `rutas sin CORS y sin clasificar:\n${sinClasificar.join("\n")}`);
 });
 
-test("las 24 integradas coinciden en sus TRES declaraciones de método", () => {
+test("las 33 integradas coinciden en sus TRES declaraciones de método", () => {
   const divergentes: string[] = [];
   for (const r of rutasDeApi()) {
     if (EXCLUIDAS.has(r)) continue;
@@ -203,7 +206,7 @@ test("ningún OPTIONS puede ejecutar el handler real", () => {
   assert.deepEqual(malas, [], `OPTIONS que llegarían al handler:\n${malas.join("\n")}`);
 });
 
-test("el recuento cierra: 26 rutas = 24 integradas + 2 excluidas", () => {
+test("el recuento cierra: 39 rutas = 36 integradas + 3 excluidas", () => {
   // 25 -> 26 al integrar `main`: el Top manual sumó `app/api/admin/top`, que se
   // clasificó como excluida. Las 23 integradas de CP4 no se movieron.
   const todas = rutasDeApi();
@@ -212,9 +215,24 @@ test("el recuento cierra: 26 rutas = 24 integradas + 2 excluidas", () => {
   // contenedor con el JWT del organizador, igual que /api/te-va-a-gustar).
   // 27 -> 26 el 2026-10-20: se borró `app/api/cron/netflix-top10` (excluida),
   // con la ingesta automática del Top.
-  assert.equal(todas.length, 26, "cambió la cantidad de rutas: hay que reclasificar");
-  assert.equal(integradas.length, 24);
-  assert.equal(EXCLUIDAS.size, 2);
+  // 26 -> 27 con el contrato de baja (E2b): `app/api/cuenta/estado-baja`
+  // integra CORS, como `cuenta/eliminar`: la consulta Configuración, que
+  // viaja en el contenedor.
+  // 27 -> 32 con la escritura de reseñas (E3a): resenas, resenas/borrar,
+  // votos, terminos y titulo integran CORS: las usa la ficha, que viaja en el
+  // contenedor.
+  // 32 -> 35 con la moderación (E3b): denuncias, bloqueos y revision integran
+  // CORS por el mismo motivo (la ficha y Configuración viajan en el contenedor).
+  // 35 -> 36 con la moderación administrativa (E4): `app/api/admin/moderacion`
+  // queda EXCLUIDA, como `admin/top` (sólo la usa app/admin).
+  // 36 -> 38 con los perfiles (E6): `comunidad/perfil` y `comunidad/nombre`
+  // integran CORS: las usan el perfil (`/u`) y la cuenta, que viajan en el
+  // contenedor.
+  // 38 -> 39 con el Top Yumpers (E7): `comunidad/top-yumpers` integra CORS:
+  // la usa /top, que viaja en el contenedor.
+  assert.equal(todas.length, 39, "cambió la cantidad de rutas: hay que reclasificar");
+  assert.equal(integradas.length, 36);
+  assert.equal(EXCLUIDAS.size, 3);
   assert.equal(integradas.length + EXCLUIDAS.size, todas.length);
 });
 

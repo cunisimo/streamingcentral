@@ -46,3 +46,35 @@ test("las cargas del catálogo van en orden numérico y sólo si se pidieron", (
   assert.equal(con.at(-1), "scripts/sala/fixtures-local.sql");
   assert.equal(con[0], "scripts/sala/local-pre.sql");
 });
+
+test("aplica 007 (is_admin_mfa) y las migraciones de reseñas, en orden y sin los rollbacks", () => {
+  const l = archivosAAplicar({ conCatalogo: false, cargas: [] });
+  const i = (f) => l.indexOf(`supabase/migrations/${f}`);
+  assert.ok(i("007_top_manual.sql") > l.indexOf("supabase/schema.sql"));
+  assert.ok(i("009_salas.sql") > i("007_top_manual.sql"));
+  assert.ok(i("011_comunidad_esquema.sql") > i("009_salas.sql"));
+  // 012 (baja, E2b) completa tablas de 011.
+  assert.ok(i("012_comunidad_baja.sql") === i("011_comunidad_esquema.sql") + 1);
+  // 013 (protocolo, E2c) usa funciones de 012.
+  assert.ok(i("013_comunidad_protocolo.sql") === i("012_comunidad_baja.sql") + 1);
+  // 014 (escritura, E3a) usa las primitivas de 013.
+  assert.ok(i("014_comunidad_escritura.sql") === i("013_comunidad_protocolo.sql") + 1);
+  // 015 (moderación, E3b) redefine funciones de 013 y 014.
+  assert.ok(i("015_comunidad_moderacion_datos.sql") === i("014_comunidad_escritura.sql") + 1);
+  // 016 (moderación administrativa, E4) redefine funciones de 011, 012 y 015.
+  assert.ok(i("016_comunidad_admin.sql") === i("015_comunidad_moderacion_datos.sql") + 1);
+  // 017 (lectura, E5a) borra la lectura provisional de 015 y usa la configuración de 016.
+  assert.ok(i("017_comunidad_lectura.sql") === i("016_comunidad_admin.sql") + 1);
+  // 018 (utilidad, E5b) redefine la lectura de 017.
+  assert.ok(i("018_comunidad_utilidad.sql") === i("017_comunidad_lectura.sql") + 1);
+  // 019 (perfiles, E6) redefine item_lectura de 017 (suma el autor).
+  assert.ok(i("019_comunidad_perfiles.sql") === i("018_comunidad_utilidad.sql") + 1);
+  // 020 (Top Yumpers, E7) usa los nombres y avatares de 019.
+  assert.ok(i("020_comunidad_top.sql") === i("019_comunidad_perfiles.sql") + 1);
+  // 021 (purga, E8) redefine consolidar_mes y la lectura del Top Yumpers de 020.
+  assert.ok(i("021_comunidad_purga.sql") === i("020_comunidad_top.sql") + 1);
+  // 022 cierra user_reviews: tiene que ir DESPUÉS de schema.sql, que recrea sus policies.
+  assert.ok(i("022_cerrar_user_reviews.sql") > i("011_comunidad_esquema.sql"));
+  assert.ok(!l.some((f) => /_down\.sql$/.test(f)), "un rollback nunca va en la lista");
+  assert.equal(l.at(-1), "scripts/sala/fixtures-local.sql");
+});

@@ -1,0 +1,106 @@
+# Salidas de las correcciones A1/A2 de E3b (25/10/2026)
+
+## Pruebas focalizadas (preliminares: núcleos puros y modelos, sin React ni red)
+
+✔ éxito / éxito: denunciada y bloqueada, nada pendiente (9.8437ms)
+✔ éxito / incierto: la denuncia queda recibida y se ofrece reintentar el bloqueo (incierto) (0.9137ms)
+✔ éxito / error confirmado: se ofrece reintentar el bloqueo, distinto del incierto (0.8732ms)
+✔ éxito / rechazo definitivo del bloqueo: no se ofrece reintento (0.9473ms)
+✔ denuncia rechazada / bloqueo permitido: bloqueado, no denunciada (1.1616ms)
+✔ denuncia rechazada / bloqueo incierto: reintento sólo del bloqueo (la denuncia ya tuvo respuesta) (0.7341ms)
+✔ denuncia incierta: el formulario sigue y el reintento es el pedido completo (0.8027ms)
+✔ sin pedir bloqueo, un `bloqueo` en la respuesta se ignora (0.6291ms)
+✔ reintento del bloqueo: conserva la denuncia; incierto → error → bloqueado; rechazo cierra (1.1549ms)
+✔ modelo: éxito/incierto + dos reintentos → 1 denuncia, 1 bloqueo, sin excedente extra (1.9866ms)
+✔ barrido: el diálogo reintenta el bloqueo contra la ruta de bloqueos, nunca reenvía la denuncia (2.3615ms)
+✔ tokenDeCuenta: sólo con la sesión de la misma cuenta (4.4306ms)
+✔ frontera: sólo vale la última carga; cerrada no vale nada; reabrir (Strict Mode) no revive cargas viejas (3.8855ms)
+✔ A→B mientras A carga: B no ve nada de A, ni con la respuesta de A llegando después (20.1424ms)
+✔ A cargada, cambio a B y la lectura de B falla: no queda la lista de A (caso de la auditoría) (1.868ms)
+✔ recarga fallida de la MISMA cuenta: conserva la lista y muestra el error (2.3026ms)
+✔ misma cuenta, cargas fuera de orden: la vieja no pisa a la nueva (1.5823ms)
+✔ cierre de sesión con lectura pendiente: no hay vista y la respuesta se descarta (2.1737ms)
+✔ cambio a B durante un desbloqueo de A: el mensaje y la recarga de A no aparecen en B (3.2447ms)
+✔ una operación que empieza con la sesión ya cambiada no sale en nombre de nadie (1.3275ms)
+✔ barrido: bloqueados, la ficha y la fila de configuración usan tokenDeCuenta y frontera (3.5596ms)
+ℹ tests 21
+ℹ pass 21
+ℹ fail 0
+ℹ skipped 0
+
+## Regresión de núcleos tocados o vecinos (moderación, editor, escritura, CORS)
+
+ℹ tests 77
+ℹ pass 77
+ℹ fail 0
+ℹ skipped 0
+
+## npm test
+
+ℹ tests 2461
+ℹ pass 2445
+ℹ fail 0
+ℹ skipped 16
+
+## tsc --noEmit --incremental false
+
+exit 0
+
+## Recorrido en navegador (real: app local en :3100, Supabase local y Auth local)
+
+Cuentas ficticias: A y B (las que se alternan) y autores X, Y, Z, P, Q, R, S con
+una reseña cada uno en el título 9731. Los identificadores se muestran con sus
+primeros 8 caracteres: A = 78aec4e3, B = 49f733a6.
+
+Simulado dentro del recorrido: el cambio de cuenta reproduce lo que hace un
+inicio de sesión en otra pestaña (guarda la sesión de B y avisa por el canal
+de Auth); las demoras, fallas y respuestas perdidas son un interceptor de
+fetch en la página (el pedido sale y llega a la base; se retiene, falla o se
+reescribe la RESPUESTA). En "error confirmado" además se quitó `bloquear` del
+cuerpo para que la base no bloquee.
+
+A1 · bloqueados (escritorio)
+- A cargada (1 bloqueo) → B, lectura de B retenida: pantalla "Cargando…", sin
+  la fila de A. Pedidos retenidos: cuenta 49f733a6, {"accion":"listar"} ×2
+  (Strict Mode).
+- La lectura de B falla: "No pudimos cargar la lista. Reintentar", sin la fila de A.
+- Lectura de A en vuelo → B; se responde B (vacía) y después A (1 fila):
+  queda "No bloqueaste a nadie.".
+- Desbloqueo de A en vuelo ({"accion":"desbloquear","bloqueo_id":183}, cuenta
+  78aec4e3) → B; se suelta la respuesta: B sin diálogo, sin mensaje y sin
+  pedidos posteriores de A. Base: el bloqueo de A se borró (era de A).
+- Cierre de sesión con lectura de A pendiente: redirige a /cuenta.
+A1 · ficha
+- Denuncia+bloqueo de A en vuelo ({"version_id":859,"categoria":"spam","bloquear":true})
+  → B; se suelta: B sin diálogo ni aviso y con las 3 reseñas; 0 pedidos
+  posteriores. Base: denuncia y bloqueo de A sobre X.
+- Lectura de A en vuelo → cierre de sesión; se suelta: sin sección y 0 pedidos.
+- E3a: B con borrador; el voto dispara una recarga que falla → borrador intacto,
+  "No pudimos cargar las reseñas. Reintentar" y las 3 reseñas siguen.
+- B → A: editor de A vacío (el borrador de B no viaja).
+A2 (A denuncia con "Bloquear también al autor")
+- Y, éxito/éxito (real): diálogo cerrado; aviso "Recibimos tu denuncia… Bloqueaste al autor…".
+- Z, éxito/incierto (respuesta reescrita; la base sí bloqueó): HALLAZGO — la
+  recarga posterior a la denuncia quitaba la reseña y con ella el diálogo y el
+  reintento. Corregido (la recarga espera al cierre del diálogo).
+- P, éxito/incierto, repetido tras la corrección: botones [Cerrar, Reintentar
+  el bloqueo]; "No sabemos si se guardó el bloqueo. Reintentá: no se duplica.".
+  Reintento: 1 pedido a /api/comunidad/bloqueos {"accion":"bloquear","version_id":862}
+  y ninguno a /denuncias; respuesta real bloqueado (repetido). Diálogo cerrado y aviso.
+- Q, éxito/error confirmado, 375 px: "No se pudo bloquear, probá de nuevo." y
+  [Cerrar, Reintentar el bloqueo]; ancho de documento 375. Respuesta real del
+  servidor: {"resultado":"denuncia_registrada"}. Reintento: 1 pedido a
+  /bloqueos, bloqueo creado.
+- R, denuncia rechazada/bloqueo permitido (real, denuncias_por_hora=0): diálogo
+  cerrado; aviso "Bloqueaste al autor…" con "Denunciar la reseña".
+- S, éxito/rechazo definitivo del bloqueo (real, limite_bloqueos=0): sólo
+  [Cerrar], "Llegaste al límite de bloqueos de hoy. Probá mañana.". Al cerrar,
+  1 recarga; el menú dice "Ya la denunciaste".
+Base al final del recorrido (antes de limpiar):
+  denuncias de A: x, y, z, p, q, s (una por autor); excedentes 0;
+  bloqueos de A: x, y, z, p, q, r (uno por autor).
+A1 · 375 px: bloqueados de A (6 filas, ancho 375) → B con lectura fallida: 0 filas y el error.
+
+Limpieza: limpio: 0|0|0|false|5/10/100/10/50/2/50/50/100
+Base: participantes 6, versiones 2, denuncias 0, bloqueos 0, huellas 0,
+excedentes 0, corroboraciones 0, cuentas @comunidad.test 42, locks 0.

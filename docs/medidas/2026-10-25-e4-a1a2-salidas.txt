@@ -1,0 +1,485 @@
+Salidas de la corrección A1/A2 de E4 (Claude, 25/10/2026, feat/resenas-reglas).
+Base: Supabase local (supabase start), datos ficticios @comunidad.test, corridas en secuencia.
+Todas son corridas REALES contra la base local salvo donde se indica. La respuesta
+perdida y la demora del recorrido de E4 no se repitieron acá.
+
+===== 1. A2 ANTES de la corrección (016 de 9340da9 aplicada): la regresión FALLA =====
+(SOLO='A2 ·'; la tercera prueba, denuncias cruzadas, se agregó después)
+docker: desktop-linux (config.json) → npipe:////./pipe/dockerDesktopLinuxEngine
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321 · app http://localhost:3100
+
+— Cuentas y sesiones reales —
+✔ admin con DOS factores TOTP reales (aal2), el mismo admin en aal1 y un usuario común
+
+— Permisos: catálogo y RPC directo —
+
+— Decisiones atadas a versión —
+
+— Suspensión —
+
+— Baja: cancelación (B10, B14), denuncias recibidas y concurrencia —
+     historial de b (dado de baja): 1; de c (activa): otro:cerrada_por_baja; resultado y: {"cuenta":"existe","origen":"app","marcador":"nuevo","participante":true,"sancion_hasta":null,"tramos_cerrados":0,"resenas_borradas":1,"bloqueos_borrados":0,"denuncias_borradas":0,"contadores_borrados":1,"evaluaciones_borradas":0,"denuncias_recibidas_cerradas":2}
+✖ A2 · bajas simultáneas, confirma primero quien DENUNCIÓ (secuencia de la auditoría): su historial no reaparece; la denuncia de una cuenta activa queda en el historial 
+    el historial de quien denunció reapareció después de su baja
+     historial de b (dado de baja): 0; de c (activa): otro:cerrada_por_baja; resultado y: {"cuenta":"existe","origen":"app","marcador":"nuevo","participante":true,"sancion_hasta":null,"tramos_cerrados":0,"resenas_borradas":0,"bloqueos_borrados":0,"denuncias_borradas":0,"contadores_borrados":1,"evaluaciones_borradas":0,"denuncias_recibidas_cerradas":0}
+✔ A2 · bajas simultáneas, confirma primero el AUTOR: la baja de quien denunció espera, relee y borra el historial recién creado; la de la cuenta activa queda
+
+— Publicación (T4) —
+
+— Lecturas del panel —
+
+— La ruta /api/admin/moderacion (servidor local) —
+
+— Limpieza (base compartida): sólo lo de esta corrida —
+   SELECT de profiles para authenticated (local): concedido para la corrida y revocado
+   cuentas: 8; restos (cuentas|participantes|decisiones|denuncias_cerradas|locks|interruptores): 0|0|0|0|0|false
+
+2 de 3 pasaron.
+Fallaron:
+ - A2 · bajas simultáneas, confirma primero quien DENUNCIÓ (secuencia de la auditoría): su historial no reaparece; la denuncia de una cuenta activa queda en el historial
+
+===== 2. A2 DESPUÉS (limpiar_participante con el lock de denuncias, 016 reaplicada) =====
+
+— Decisiones atadas a versión —
+
+— Suspensión —
+
+— Baja: cancelación (B10, B14), denuncias recibidas y concurrencia —
+     historial de b (dado de baja): 0; de c (activa): otro:cerrada_por_baja; resultado y: {"cuenta":"existe","origen":"app","marcador":"nuevo","participante":true,"sancion_hasta":null,"tramos_cerrados":0,"resenas_borradas":1,"bloqueos_borrados":0,"denuncias_borradas":0,"contadores_borrados":1,"evaluaciones_borradas":0,"denuncias_recibidas_cerradas":1}
+✔ A2 · bajas simultáneas, confirma primero quien DENUNCIÓ (secuencia de la auditoría): su historial no reaparece; la denuncia de una cuenta activa queda en el historial
+     historial de b (dado de baja): 0; de c (activa): otro:cerrada_por_baja; resultado y: {"cuenta":"existe","origen":"app","marcador":"nuevo","participante":true,"sancion_hasta":null,"tramos_cerrados":0,"resenas_borradas":0,"bloqueos_borrados":0,"denuncias_borradas":0,"contadores_borrados":1,"evaluaciones_borradas":0,"denuncias_recibidas_cerradas":0}
+✔ A2 · bajas simultáneas, confirma primero el AUTOR: la baja de quien denunció espera, relee y borra el historial recién creado; la de la cuenta activa queda
+
+— Publicación (T4) —
+
+— Lecturas del panel —
+
+— La ruta /api/admin/moderacion (servidor local) —
+
+— Limpieza (base compartida): sólo lo de esta corrida —
+   SELECT de profiles para authenticated (local): concedido para la corrida y revocado
+   cuentas: 8; restos (cuentas|participantes|decisiones|denuncias_cerradas|locks|interruptores): 0|0|0|0|0|false
+
+3 de 3 pasaron.
+
+===== 3. pruebas-admin.mjs completa (38) con el servidor local en :3100 =====
+docker: desktop-linux (config.json) → npipe:////./pipe/dockerDesktopLinuxEngine
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321 · app http://localhost:3100
+
+— Cuentas y sesiones reales —
+✔ admin con DOS factores TOTP reales (aal2), el mismo admin en aal1 y un usuario común
+
+— Permisos: catálogo y RPC directo —
+✔ catálogo: las 13 funciones del admin son security definer, search_path vacío, lock_timeout en las que escriben, EXECUTE SÓLO para authenticated
+✔ RPC directo por REST: anon, usuario común, admin AAL1 y service_role → 401/403 con 42501 en las 13; admin AAL2 → 200; nada cambia
+✔ adaptador de la ruta con la sesión AAL1 del admin y con un usuario común → `no_autorizado`; con AAL2 lee el resumen
+
+— Decisiones atadas a versión —
+✔ publicar un retenido: visible para otros, primera publicación fijada, sin votos ni tramos inventados, registrado con admin, motivo y versión
+✔ rechazar un retenido: el autor lo ve rechazado y PUEDE corregirlo (rechazada → reemplazada); una edición limpia se publica
+✔ revisión pedida (rechazo de contenido enviado a revisión): prioridad 1 en la cola; publicarla queda como falso positivo
+✔ retirar una publicada con votos: oculta, tramos cerrados, votos intactos, denuncias resueltas; restaurar: los MISMOS votos vuelven y los tramos se reabren con su mes original, sin duplicar
+✔ A1 · retirar → sale de las dos colas → la encuentran Retiradas y la situación del Registro (votos que vuelven) → restaurar desde ahí: mismos votos, mes original, sin duplicar; ya no figura
+✔ A1 · Retiradas pagina por cursor sin repetir; con AAL1 o usuario común, Retiradas y la situación son `no_autorizado`
+✔ A1 · retirada y después REEMPLAZADA, BORRADA o de una cuenta en BAJA: no figura en Retiradas, la situación lo dice y restaurar no resucita nada
+✔ decisión sobre una versión VIEJA: el autor editó → publicar la anterior es conflicto y la nueva no se toca
+✔ reseña BORRADA por el autor: publicar su retenido es conflicto; la reseña sigue borrada (no resucita)
+✔ cuenta en BAJA: la decisión tardía no encuentra nada (no_disponible) y la baja queda intacta
+✔ decisiones SIMULTÁNEAS sobre la misma versión (publicar y rechazar, intentos distintos): una se aplica, la otra es conflicto; un solo registro
+✔ reintento con el MISMO intento: devuelve lo registrado (repetido) sin otra fila; el mismo intento sobre OTRA versión es conflicto
+✔ respuesta PERDIDA después del commit: el adaptador repite UNA vez con el mismo intento y recupera `aplicada`; un solo registro
+✔ descartar: la reseña sigue visible, las denuncias quedan descartadas y la próxima denuncia de esas cuentas pesa la mitad
+✔ cerrar: con la reseña visible es conflicto (hay que decidir); borrada por el autor, el caso se archiva como resuelto
+✔ ataque de denuncias graves sobre una reseña legítima: sigue visible, sube a la cabeza de la cola; 'No me sirvió' masivo no cambia nada
+
+— Suspensión —
+✔ suspender: no publica ni vota; SÍ borra, denuncia, bloquea y retira votos (filas B–D). Levantar: vuelve a votar. Dos registros
+✔ suspender a una cuenta dada de baja: no_disponible (cuenta eliminada), nada se escribe
+✔ caso 5a · la suspensión (real) confirma primero: el voto (real) espera la fila del evaluador, relee y se rechaza (suspendida)
+✔ caso 5b · el voto (real) confirma primero: la suspensión (real) espera y su `desde` es POSTERIOR a la marca del voto
+✔ decisión del admin y edición del autor en paralelo (sesiones): la edición espera la reseña; al confirmar la decisión, la edición reemplaza la versión ya decidida
+
+— Baja: cancelación (B10, B14), denuncias recibidas y concurrencia —
+✔ B10 · quitar el marcador (real): nada se restaura; el participante viejo sigue huérfano; la próxima identidad nace nueva y publica
+✔ B14 · suspendida → baja → quitar el marcador con la sanción vigente: nace suspendida; no publica ni vota; sí bloquea, borra y vuelve a pedir la baja (reactiva)
+✔ levantar una sanción CON plazo (copiada por B14 con fin futuro): se acorta a ahora; nunca se reescribe el pasado
+✔ denuncias RECIBIDAS en la baja del autor: se cierran en el historial mínimo (sin texto, sin comentario, sin el autor); el peso de quien denunció se conserva; su propia baja las borra
+     historial de b (dado de baja): 0; de c (activa): otro:cerrada_por_baja; resultado y: {"cuenta":"existe","origen":"app","marcador":"nuevo","participante":true,"sancion_hasta":null,"tramos_cerrados":0,"resenas_borradas":1,"bloqueos_borrados":0,"denuncias_borradas":0,"contadores_borrados":1,"evaluaciones_borradas":0,"denuncias_recibidas_cerradas":1}
+✔ A2 · bajas simultáneas, confirma primero quien DENUNCIÓ (secuencia de la auditoría): su historial no reaparece; la denuncia de una cuenta activa queda en el historial
+     historial de b (dado de baja): 0; de c (activa): otro:cerrada_por_baja; resultado y: {"cuenta":"existe","origen":"app","marcador":"nuevo","participante":true,"sancion_hasta":null,"tramos_cerrados":0,"resenas_borradas":0,"bloqueos_borrados":0,"denuncias_borradas":0,"contadores_borrados":1,"evaluaciones_borradas":0,"denuncias_recibidas_cerradas":0}
+✔ A2 · bajas simultáneas, confirma primero el AUTOR: la baja de quien denunció espera, relee y borra el historial recién creado; la de la cuenta activa queda
+✔ A2 · denuncias CRUZADAS (cada uno denunció al otro) y bajas simultáneas: sin deadlock, la segunda espera y ningún historial de los dos queda
+✔ quitar el marcador mientras la baja de esa cuenta confirma (sesiones): espera su K_CUENTA y después cancela el marcador recién creado
+
+— Publicación (T4) —
+✔ pausar: nadie publica ni edita; leer, borrar, denunciar y bloquear siguen; reanudar: se publica. Registrado; repetir es sin efecto
+
+— Lecturas del panel —
+✔ cola de retenidos por prioridad (corroborada, revisión, retenida) y paginación por cursor sin repetir ni saltear
+✔ cola de denuncias y registro paginados sin repetir; cuentas lista suspensiones y bajas pendientes
+✔ muestreo: APAGADO devuelve nada; encendido sólo durante la prueba, como mucho 5 publicadas; vuelve a apagado
+
+— La ruta /api/admin/moderacion (servidor local) —
+✔ ruta: sin token 401; usuario común y admin AAL1 403; admin AAL2 200 con `private, no-store`; cuerpo inválido 400; decide con la sesión del admin
+
+— Limpieza (base compartida): sólo lo de esta corrida —
+   SELECT de profiles para authenticated (local): concedido para la corrida y revocado
+   cuentas: 72; restos (cuentas|participantes|decisiones|denuncias_cerradas|locks|interruptores): 0|0|0|0|0|false
+
+38 de 38 pasaron.
+
+===== 4. up-down-up-016 (dependencia modificada: 016) =====
+base: supabase_db_streamingcentral
+
+   volcado 1-con-016: 14891 líneas, sha256 6a664b32a73e0a37…
+✔ 016 aplicada, sin decisiones ni historial de denuncias que la bajada perdería, muestreo apagado
+   volcado 2-sin-016: 13734 líneas, sha256 d689d5b63d910089…
+✔ 016_down: quita todo lo de 016 y sólo restaura definiciones de 011, 012 y 015
+   volcado 3-sin-016-otra-vez: 13734 líneas, sha256 d689d5b63d910089…
+✔ 016_down repetida: inocua
+   volcado 4-con-016: 14891 líneas, sha256 6a664b32a73e0a37…
+   volcado 5-con-016-repetida: 14891 líneas, sha256 6a664b32a73e0a37…
+✔ 016 up: vuelve exactamente al volcado con 016; repetida, inocua
+   volcado 6-sin-016: 13734 líneas, sha256 d689d5b63d910089…
+   volcado 7-con-016: 14891 líneas, sha256 6a664b32a73e0a37…
+✔ segunda vuelta down → up: mismos volcados; datos ajenos intactos
+
+5 de 5 pasaron.
+
+===== 4. pruebas-permisos (dependencia modificada: 016) =====
+base: supabase_db_streamingcentral · API: http://127.0.0.1:54321
+
+— 1. SQL (SET ROLE) —
+✔ el esquema tiene exactamente las diecisiete tablas previstas (11 de E2a + intentos de E3a + 3 de E3b + 2 de E4)
+✔ catálogo: ningún privilegio de tabla para PUBLIC, anon, authenticated ni service_role
+✔ catálogo: ningún privilegio de columna para esos roles
+✔ catálogo: el esquema niega USAGE y CREATE; secuencias y funciones cerradas
+✔ control: una función nueva en el esquema SIN su revoke queda ejecutable por PUBLIC (default de PostgreSQL); la frena sólo el esquema
+✔ catálogo: RLS activada en las quince y ninguna policy
+✔ control positivo: el dueño (postgres) sí lee las quince tablas
+✔ control positivo: SET ROLE cambia de verdad el rol (current_user = anon)
+✔ 1a · esquema: 255 intentos reales → 42501
+✔ 1b · grants de tabla (USAGE concedido y revertido): 255 intentos → 42501
+✔ 1c · RLS sin policies (grants concedidos y revertidos, con fixtures): anon y authenticated no ven ni tocan nada
+✔ 1c · service_role tiene BYPASSRLS: con grants vería todo (por eso su cierre son 1a y 1b)
+✔ 1c · después de revertir, los grants de prueba no quedaron
+
+— Usuarios del Auth local —
+✔ crear autor, ajeno, suspendido y admin; participantes, reseña y suspensión puestas por el dueño
+✔ is_admin_mfa(): admin AAL1 → false
+✔ is_admin_mfa(): admin AAL2 con UN factor verificado → false
+✔ is_admin_mfa(): admin AAL2 con DOS factores TOTP verificados → true
+✔ is_admin_mfa(): el mismo admin con dos factores pero sesión nueva AAL1 → false
+✔ is_admin_mfa(): usuario común (sin is_admin) → false
+
+— 2. REST —
+✔ REST: 7 credenciales × 17 tablas × 4 métodos × 2 perfiles → nunca 2xx; 404 PGRST205 / 406 PGRST106
+✔ REST: el OpenAPI no menciona ninguna tabla de comunidad; de las RPC (E2b, E3a y E3b), anon no ve ninguna y service_role ve exactamente las del inventario
+✔ GraphQL: pg_graphql no está habilitada en la base local; el endpoint lo informa y no expone nada
+
+— 3. RPC —
+✔ las únicas public.comunidad_* son las del inventario (E2b, E3a, E3b y E4), security definer y search_path vacío
+✔ catálogo: EXECUTE sólo service_role en las de E2b–E3b, y sólo authenticated en las de moderación (E4)
+✔ RPC real por REST: anon y cada JWT reciben 401/403 en todas; service_role ejecuta (uid inexistente: sin efectos)
+✔ RPC real por REST a las de moderación (E4): anon, autor, ajeno, suspendido, admin AAL1 y service_role → 401/403 con 42501; el admin AAL2 con dos factores → 200 (pedidos sin efecto); nada se registra
+✔ ninguna función del esquema comunidad es ejecutable por PUBLIC ni por los roles de la API
+✔ RPC por REST a una función del esquema: 406 PGRST106 con el perfil, 404 sin él, para cada credencial
+
+— Evidencia: ACL efectivas del esquema —
+bajas_en_curso: {postgres=arwdDxtm/postgres}
+bloqueos: {postgres=arwdDxtm/postgres}
+bloqueos_id_seq: {postgres=rwU/postgres}
+config: {postgres=arwdDxtm/postgres}
+contadores: {postgres=arwdDxtm/postgres}
+corroboraciones: {postgres=arwdDxtm/postgres}
+decisiones: {postgres=arwdDxtm/postgres}
+decisiones_id_seq: {postgres=rwU/postgres}
+denuncias: {postgres=arwdDxtm/postgres}
+denuncias_cerradas: {postgres=arwdDxtm/postgres}
+denuncias_cerradas_id_seq: {postgres=rwU/postgres}
+denuncias_excedentes: {postgres=arwdDxtm/postgres}
+denuncias_id_seq: {postgres=rwU/postgres}
+esquema comunidad: {postgres=UC/postgres}
+evaluaciones: {postgres=arwdDxtm/postgres}
+evaluaciones_id_seq: {postgres=rwU/postgres}
+huellas: {postgres=arwdDxtm/postgres}
+intentos: {postgres=arwdDxtm/postgres}
+participantes: {postgres=arwdDxtm/postgres}
+resenas: {postgres=arwdDxtm/postgres}
+resenas_id_seq: {postgres=rwU/postgres}
+suspensiones: {postgres=arwdDxtm/postgres}
+suspensiones_id_seq: {postgres=rwU/postgres}
+tramos: {postgres=arwdDxtm/postgres}
+tramos_id_seq: {postgres=rwU/postgres}
+versiones: {postgres=arwdDxtm/postgres}
+versiones_id_seq: {postgres=rwU/postgres}
+
+— Limpieza (base compartida): sólo lo que creó esta corrida —
+   cuentas: 4; restos (cuentas|participantes): 0|0
+
+28 de 28 pasaron.
+
+===== 4. pruebas-baja (dependencia modificada: 016) =====
+docker: desktop-linux (config.json) → npipe:////./pipe/dockerDesktopLinuxEngine
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321 · app http://localhost:3100
+
+— Permisos de las funciones nuevas (SQL con SET ROLE) —
+✔ anon y authenticated no ejecutan las cuatro; service_role no ejecuta las internas
+✔ service_role SÍ ejecuta las cuatro (uid inexistente: sin efectos)
+
+— B6: cuenta sin participante —
+✔ B6 · sólo marcador; después deleteUser → completa; el marcador cae con la cuenta
+
+— B1, B2, B13, B7: baja parcial, ventana, aviso y reintento —
+✔ B1 · paso 1 confirma y deleteUser FALLA (trigger real) → baja-parcial con el texto del contrato
+✔ B1 · lo de la otra cuenta queda: su reseña, su bloqueo; sólo cae lo que colgaba de lo borrado
+✔ B2 · durante la ventana, otra sesión que quiera escribir (resolver_participante) → baja_en_curso; no se crea participante
+✔ B13 · login nuevo con marcador: GET /api/cuenta/estado-baja → pendiente; otra cuenta no lo ve; sin sesión → 401
+✔ B7 · reingreso con marcador y reintento: completa; no queda marcador ni vínculo
+
+— B3a, B3b: escrituras en vuelo (preliminar, §5.0) —
+✔ B3a · escritura que tomó K_CUENTA antes: confirma; la baja espera y después la borra y cierra su tramo
+✔ B3b · escritura que verificó el Bearer antes pero llega después (secuencial): baja_en_curso, nada escrito
+✔ B3b · la misma, esperando K_CUENTA mientras la baja confirma: relee el marcador y se rechaza
+
+— B4, B5: pedidos simultáneos y respuesta perdida —
+✔ B4 · dos baja_comunitaria a la vez: se serializan; la segunda no cambia nada
+   deleteUser simultáneos: true, true
+✔ B4 · dos flujos completos a la vez: los dos responden ok (eliminación completa)
+✔ B4 · el segundo deleteUser llega cuando el primero ya borró: falla (404) y reconcilia → los dos responden ok
+✔ B5 · Auth borró pero la respuesta se perdió: reconcilia → completa; sin marcador (cascada)
+
+— B12: no se puede verificar —
+[TypeError: fetch failed] {
+  [cause]: Error: connect ECONNREFUSED 127.0.0.1:59999
+      at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1706:16) {
+    errno: -4078,
+    code: 'ECONNREFUSED',
+    syscall: 'connect',
+    address: '127.0.0.1',
+    port: 59999
+  }
+}
+✔ B12 · deleteUser falla y getUserById falla por red → baja-sin-verificar; nunca ok; el marcador sigue
+✔ B12 · sin configuración para verificar (cliente ausente) → también baja-sin-verificar
+✔ B12 · el reintento vuelve a reconciliar: con red → baja-parcial; sin la falla → completa
+
+— B9: runbook (baja pedida fuera de la app) —
+✔ B9 · comunidad_baja_comunitaria_admin y después borrado en Auth → completa; la consulta del runbook da 0
+
+— B10, B11, B14: cancelación y suspensiones —
+✔ B10 · el admin cancela el marcador (preliminar: dueño de la base): nada se restaura; la próxima escritura crea OTRO participante
+✔ B11 · cuenta suspendida pide la baja: se permite; la suspensión no se toca; el marcador impide recrear identidad
+✔ B14 · suspendida → paso 1 → el admin cancela con la sanción vigente: el participante nuevo nace suspendido hasta sancion_hasta
+✔ B10/B14 · una baja con marcador cancelado lo REACTIVA (no crea otro)
+
+— B8: borrado por Auth SIN paso 1, con voto concurrente y consolidación esperando (preliminar) —
+   deleteUser: ok en 5850 ms · abortada: ninguna · escritura confirmó
+✔ B8a · voto de OTRA cuenta en vuelo + consolidación esperando: ciclo de colas; la baja termina o se revierte entera
+   deleteUser: error 500 en 5979 ms · abortada: auth (500 {}) · escritura confirmó
+✔ B8b · escritura de la PROPIA cuenta en vuelo (retiene su K_CUENTA) + consolidación: deadlock real; se aborta una; nunca a medio cerrar
+   deleteUser: error 500 en 12257 ms · abortada: auth (500 {}) · escritura confirmó
+✔ B8c · escritura de la propia cuenta que retiene K_CUENTA más que lock_timeout (5 s): Auth se revierte ENTERA y el reintento termina
+
+— Limpieza (base compartida) —
+   cuentas creadas: 24, participantes: 25; restos (cuentas|participantes|solo_local|trigger): 0|0|0|0
+
+26 de 26 pasaron.
+
+===== 4. pruebas-invariantes (dependencia modificada: 016) =====
+base: supabase_db_streamingcentral · API: http://127.0.0.1:54321
+
+— Control positivo —
+✔ las fixtures completas (las once tablas) confirman → ok
+✔ config: una sola fila, todo apagado por defecto y límites de §2.1.2 → ok
+
+— Autoría: FK compuesta y CHECK de la misma fila —
+✔ autoevaluación (evaluador = autor de la versión) → 23514
+✔ evaluación que declara otro autor que el de la versión → 23503
+✔ denuncia de la propia reseña → 23514
+✔ denuncia que declara otro autor → 23503
+✔ tramo propio (evaluador = autor) → 23514
+✔ tramo con un autor que no es el de la versión (trigger) → 23503
+✔ tramo con una versión inexistente → 23503
+✔ bloquearse a sí mismo → 23514
+✔ una versión de una reseña con otro autor declarado → 23503
+
+— Texto de la versión: largo, NFC y controles —
+✔ 79 caracteres → 23514
+✔ 80 caracteres → ok
+✔ 600 caracteres → ok
+✔ 601 caracteres → 23514
+✔ 600 letras astrales (600 puntos de código, 1200 unidades UTF-16) → ok
+✔ texto en NFD (e + acento combinante) → 23514
+✔ el mismo texto en NFC → ok
+✔ con salto de línea (fin de oración) → ok
+✔ con tabulación → 23514
+✔ con U+202E (inversión bidireccional) → 23514
+✔ con U+200B (espacio de ancho cero) → 23514
+✔ con U+0085 (control C1) → 23514
+
+— Unicidad —
+✔ segunda reseña viva del mismo autor y título → 23505
+✔ mismo autor, otro tipo (tv 603) sí → ok
+✔ después de borrar la suya (borrada_en), puede volver a reseñar el título → ok
+✔ segundo voto vigente del mismo evaluador a la misma versión → 23505
+✔ retirado el voto, puede votar de nuevo → ok
+✔ segunda denuncia del mismo denunciante a la misma versión → 23505
+✔ segundo tramo abierto del mismo evaluador y versión → 23505
+✔ segunda suspensión abierta del mismo participante → 23505
+✔ el mismo id_intento dos veces en la misma reseña (reintento) → 23505
+✔ dos participantes con el mismo user_id → 23505
+✔ segunda fila de config → 23505
+✔ config con id = false → 23514
+
+— Estados de versión y vigencia —
+✔ edición publicada: la vieja pasa a reemplazada y la vigente se mueve → ok
+✔ edición retenida: la vieja deja de verse (reemplazada) → ok
+✔ reemplazada → publicada → 23514
+✔ rechazada → publicada → 23514
+✔ rechazada → reemplazada (el autor corrige la rechazada; E4) → ok
+✔ publicada → oculta → publicada (restauración del admin) → ok
+✔ revision_solicitada → publicada (el admin aprueba) → ok
+✔ una versión no nace reemplazada → 23514
+✔ una versión no nace oculta → 23514
+✔ el texto de una versión no cambia → 23514
+✔ una reseña no cambia de título → 23514
+✔ dos versiones publicadas: la nueva no es la vigente (al confirmar) → 23514
+✔ mover la vigente sin reemplazar la publicada anterior (al confirmar) → 23514
+✔ la vigente marcada reemplazada sin moverla (al confirmar) → 23514
+✔ reseña sin versión vigente (al confirmar) → 23514
+✔ vigente que apunta a una versión de OTRA reseña (al confirmar) → 23503
+
+— Tramos y suspensiones: intervalos que sólo se cierran —
+✔ cerrar un tramo → ok
+✔ cerrar un tramo dos veces → 23514
+✔ reabrir un tramo cerrado → 23514
+✔ cerrar un tramo antes de que empiece (intervalo vacío) → 23514
+✔ un tramo no nace cerrado → 23514
+✔ mes de primera positiva que no es día 1 → 23514
+✔ un tramo sobrevive al borrado de su reseña (versión sin FK) → ok
+✔ cerrar una suspensión y volver a cerrarla → 23514
+✔ acortar hacia el futuro una suspensión con plazo (E4) → ok
+✔ alargar una suspensión con plazo → 23514
+✔ llevar al pasado el fin de una suspensión → 23514
+✔ cerrada la suspensión, puede abrirse otra → ok
+
+— Nombre comunitario —
+✔ 1 carácter → 23514
+✔ 2 caracteres → ok
+✔ 24 caracteres → ok
+✔ 25 caracteres → 23514
+✔ con un control (U+0007) → 23514
+✔ con salto de línea → 23514
+✔ con U+202E → 23514
+✔ con espacio inicial → 23514
+✔ en NFD → 23514
+✔ en NFC, con espacio interior → ok
+
+— Denuncias, contadores, bloqueos —
+✔ categoría fuera de la lista → 23514
+✔ comentario de 301 caracteres → 23514
+✔ comentario de 300 caracteres → ok
+✔ cerrar una denuncia sin fecha de cierre → 23514
+✔ cerrar una denuncia con fecha → ok
+✔ contador negativo → 23514
+✔ acción de contador desconocida → 23514
+✔ tipo de reseña desconocido → 23514
+
+— Auth: borrado de la cuenta —
+✔ borrar auth.users (SQL): desvincula y la red de seguridad (E2b) borra lo propio, cierra tramos y conserva suspensiones; el marcador cae → ok
+✔ borrar un participante con reseñas está prohibido (no hay cascada desde participantes) → 23503
+✔ borrar con la API real de Auth (admin.deleteUser): user_id → null, nombre → null (red de seguridad, E2b), marcador → borrado
+✔ ninguna fixture de los casos quedó en la base
+
+85 de 85 pasaron.
+
+===== 4. pruebas-moderacion (dependencia modificada: 016) =====
+docker: desktop-linux (config.json) → npipe:////./pipe/dockerDesktopLinuxEngine
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321 · app http://localhost:3100
+
+— Duplicados (§3.3.1): huella HMAC, sin texto en claro —
+✔ duplicados · el mismo texto en otro título de la misma cuenta → 'retenida' (sin revelar la regla); otro texto → 'publicada'
+✔ duplicados · casi duplicado propio (una palabra cambiada, Jaccard ≥ 0,8) → retenida, también como edición de OTRA reseña; editar la MISMA reseña con un cambio chico → publicada
+✔ duplicados · el mismo texto en 3 cuentas → la 4.ª cuenta queda 'retenida' (duplicado_coordinado); las 3 primeras, publicadas
+✔ duplicados · CONCURRENCIA: 7 cuentas publican el mismo texto a la vez → exactamente 3 publicadas y 4 retenidas (lock por hash, nivel 8)
+✔ duplicados · la tabla de huellas NO contiene texto: sólo hex (64 y 16); ninguna palabra del texto aparece; un shingle en claro lo rechaza el CHECK
+✔ duplicados · borrar la reseña borra sus huellas; volver a publicar el mismo texto ya no es duplicado
+✔ duplicados · sin secreto HMAC la escritura responde 'error' y no toca la base (una regla que no corre nunca aprueba)
+
+— Admisión a la cola de retenidos (§3.3) —
+✔ admisión · por autor: con 2 retenidos, el 3.º que sería retenido NO se guarda ('admision_autor', sin cupo); lo limpio se publica
+✔ admisión · por autor: editar uno de SUS 2 retenidos con otro texto retenido se admite (la vigente reemplazada sale de la cola)
+✔ admisión · por autor, CONCURRENCIA: 5 envíos retenibles simultáneos de la misma cuenta → exactamente 2 retenidos y 3 'admision_autor'
+✔ admisión · global, CONCURRENCIA (ataque que llena la cola): tope = cola + 3; 10 cuentas envían spam a la vez → exactamente 3 entran y 7 reciben 'admision_global'; lo limpio se sigue publicando
+✔ admisión · lo retenido NO se publica por vencimiento: no hay job que lo haga (pg_cron no programa nada sobre comunidad)
+
+— Pedir revisión de un rechazo por contenido (§3.3.3, §3.4.1) —
+✔ revisión · publicar con teléfono → rechazo_contenido (nada guardado); pedir revisión (id nuevo) → 'revision_solicitada', invisible para otros, cuenta para el límite
+✔ revisión · si las reglas vigentes ya no rechazan el texto, es un envío normal ('publicada')
+✔ revisión · edición: sin confirmar → 'requiere_confirmacion' sin tocar nada; confirmada → la publicada se reemplaza (deja de verse), votos reiniciados UNA vez
+✔ revisión · pasa por la admisión: con 2 retenidos propios → 'admision_autor' y nada guardado
+✔ revisión · idempotencia: respuesta perdida tras el commit → el reintento con el mismo id devuelve lo guardado (UNA versión); el mismo id sin revisión → conflicto
+
+— Denuncias (§3.3.2) —
+✔ denuncia · se registra, la reseña SIGUE VISIBLE; repetirla da el mismo resultado sin otra fila ni otro cupo; quien denuncia la ve marcada
+✔ denuncia · no la propia ('propia'); no lo invisible (retenida → 'version_no_disponible'); motivo fuera del diseño → 'invalido' sin tocar la base
+✔ denuncia · ATAQUE: 8 cuentas denuncian como grave una reseña legítima → sigue publicada y visible, y queda PRIMERA en la cola (la cantidad ordena, no oculta)
+✔ denuncia · cota por versión, CONCURRENCIA: tope 3 filas; 7 denuncias simultáneas → 3 filas + excedente 4, todas 'denuncia_registrada'; sigue publicada
+✔ denuncia · tope global por hora, CONCURRENCIA: tope = ingreso + 4; 9 cuentas denuncian a la vez → exactamente 4 recibidas y 5 'cola_denuncias_llena'; con bloquear, el bloqueo se hace igual
+✔ denuncia · límite diario propio (tope 2): la 3.ª → 'limite_diario'
+✔ denuncia · CORROBORACIÓN: una versión publicada con reglas viejas que las vigentes retendrían pasa a 'retenida' POR LA REGLA; una legítima denunciada, no
+✔ denuncia · 'No me sirvió' masivo (12 cuentas) → ningún efecto de moderación: publicada, sin denuncias, fuera de la cola
+✔ denuncia · respuesta perdida tras el commit → se reconcilia: 'denuncia_registrada' repetida, UNA fila, UN cupo; perdidas las dos → 'sin_confirmar' y el reintento no duplica
+
+— Bloqueos (§3.3.4) —
+✔ bloqueo · oculta TODAS las reseñas del autor sólo para quien bloquea; los demás las siguen viendo; su estado no cambia
+✔ bloqueo · idempotente; no a sí mismo ('propio'); límite diario (tope 1 → el 2.º 'limite_diario'); se puede denunciar después de bloquear
+✔ desbloqueo · por id: vuelve a verse; el bloqueo de OTRA cuenta no se toca ('sin_efecto', la fila sigue); repetirlo es 'sin_efecto'
+✔ bloqueo y desbloqueo · respuesta perdida tras el commit → reconciliados sin duplicar ni fallar
+
+— Matriz filas C (denunciar) y D (bloquear, desbloquear) (§2.1.2) —
+✔ matriz · suspendido: C → 'denuncia_registrada'; D → permitidas
+✔ matriz · correo pendiente: C → 'correo_pendiente'; D → permitidas
+✔ matriz · términos sin aceptar: C → 'denuncia_registrada'; D → permitidas
+✔ matriz · publicación pausada: C → 'denuncia_registrada'; D → permitidas
+✔ matriz · módulo apagado: C → 'modulo_apagado'; D → permitidas
+✔ matriz · cola de retenidos llena: C → 'denuncia_registrada'; D → permitidas
+✔ matriz · cola de denuncias llena: C → 'cola_denuncias_llena'; D → permitidas
+✔ matriz · baja en curso: C → 'baja_en_curso'; D → 'baja_en_curso'
+
+— Protocolo: niveles 8 (huella) y 9 (cola) —
+✔ protocolo · fuera de orden → CB002: cola antes que huella, huella o cola después de la marca, cola repetida; saltear la huella vale
+
+— Compuertas con sesiones psql: el segundo ESPERA el lock del nivel 8/9 y relee —
+✔ compuerta · admisión global: X entra a la cola (tope = cola + 1) y retiene; Y espera el lock 7304, relee y recibe 'admision_global'
+✔ compuerta · denuncias por hora: X recibe la última (tope = ingreso + 1) y retiene; Y espera el lock 7304, relee y recibe 'cola_denuncias_llena'
+✔ compuerta · duplicado entre cuentas: con el texto en 2 cuentas, X (3.ª) publica y retiene el hash; Y (4.ª) espera el lock 7303, relee y queda 'retenida'
+
+— Acceso directo —
+✔ acceso directo · un JWT de usuario (y anon) no lee ni escribe las tablas nuevas ni ejecuta las funciones de E3b
+
+— Rutas HTTP (servidor local) —
+✔ rutas · sin sesión → 401; cuerpo inválido → 400; sin caché
+✔ rutas · denunciar + bloquear en un paso por HTTP: la respuesta no trae el texto; la reseña desaparece para quien bloquea; listar y desbloquear por HTTP
+✔ rutas · pedir revisión por HTTP: edición sin confirmar → 'requiere_confirmacion'; publicar → 'revision_solicitada'
+
+— Limpieza (base compartida) —
+   cuentas: 147; restos (cuentas|participantes|locks|interruptores encendidos|límites): 0|0|0|false|{"limite_resenas":5,"limite_ediciones":10,"limite_evaluaciones":100,"limite_denuncias":10,"limite_bloqueos":50,"admision_por_autor":2,"admision_global":50,"denuncias_filas_por_version":50,"denuncias_por_hora":100}
+
+46 de 46 pasaron.
+
+===== 5. npm test (unitarias y barridos; no toca la base) =====
+ℹ tests 2476
+ℹ suites 0
+ℹ pass 2460
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 16
+ℹ todo 0
+
+===== 6. tsc --noEmit --incremental false =====
+exit 0, sin errores (después del último cambio de app/admin/moderacion/page.tsx)
+
+===== 7. unitarias focalizadas después del último cambio del panel =====
+node --test admin-nucleo, cors-inventario, api-base, descartes-tmdb-inventario: 82/82

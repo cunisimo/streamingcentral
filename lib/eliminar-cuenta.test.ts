@@ -121,18 +121,42 @@ test("nunca dice 0 minutos estando bloqueado", () => {
 
 import { correrFlujo, cuentaComoIntento, type Dependencias } from "./eliminar-cuenta-flujo.ts";
 
-// Espías: registran si cada paso llegó a ejecutarse. Es lo único que hay que
-// demostrar acá — QUÉ corre y qué no.
-function espias(o: { hayAdmin?: boolean; passwordOk?: boolean; borradoOk?: boolean } = {}) {
-  const llamadas = { validarPassword: 0, borrar: 0, emails: [] as string[] };
+// Espías: registran si cada paso llegó a ejecutarse, y en qué orden. Es lo
+// único que hay que demostrar acá — QUÉ corre y qué no.
+type Opciones = {
+  hayAdmin?: boolean; passwordOk?: boolean; comunidadOk?: boolean | "lanza";
+  borradoOk?: boolean | "lanza"; existe?: "existe" | "no-existe" | "indeterminado" | "lanza";
+  registrarLanza?: boolean;
+};
+function espias(o: Opciones = {}) {
+  const llamadas = { validarPassword: 0, borrar: 0, comunidad: 0, existe: 0, registrar: 0, emails: [] as string[], orden: [] as string[] };
   const deps: Dependencias = {
-    hayAdmin: () => o.hayAdmin ?? true,
+    hayAdmin: () => { llamadas.orden.push("config"); return o.hayAdmin ?? true; },
     validarPassword: async (email) => {
       llamadas.validarPassword++;
+      llamadas.orden.push("password");
       llamadas.emails.push(email);
       return o.passwordOk ?? true;
     },
-    borrar: async () => { llamadas.borrar++; return o.borradoOk ?? true; },
+    bajaComunitaria: async () => {
+      llamadas.comunidad++; llamadas.orden.push("comunidad");
+      if (o.comunidadOk === "lanza") throw new Error("red");
+      return o.comunidadOk ?? true;
+    },
+    borrar: async () => {
+      llamadas.borrar++; llamadas.orden.push("deleteUser");
+      if (o.borradoOk === "lanza") throw new Error("respuesta perdida");
+      return o.borradoOk ?? true;
+    },
+    existe: async () => {
+      llamadas.existe++; llamadas.orden.push("getUserById");
+      if (o.existe === "lanza") throw new Error("red");
+      return o.existe ?? "existe";
+    },
+    registrarFallo: async () => {
+      llamadas.registrar++; llamadas.orden.push("registrar");
+      if (o.registrarLanza) throw new Error("red");
+    },
   };
   return { deps, llamadas };
 }
@@ -180,17 +204,68 @@ test("CON service role, una contraseña mal SÍ suma al límite y no borra", asy
   assert.equal(cuentaComoIntento(r), true);
 });
 
-test("el camino feliz ejecuta los tres pasos, en orden", async () => {
+test("el camino feliz: configuración → contraseña → comunidad → deleteUser, en ese orden", async () => {
   const { deps, llamadas } = espias({ hayAdmin: true, passwordOk: true, borradoOk: true });
   assert.deepEqual(await correrFlujo(deps, CUENTA), { ok: true });
-  assert.equal(llamadas.validarPassword, 1);
-  assert.equal(llamadas.borrar, 1);
+  assert.deepEqual(llamadas.orden, ["config", "password", "comunidad", "deleteUser"]);
+  assert.equal(llamadas.existe, 0, "con deleteUser ok no hace falta reconciliar");
   assert.deepEqual(llamadas.emails, [CUENTA.email], "se valida contra el email del token");
 });
 
-test("si el borrado falla, la contraseña ya se validó y NO suma al límite", async () => {
-  const { deps } = espias({ hayAdmin: true, passwordOk: true, borradoOk: false });
+test("con la contraseña mal NO se toca lo comunitario", async () => {
+  const { deps, llamadas } = espias({ passwordOk: false });
+  await correrFlujo(deps, CUENTA);
+  assert.equal(llamadas.comunidad, 0);
+  assert.equal(llamadas.borrar, 0);
+});
+
+test("si el paso comunitario falla (o lanza), no se llama a deleteUser: fallo-borrado, no suma intentos", async () => {
+  for (const comunidadOk of [false, "lanza"] as const) {
+    const { deps, llamadas } = espias({ comunidadOk });
+    const r = await correrFlujo(deps, CUENTA);
+    assert.deepEqual(r, { ok: false, motivo: "fallo-borrado" }, String(comunidadOk));
+    assert.equal(llamadas.borrar, 0);
+    assert.equal(cuentaComoIntento(r), false, "la contraseña estaba bien: no es un intento fallido");
+  }
+});
+
+test("B1: deleteUser falla y la cuenta EXISTE → baja-parcial, con el fallo registrado", async () => {
+  const { deps, llamadas } = espias({ borradoOk: false, existe: "existe" });
   const r = await correrFlujo(deps, CUENTA);
-  assert.deepEqual(r, { ok: false, motivo: "fallo-borrado" });
-  assert.equal(cuentaComoIntento(r), false, "la contraseña estaba bien: no es un intento fallido");
+  assert.deepEqual(r, { ok: false, motivo: "baja-parcial" });
+  assert.deepEqual(llamadas.orden, ["config", "password", "comunidad", "deleteUser", "getUserById", "registrar"]);
+  assert.equal(cuentaComoIntento(r), false);
+});
+
+test("B1: si registrar el fallo también falla, la respuesta sigue siendo baja-parcial", async () => {
+  const { deps } = espias({ borradoOk: false, existe: "existe", registrarLanza: true });
+  assert.deepEqual(await correrFlujo(deps, CUENTA), { ok: false, motivo: "baja-parcial" });
+});
+
+test("B4/B5: deleteUser falla o lanza (respuesta perdida, otro pedido ganó) y la cuenta NO existe → ok", async () => {
+  for (const borradoOk of [false, "lanza"] as const) {
+    const { deps, llamadas } = espias({ borradoOk, existe: "no-existe" });
+    assert.deepEqual(await correrFlujo(deps, CUENTA), { ok: true }, String(borradoOk));
+    assert.equal(llamadas.registrar, 0);
+  }
+});
+
+test("B12: deleteUser falla y getUserById falla o lanza → baja-sin-verificar, NUNCA ok", async () => {
+  for (const existe of ["indeterminado", "lanza"] as const) {
+    const { deps, llamadas } = espias({ borradoOk: false, existe });
+    const r = await correrFlujo(deps, CUENTA);
+    assert.deepEqual(r, { ok: false, motivo: "baja-sin-verificar" }, existe);
+    assert.equal(llamadas.registrar, 0, "no se sabe si existe: no se escribe nada");
+  }
+});
+
+test("ningún camino devuelve ok: true si getUserById encuentra la cuenta o falla", async () => {
+  const combos: Opciones[] = [];
+  for (const borradoOk of [false, "lanza"] as const)
+    for (const existe of ["existe", "indeterminado", "lanza"] as const)
+      for (const registrarLanza of [false, true]) combos.push({ borradoOk, existe, registrarLanza });
+  for (const o of combos) {
+    const r = await correrFlujo(espias(o).deps, CUENTA);
+    assert.equal(r.ok, false, JSON.stringify(o));
+  }
 });

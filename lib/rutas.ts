@@ -66,6 +66,17 @@ export function hrefSala(id: string, opts: Opciones = {}): string {
   return esNativo(opts.nativo) ? `/s/?id=${id}` : `/sala/${id}`;
 }
 
+/**
+ * El href INTERNO al perfil comunitario de un autor (E6). Es el MISMO en la
+ * web y en el contenedor: `/u/?id=<participante>` es estática y lee la query,
+ * así que no hay segmento dinámico que el export no pueda enumerar. El id es
+ * el del participante (seudónimo comunitario), nunca el de la cuenta. No es
+ * un enlace para repartir: el perfil exige sesión.
+ */
+export function hrefPerfil(id: string): string {
+  return `/u/?id=${id}`;
+}
+
 // Los parámetros se validan y NO se confía en la URL: `/t` y `/p` son rutas
 // públicas del bundle y cualquiera puede escribirles cualquier cosa.
 const soloDigitos = /^\d+$/;
@@ -97,4 +108,13 @@ export function parseParamsPersona(sp: URLSearchParams): { id: string } | null {
   const id = sp.get("id");
   if (!id || !soloDigitos.test(id)) return null;
   return { id };
+}
+
+const UUID_PERFIL = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Valida el param de `/u`. Devuelve null si es inválido. */
+export function parseParamsPerfil(sp: URLSearchParams): { id: string } | null {
+  const id = sp.get("id");
+  if (!id || !UUID_PERFIL.test(id)) return null;
+  return { id: id.toLowerCase() };
 }

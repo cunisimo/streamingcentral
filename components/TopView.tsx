@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { olvidarTrack, useTrackScroll } from "@/hooks/useTrackScroll";
 import { consumirVuelta, decidirRestauracionVista, guardarVista } from "@/hooks/lista-paginada-store";
 import { contextoDe, snapshotVigente } from "@/hooks/restauracion-vigente";
@@ -12,6 +12,8 @@ import TitleCard from "./TitleCard";
 import PlatformLogo from "./PlatformLogo";
 import OfflineState from "./pwa/OfflineState";
 import { platformByCode } from "@/lib/providers-ar";
+import { apiUrl } from "@/lib/api-base";
+import TopYumpers from "./comunidad/TopYumpers";
 import type { TopBlock, TopPayload } from "@/lib/top";
 import type { MediaType } from "@/lib/types";
 
@@ -88,7 +90,7 @@ function Bloque({ b, tipo }: { b: TopBlock; tipo: MediaType }) {
   );
 }
 
-export default function TopView() {
+function TopPlataformas({ selector }: { selector: ReactNode }) {
   const online = useOnline();
   const { platforms } = usePlatforms();
   const [tipo, setTipo] = useShelfType("top", "movie");
@@ -199,12 +201,13 @@ export default function TopView() {
   // bloques en pantalla, un refetch fallido no los borra (keepPrevious) — se
   // avisa arriba y se ofrece reintentar sin tapar lo que sí cargó.
   if (!hayContenido && !cargando && (!online || offline)) {
-    return <div className="wrap"><OfflineState onRetry={retry} /></div>;
+    return <div className="wrap">{selector}<OfflineState onRetry={retry} /></div>;
   }
 
   return (
     <div className="wrap">
       <h1 className="section-title">Top Yump</h1>
+      {selector}
       <p className="section-sub">Lo que más se está viendo en Argentina.</p>
       <div className="top-toggle">
         <ShelfTypeToggle value={tipo} onChange={setTipo} />
@@ -250,4 +253,58 @@ export default function TopView() {
       )}
     </div>
   );
+}
+
+// ---------------------------------------------------------------------------
+// E7: el selector «Top semanal plataformas» / «Top Yumpers».
+//
+// El Top de plataformas sigue siendo PÚBLICO y exclusivamente manual: es el
+// mismo componente de arriba, con su fuente (/api/top), su toggle
+// Películas/Series y su snapshot de vuelta. El Top Yumpers es OTRA vista
+// (components/comunidad/TopYumpers.tsx): exige sesión, no tiene toggle, no
+// usa `sessionStorage` y no comparte fuente ni caché con el de plataformas.
+//
+// El selector aparece sólo si el módulo y el Top Yumpers están encendidos:
+// lo dice /api/comunidad/top-yumpers SIN token (401 con `activo` y nada
+// más). Apagados, /top es exactamente el de antes. Qué sección se ve vive
+// en el estado del componente: no se persiste.
+// ---------------------------------------------------------------------------
+type Seccion = "plataformas" | "yumpers";
+const SECCIONES: { id: Seccion; titulo: string }[] = [
+  { id: "plataformas", titulo: "Top semanal plataformas" },
+  { id: "yumpers", titulo: "Top Yumpers" },
+];
+
+export default function TopView() {
+  const [seccion, setSeccion] = useState<Seccion>("plataformas");
+  const [hayYumpers, setHayYumpers] = useState(false);
+  useEffect(() => {
+    let vivo = true;
+    fetch(apiUrl("/api/comunidad/top-yumpers"), { cache: "no-store" })
+      .then((r) => r.json())
+      .then((j) => { if (vivo && j && typeof j === "object" && (j as { activo?: unknown }).activo === true) setHayYumpers(true); })
+      .catch(() => { /* sin dato: el selector no aparece y /top queda como siempre */ });
+    return () => { vivo = false; };
+  }, []);
+
+  const selector = hayYumpers ? (
+    <div className="cm-orden top-secciones" role="radiogroup" aria-label="Qué top ver">
+      {SECCIONES.map((x) => (
+        <button key={x.id} type="button" role="radio" aria-checked={seccion === x.id}
+          className={`cm-orden-op${seccion === x.id ? " on" : ""}`} onClick={() => setSeccion(x.id)}>{x.titulo}</button>
+      ))}
+    </div>
+  ) : null;
+
+  if (hayYumpers && seccion === "yumpers") {
+    return (
+      <div className="wrap">
+        <h1 className="section-title">Top Yump</h1>
+        {selector}
+        <p className="section-sub">Quienes más ayudaron con sus reseñas en el último mes.</p>
+        <TopYumpers />
+      </div>
+    );
+  }
+  return <TopPlataformas selector={selector} />;
 }

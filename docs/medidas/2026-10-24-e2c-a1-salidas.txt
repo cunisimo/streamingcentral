@@ -1,0 +1,662 @@
+# Corrección A1 de la auditoría de E2c (actores cruzados): salidas de las corridas de Claude (24/10/2026)
+# Base: supabase start (supabase_db_streamingcentral). Sin Producción. En secuencia y en este orden.
+# Correos de cuentas ficticias reemplazados por '…'.
+
+### ANTES de la corrección (013 original 61e91531…) — regresión de actores cruzados, corrida 1 (2026-10-24T17:09:45-03:00)
+docker: desktop-linux (config.json) → npipe:////./pipe/dockerDesktopLinuxEngine
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321
+inicio: 2026-10-24 20:09:52.378141+00
+
+(sólo las pruebas que contienen «cruce»)
+
+— Permisos de las primitivas (SQL con SET ROLE) —
+
+— El guardián del orden (nivel por transacción) —
+
+— Actores cruzados (auditoría de E2c, A1) —
+   filas de participante tras el paso de cuenta: A=bloqueada, B=bloqueada
+✖ cruce · A evalúa la reseña de B y B la de A, coordinados después del paso de cuenta: los dos confirman, sin deadlock ni CB002
+    errores: deadlock detected
+
+— Caso 1: dos sesiones sobre el mismo (evaluador, versión) (preliminar; gate en E3a) —
+
+— Caso 2: edición y voto sobre la misma versión (preliminar; gate en E3a) —
+
+— Caso 3: dos ediciones con la misma versión esperada (preliminar; gate en E3a) —
+
+— Caso 4: reintento con el mismo id_intento (preliminar; gate en E3a) —
+
+— Caso 5: suspensión y voto del suspendido (preliminar; gate en E4) —
+
+— El orden importa: una sesión que lo viola produce el deadlock —
+
+— Errores y tiempos de espera: nada a medias —
+
+— Casos 6 y 7: frente a la consolidación (preliminar: consolidación de FIXTURE; gate en E7) —
+
+— Caso 11: igualdad exacta en T(M) (primitivas reales; cómputo de FIXTURE, gate en E7) —
+
+— Limpieza (base compartida) —
+   cuentas: 2, participantes: 2; restos (cuentas|participantes|sesiones|locks consultivos): 0|0|0|0
+   log de Postgres de esta corrida: 2 esperas registradas, 2 adquiridas tras esperar, 1 deadlock, 0 lock timeout
+
+0 de 1 pasaron.
+Fallaron:
+ - cruce · A evalúa la reseña de B y B la de A, coordinados después del paso de cuenta: los dos confirman, sin deadlock ni CB002
+exit 1
+
+### ANTES de la corrección (013 original 61e91531…) — regresión de actores cruzados, corrida 2 (2026-10-24T17:10:11-03:00)
+docker: desktop-linux (config.json) → npipe:////./pipe/dockerDesktopLinuxEngine
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321
+inicio: 2026-10-24 20:10:19.264728+00
+
+(sólo las pruebas que contienen «cruce»)
+
+— Permisos de las primitivas (SQL con SET ROLE) —
+
+— El guardián del orden (nivel por transacción) —
+
+— Actores cruzados (auditoría de E2c, A1) —
+   filas de participante tras el paso de cuenta: A=bloqueada, B=bloqueada
+✖ cruce · A evalúa la reseña de B y B la de A, coordinados después del paso de cuenta: los dos confirman, sin deadlock ni CB002
+    errores: deadlock detected
+
+— Caso 1: dos sesiones sobre el mismo (evaluador, versión) (preliminar; gate en E3a) —
+
+— Caso 2: edición y voto sobre la misma versión (preliminar; gate en E3a) —
+
+— Caso 3: dos ediciones con la misma versión esperada (preliminar; gate en E3a) —
+
+— Caso 4: reintento con el mismo id_intento (preliminar; gate en E3a) —
+
+— Caso 5: suspensión y voto del suspendido (preliminar; gate en E4) —
+
+— El orden importa: una sesión que lo viola produce el deadlock —
+
+— Errores y tiempos de espera: nada a medias —
+
+— Casos 6 y 7: frente a la consolidación (preliminar: consolidación de FIXTURE; gate en E7) —
+
+— Caso 11: igualdad exacta en T(M) (primitivas reales; cómputo de FIXTURE, gate en E7) —
+
+— Limpieza (base compartida) —
+   cuentas: 2, participantes: 2; restos (cuentas|participantes|sesiones|locks consultivos): 0|0|0|0
+   log de Postgres de esta corrida: 2 esperas registradas, 2 adquiridas tras esperar, 1 deadlock, 0 lock timeout
+
+0 de 1 pasaron.
+Fallaron:
+ - cruce · A evalúa la reseña de B y B la de A, coordinados después del paso de cuenta: los dos confirman, sin deadlock ni CB002
+exit 1
+
+### ANTES de la corrección (013 original 61e91531…) — regresión de actores cruzados, corrida 3 (2026-10-24T17:10:35-03:00)
+docker: desktop-linux (config.json) → npipe:////./pipe/dockerDesktopLinuxEngine
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321
+inicio: 2026-10-24 20:10:42.214956+00
+
+(sólo las pruebas que contienen «cruce»)
+
+— Permisos de las primitivas (SQL con SET ROLE) —
+
+— El guardián del orden (nivel por transacción) —
+
+— Actores cruzados (auditoría de E2c, A1) —
+   filas de participante tras el paso de cuenta: A=bloqueada, B=bloqueada
+✖ cruce · A evalúa la reseña de B y B la de A, coordinados después del paso de cuenta: los dos confirman, sin deadlock ni CB002
+    errores: deadlock detected
+
+— Caso 1: dos sesiones sobre el mismo (evaluador, versión) (preliminar; gate en E3a) —
+
+— Caso 2: edición y voto sobre la misma versión (preliminar; gate en E3a) —
+
+— Caso 3: dos ediciones con la misma versión esperada (preliminar; gate en E3a) —
+
+— Caso 4: reintento con el mismo id_intento (preliminar; gate en E3a) —
+
+— Caso 5: suspensión y voto del suspendido (preliminar; gate en E4) —
+
+— El orden importa: una sesión que lo viola produce el deadlock —
+
+— Errores y tiempos de espera: nada a medias —
+
+— Casos 6 y 7: frente a la consolidación (preliminar: consolidación de FIXTURE; gate en E7) —
+
+— Caso 11: igualdad exacta en T(M) (primitivas reales; cómputo de FIXTURE, gate en E7) —
+
+— Limpieza (base compartida) —
+   cuentas: 2, participantes: 2; restos (cuentas|participantes|sesiones|locks consultivos): 0|0|0|0
+   log de Postgres de esta corrida: 2 esperas registradas, 2 adquiridas tras esperar, 1 deadlock, 0 lock timeout
+
+0 de 1 pasaron.
+Fallaron:
+ - cruce · A evalúa la reseña de B y B la de A, coordinados después del paso de cuenta: los dos confirman, sin deadlock ni CB002
+exit 1
+
+### DESPUÉS de la corrección — regresión de actores cruzados, corrida 1 (2026-10-24T17:12:11-03:00)
+docker: desktop-linux (config.json) → npipe:////./pipe/dockerDesktopLinuxEngine
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321
+inicio: 2026-10-24 20:12:18.366476+00
+
+(sólo las pruebas que contienen «cruce»)
+
+— Permisos de las primitivas (SQL con SET ROLE) —
+
+— El guardián del orden (nivel por transacción) —
+
+— Actores cruzados (auditoría de E2c, A1) —
+   filas de participante tras el paso de cuenta: A=libre, B=libre
+✔ cruce · A evalúa la reseña de B y B la de A, coordinados después del paso de cuenta: los dos confirman, sin deadlock ni CB002
+
+— Caso 1: dos sesiones sobre el mismo (evaluador, versión) (preliminar; gate en E3a) —
+
+— Caso 2: edición y voto sobre la misma versión (preliminar; gate en E3a) —
+
+— Caso 3: dos ediciones con la misma versión esperada (preliminar; gate en E3a) —
+
+— Caso 4: reintento con el mismo id_intento (preliminar; gate en E3a) —
+
+— Caso 5: suspensión y voto del suspendido (preliminar; gate en E4) —
+
+— El orden importa: una sesión que lo viola produce el deadlock —
+
+— Errores y tiempos de espera: nada a medias —
+
+— Casos 6 y 7: frente a la consolidación (preliminar: consolidación de FIXTURE; gate en E7) —
+
+— Caso 11: igualdad exacta en T(M) (primitivas reales; cómputo de FIXTURE, gate en E7) —
+
+— Limpieza (base compartida) —
+   cuentas: 2, participantes: 2; restos (cuentas|participantes|sesiones|locks consultivos): 0|0|0|0
+   log de Postgres de esta corrida: 1 esperas registradas, 1 adquiridas tras esperar, 0 deadlock, 0 lock timeout
+
+1 de 1 pasaron.
+exit 0
+
+### DESPUÉS de la corrección — regresión de actores cruzados, corrida 2 (2026-10-24T17:12:33-03:00)
+docker: desktop-linux (config.json) → npipe:////./pipe/dockerDesktopLinuxEngine
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321
+inicio: 2026-10-24 20:12:41.488566+00
+
+(sólo las pruebas que contienen «cruce»)
+
+— Permisos de las primitivas (SQL con SET ROLE) —
+
+— El guardián del orden (nivel por transacción) —
+
+— Actores cruzados (auditoría de E2c, A1) —
+   filas de participante tras el paso de cuenta: A=libre, B=libre
+✔ cruce · A evalúa la reseña de B y B la de A, coordinados después del paso de cuenta: los dos confirman, sin deadlock ni CB002
+
+— Caso 1: dos sesiones sobre el mismo (evaluador, versión) (preliminar; gate en E3a) —
+
+— Caso 2: edición y voto sobre la misma versión (preliminar; gate en E3a) —
+
+— Caso 3: dos ediciones con la misma versión esperada (preliminar; gate en E3a) —
+
+— Caso 4: reintento con el mismo id_intento (preliminar; gate en E3a) —
+
+— Caso 5: suspensión y voto del suspendido (preliminar; gate en E4) —
+
+— El orden importa: una sesión que lo viola produce el deadlock —
+
+— Errores y tiempos de espera: nada a medias —
+
+— Casos 6 y 7: frente a la consolidación (preliminar: consolidación de FIXTURE; gate en E7) —
+
+— Caso 11: igualdad exacta en T(M) (primitivas reales; cómputo de FIXTURE, gate en E7) —
+
+— Limpieza (base compartida) —
+   cuentas: 2, participantes: 2; restos (cuentas|participantes|sesiones|locks consultivos): 0|0|0|0
+   log de Postgres de esta corrida: 2 esperas registradas, 2 adquiridas tras esperar, 0 deadlock, 0 lock timeout
+
+1 de 1 pasaron.
+exit 0
+
+### DESPUÉS de la corrección — regresión de actores cruzados, corrida 3 (2026-10-24T17:12:58-03:00)
+docker: desktop-linux (config.json) → npipe:////./pipe/dockerDesktopLinuxEngine
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321
+inicio: 2026-10-24 20:13:05.837241+00
+
+(sólo las pruebas que contienen «cruce»)
+
+— Permisos de las primitivas (SQL con SET ROLE) —
+
+— El guardián del orden (nivel por transacción) —
+
+— Actores cruzados (auditoría de E2c, A1) —
+   filas de participante tras el paso de cuenta: A=libre, B=libre
+✔ cruce · A evalúa la reseña de B y B la de A, coordinados después del paso de cuenta: los dos confirman, sin deadlock ni CB002
+
+— Caso 1: dos sesiones sobre el mismo (evaluador, versión) (preliminar; gate en E3a) —
+
+— Caso 2: edición y voto sobre la misma versión (preliminar; gate en E3a) —
+
+— Caso 3: dos ediciones con la misma versión esperada (preliminar; gate en E3a) —
+
+— Caso 4: reintento con el mismo id_intento (preliminar; gate en E3a) —
+
+— Caso 5: suspensión y voto del suspendido (preliminar; gate en E4) —
+
+— El orden importa: una sesión que lo viola produce el deadlock —
+
+— Errores y tiempos de espera: nada a medias —
+
+— Casos 6 y 7: frente a la consolidación (preliminar: consolidación de FIXTURE; gate en E7) —
+
+— Caso 11: igualdad exacta en T(M) (primitivas reales; cómputo de FIXTURE, gate en E7) —
+
+— Limpieza (base compartida) —
+   cuentas: 2, participantes: 2; restos (cuentas|participantes|sesiones|locks consultivos): 0|0|0|0
+   log de Postgres de esta corrida: 2 esperas registradas, 2 adquiridas tras esperar, 0 deadlock, 0 lock timeout
+
+1 de 1 pasaron.
+exit 0
+
+### up-down-up.mjs (2026-10-24T17:18:43-03:00)
+base: supabase_db_streamingcentral
+
+   volcado 00-con-013: 12176 líneas, sha256 35aed9fc6c583a77…
+   volcado 00b-sin-013: 11801 líneas, sha256 49e76e46bd1da271…
+   volcado 00c-sin-013-otra-vez: 11801 líneas, sha256 49e76e46bd1da271…
+   volcado 00d-con-013: 12176 líneas, sha256 35aed9fc6c583a77…
+   volcado 00e-con-013-repetida: 12176 líneas, sha256 35aed9fc6c583a77…
+   volcado 00f-sin-013: 11801 líneas, sha256 49e76e46bd1da271…
+✔ 013 (E2c): up → down → up da el mismo volcado; down quita sus funciones y sólo restaura la definición de 012; repetidas, inocuas
+   volcado 0-con-011-y-012: 11801 líneas, sha256 49e76e46bd1da271…
+✔ estado de partida: 011 y 012 aplicadas (repetibles)
+   volcado 1-con-011: 11404 líneas, sha256 2121d0f00b453587…
+   volcado 1-con-011-sin-comunidad: 10413 líneas, sha256 6aa727421a1a8b08…
+✔ 012_down: quita sólo lo de 012 (funciones, triggers y columnas del marcador)
+   volcado 1b-con-012: 11801 líneas, sha256 49e76e46bd1da271…
+   volcado 1c-con-012-repetida: 11801 líneas, sha256 49e76e46bd1da271…
+   volcado 1d-sin-012: 11404 líneas, sha256 2121d0f00b453587…
+   volcado 1e-sin-012-otra-vez: 11404 líneas, sha256 2121d0f00b453587…
+✔ 012 up → down → up: mismos volcados; repetida, inocua
+   volcado 2-sin-011: 10413 líneas, sha256 6aa727421a1a8b08…
+✔ down: el esquema desaparece y el resto queda idéntico a lo que había con 011
+   volcado 2b-sin-011-otra-vez: 10413 líneas, sha256 6aa727421a1a8b08…
+✔ down repetido: inocuo
+   volcado 3-con-011: 11404 líneas, sha256 2121d0f00b453587…
+✔ up: vuelve exactamente al volcado con 011
+   volcado 4-sin-011: 10413 líneas, sha256 6aa727421a1a8b08…
+   volcado 5-con-011: 11404 líneas, sha256 2121d0f00b453587…
+✔ segunda vuelta down → up: mismos volcados
+   volcado 6-con-011-repetida: 11404 líneas, sha256 2121d0f00b453587…
+✔ up repetido sobre sí mismo: no cambia el volcado
+   volcado 6b-con-011-y-012: 11801 líneas, sha256 49e76e46bd1da271…
+✔ vuelta a 012: 011 + 012 dan el mismo volcado del principio
+   volcado 7a-antes-de-022: 12190 líneas, sha256 35d0acf7f6fe3746…
+   volcado 7b-despues-de-022: 12176 líneas, sha256 35aed9fc6c583a77…
+   quitado por 022:
+     -- Name: user_reviews el autor gestiona la suya; Type: POLICY; Schema: public; Owner: postgres
+     CREATE POLICY "el autor gestiona la suya" ON public.user_reviews USING ((auth.uid() = user_id)) WITH CHECK ((auth.uid() = user_id));
+     -- Name: user_reviews lectura publica aprobadas; Type: POLICY; Schema: public; Owner: postgres
+     CREATE POLICY "lectura publica aprobadas" ON public.user_reviews FOR SELECT USING ((estado = 'aprobada'::text));
+✔ 022 sólo cambia policies y permisos de user_reviews (schema.sql re-crea las policies, como en db-local)
+   volcado 7-con-022: 12176 líneas, sha256 35aed9fc6c583a77…
+✔ 022 aplicada: user_reviews sin policies ni permisos para anon/authenticated, RLS activa
+   volcado 8-tras-022-down: 12176 líneas, sha256 35aed9fc6c583a77…
+✔ 022_down conservador: no cambia el volcado ni reabre nada, y las filas siguen
+✔ tras 022_down, anon por REST sigue sin leer user_reviews (401/403, nunca 200)
+   volcado 9-con-022-repetida: 12176 líneas, sha256 35aed9fc6c583a77…
+✔ 022 repetida: inocua
+
+volcados en C:\Users\CUNO\AppData\Local\Temp\comunidad-volcados-1792873127970
+
+15 de 15 pasaron.
+exit 0
+
+### pruebas-baja.mjs (con 013 corregida) (2026-10-24T17:22:13-03:00)
+(node:46024) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///D:/DESARROLLO/stream%20central/wt-resenas-comunidad/lib/eliminar-cuenta-flujo.ts is not specified and it doesn't parse as CommonJS.
+To eliminate this warning, add "type": "module" to \\?\D:\DESARROLLO\stream central\wt-resenas-comunidad\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+docker: desktop-linux (config.json) → npipe:////./pipe/dockerDesktopLinuxEngine
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321 · app http://localhost:3100
+
+— Permisos de las funciones nuevas (SQL con SET ROLE) —
+✔ anon y authenticated no ejecutan las cuatro; service_role no ejecuta las internas
+✔ service_role SÍ ejecuta las cuatro (uid inexistente: sin efectos)
+
+— B6: cuenta sin participante —
+✔ B6 · sólo marcador; después deleteUser → completa; el marcador cae con la cuenta
+
+— B1, B2, B13, B7: baja parcial, ventana, aviso y reintento —
+✔ B1 · paso 1 confirma y deleteUser FALLA (trigger real) → baja-parcial con el texto del contrato
+✔ B1 · lo de la otra cuenta queda: su reseña, su bloqueo; sólo cae lo que colgaba de lo borrado
+✔ B2 · durante la ventana, otra sesión que quiera escribir (resolver_participante) → baja_en_curso; no se crea participante
+✔ B13 · login nuevo con marcador: GET /api/cuenta/estado-baja → pendiente; otra cuenta no lo ve; sin sesión → 401
+✔ B7 · reingreso con marcador y reintento: completa; no queda marcador ni vínculo
+
+— B3a, B3b: escrituras en vuelo (preliminar, §5.0) —
+✔ B3a · escritura que tomó K_CUENTA antes: confirma; la baja espera y después la borra y cierra su tramo
+✔ B3b · escritura que verificó el Bearer antes pero llega después (secuencial): baja_en_curso, nada escrito
+✔ B3b · la misma, esperando K_CUENTA mientras la baja confirma: relee el marcador y se rechaza
+
+— B4, B5: pedidos simultáneos y respuesta perdida —
+✔ B4 · dos baja_comunitaria a la vez: se serializan; la segunda no cambia nada
+   deleteUser simultáneos: true, true
+✔ B4 · dos flujos completos a la vez: los dos responden ok (eliminación completa)
+✔ B4 · el segundo deleteUser llega cuando el primero ya borró: falla (404) y reconcilia → los dos responden ok
+✔ B5 · Auth borró pero la respuesta se perdió: reconcilia → completa; sin marcador (cascada)
+
+— B12: no se puede verificar —
+✔ B12 · deleteUser falla y getUserById falla por red → baja-sin-verificar; nunca ok; el marcador sigue
+✔ B12 · sin configuración para verificar (cliente ausente) → también baja-sin-verificar
+✔ B12 · el reintento vuelve a reconciliar: con red → baja-parcial; sin la falla → completa
+
+— B9: runbook (baja pedida fuera de la app) —
+✔ B9 · comunidad_baja_comunitaria_admin y después borrado en Auth → completa; la consulta del runbook da 0
+
+— B10, B11, B14: cancelación y suspensiones —
+✔ B10 · el admin cancela el marcador (preliminar: dueño de la base): nada se restaura; la próxima escritura crea OTRO participante
+✔ B11 · cuenta suspendida pide la baja: se permite; la suspensión no se toca; el marcador impide recrear identidad
+✔ B14 · suspendida → paso 1 → el admin cancela con la sanción vigente: el participante nuevo nace suspendido hasta sancion_hasta
+✔ B10/B14 · una baja con marcador cancelado lo REACTIVA (no crea otro)
+
+— B8: borrado por Auth SIN paso 1, con voto concurrente y consolidación esperando (preliminar) —
+   deleteUser: ok en 4307 ms · abortada: ninguna · escritura confirmó
+✔ B8a · voto de OTRA cuenta en vuelo + consolidación esperando: ciclo de colas; la baja termina o se revierte entera
+   deleteUser: error 500 en 5444 ms · abortada: auth (500 {}) · escritura confirmó
+✔ B8b · escritura de la PROPIA cuenta en vuelo (retiene su K_CUENTA) + consolidación: deadlock real; se aborta una; nunca a medio cerrar
+   deleteUser: error 500 en 9988 ms · abortada: auth (500 {}) · escritura confirmó
+✔ B8c · escritura de la propia cuenta que retiene K_CUENTA más que lock_timeout (5 s): Auth se revierte ENTERA y el reintento termina
+
+— Limpieza (base compartida) —
+   cuentas creadas: 24, participantes: 25; restos (cuentas|participantes|solo_local|trigger): 0|0|0|0
+
+26 de 26 pasaron.
+exit 0
+
+### pruebas-concurrencia.mjs (con 013 corregida) — corrida 1 de 5 (2026-10-24T17:26:39-03:00)
+docker: desktop-linux (config.json) → npipe:////./pipe/dockerDesktopLinuxEngine
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321
+inicio: 2026-10-24 20:26:49.647702+00
+
+— Permisos de las primitivas (SQL con SET ROLE) —
+✔ anon, authenticated y service_role no ejecutan ninguna primitiva de 013 (42501)
+✔ catálogo: ninguna función del esquema comunidad es ejecutable por PUBLIC ni por los roles de la API
+
+— El guardián del orden (nivel por transacción) —
+✔ fuera de orden → CB002 en el acto, sin esperar ningún lock: sin paso 1, nivel repetido, retroceso, lock tras la marca, paso 1 dos veces
+✔ la marca se toma DESPUÉS de los locks: una operación que esperó un lock marca después de que lo soltó quien lo tenía
+
+— Actores cruzados (auditoría de E2c, A1) —
+   filas de participante tras el paso de cuenta: A=libre, B=libre
+✔ cruce · A evalúa la reseña de B y B la de A, coordinados después del paso de cuenta: los dos confirman, sin deadlock ni CB002
+
+— Caso 1: dos sesiones sobre el mismo (evaluador, versión) (preliminar; gate en E3a) —
+✔ 1a · votar ‖ retirar, gana votar: B espera, relee el voto y lo retira; marcas monótonas; igual al serial votar→retirar
+✔ 1b · retirar ‖ votar, gana retirar (no hay voto: no-op); el voto entra después; igual al serial retirar→votar
+
+— Caso 2: edición y voto sobre la misma versión (preliminar; gate en E3a) —
+✔ 2a · la edición confirma primero: el voto esperó la fila del autor, relee, ve la versión reemplazada y se rechaza (CB003); no escribe nada
+✔ 2b · el voto confirma primero: la edición espera, relee y lo reinicia con su marca (posterior); cierra su tramo
+
+— Caso 3: dos ediciones con la misma versión esperada (preliminar; gate en E3a) —
+✔ 3 · la segunda espera, relee la vigente y da conflicto (CB003); hay UNA versión nueva
+
+— Caso 4: reintento con el mismo id_intento (preliminar; gate en E3a) —
+✔ 4 · dos envíos del mismo intento a la vez: UNA versión y UN reinicio de votos; el segundo devuelve la misma
+
+— Caso 5: suspensión y voto del suspendido (preliminar; gate en E4) —
+✔ 5a · la suspensión confirma primero: el voto espera la fila, relee la suspensión y se rechaza (CB004)
+✔ 5b · el voto confirma primero: la suspensión espera y su desde es POSTERIOR a la marca del voto
+
+— El orden importa: una sesión que lo viola produce el deadlock —
+   abortada: dl-fuera-de-orden
+✔ una sesión fuera del protocolo (versión → participante) contra una en orden: deadlock 40P01; la abortada no deja nada
+
+— Errores y tiempos de espera: nada a medias —
+✔ lock_timeout: una cuenta nueva espera la fila del autor más de 1 s → 55P03; tampoco queda el participante que creó el paso 1
+✔ error después de la marca y de escrituras parciales (texto inválido): la edición se revierte entera
+
+— Casos 6 y 7: frente a la consolidación (preliminar: consolidación de FIXTURE; gate en E7) —
+✔ 6 · operación con el compartido tomado y marca < T, que confirma DESPUÉS de T mientras la consolidación espera: la consolidación la ve y la cuenta
+✔ 7a · operación que llega con la consolidación CALCULANDO: espera; su marca es > L; el cómputo al corte L no la incluye
+✔ 7b · operación que llega con la consolidación ESPERANDO: no se cuela delante; marca > L; la anterior sí cuenta
+
+— Caso 11: igualdad exacta en T(M) (primitivas reales; cómputo de FIXTURE, gate en E7) —
+✔ 11 · corte_de_mes, mes_ar y rige_antes_de en T(M) y a 1 µs de cada lado
+✔ 11 · cómputo de FIXTURE sobre filas con marcas exactas: cuentan los pares cuyo tramo rige antes de T, con primera positiva en [T(M-1), T(M)) y sin suspensión vigente
+
+— Limpieza (base compartida) —
+   cuentas: 45, participantes: 42; restos (cuentas|participantes|sesiones|locks consultivos): 0|0|0|0
+   log de Postgres de esta corrida: 3 esperas registradas, 3 adquiridas tras esperar, 1 deadlock, 1 lock timeout
+
+21 de 21 pasaron.
+exit 0
+
+### pruebas-concurrencia.mjs (con 013 corregida) — corrida 2 de 5 (2026-10-24T17:30:06-03:00)
+docker: desktop-linux (config.json) → npipe:////./pipe/dockerDesktopLinuxEngine
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321
+inicio: 2026-10-24 20:30:12.482339+00
+
+— Permisos de las primitivas (SQL con SET ROLE) —
+✔ anon, authenticated y service_role no ejecutan ninguna primitiva de 013 (42501)
+✔ catálogo: ninguna función del esquema comunidad es ejecutable por PUBLIC ni por los roles de la API
+
+— El guardián del orden (nivel por transacción) —
+✔ fuera de orden → CB002 en el acto, sin esperar ningún lock: sin paso 1, nivel repetido, retroceso, lock tras la marca, paso 1 dos veces
+✔ la marca se toma DESPUÉS de los locks: una operación que esperó un lock marca después de que lo soltó quien lo tenía
+
+— Actores cruzados (auditoría de E2c, A1) —
+   filas de participante tras el paso de cuenta: A=libre, B=libre
+✔ cruce · A evalúa la reseña de B y B la de A, coordinados después del paso de cuenta: los dos confirman, sin deadlock ni CB002
+
+— Caso 1: dos sesiones sobre el mismo (evaluador, versión) (preliminar; gate en E3a) —
+✔ 1a · votar ‖ retirar, gana votar: B espera, relee el voto y lo retira; marcas monótonas; igual al serial votar→retirar
+✔ 1b · retirar ‖ votar, gana retirar (no hay voto: no-op); el voto entra después; igual al serial retirar→votar
+
+— Caso 2: edición y voto sobre la misma versión (preliminar; gate en E3a) —
+✔ 2a · la edición confirma primero: el voto esperó la fila del autor, relee, ve la versión reemplazada y se rechaza (CB003); no escribe nada
+✔ 2b · el voto confirma primero: la edición espera, relee y lo reinicia con su marca (posterior); cierra su tramo
+
+— Caso 3: dos ediciones con la misma versión esperada (preliminar; gate en E3a) —
+✔ 3 · la segunda espera, relee la vigente y da conflicto (CB003); hay UNA versión nueva
+
+— Caso 4: reintento con el mismo id_intento (preliminar; gate en E3a) —
+✔ 4 · dos envíos del mismo intento a la vez: UNA versión y UN reinicio de votos; el segundo devuelve la misma
+
+— Caso 5: suspensión y voto del suspendido (preliminar; gate en E4) —
+✔ 5a · la suspensión confirma primero: el voto espera la fila, relee la suspensión y se rechaza (CB004)
+✔ 5b · el voto confirma primero: la suspensión espera y su desde es POSTERIOR a la marca del voto
+
+— El orden importa: una sesión que lo viola produce el deadlock —
+   abortada: dl-fuera-de-orden
+✔ una sesión fuera del protocolo (versión → participante) contra una en orden: deadlock 40P01; la abortada no deja nada
+
+— Errores y tiempos de espera: nada a medias —
+✔ lock_timeout: una cuenta nueva espera la fila del autor más de 1 s → 55P03; tampoco queda el participante que creó el paso 1
+✔ error después de la marca y de escrituras parciales (texto inválido): la edición se revierte entera
+
+— Casos 6 y 7: frente a la consolidación (preliminar: consolidación de FIXTURE; gate en E7) —
+✔ 6 · operación con el compartido tomado y marca < T, que confirma DESPUÉS de T mientras la consolidación espera: la consolidación la ve y la cuenta
+✔ 7a · operación que llega con la consolidación CALCULANDO: espera; su marca es > L; el cómputo al corte L no la incluye
+✔ 7b · operación que llega con la consolidación ESPERANDO: no se cuela delante; marca > L; la anterior sí cuenta
+
+— Caso 11: igualdad exacta en T(M) (primitivas reales; cómputo de FIXTURE, gate en E7) —
+✔ 11 · corte_de_mes, mes_ar y rige_antes_de en T(M) y a 1 µs de cada lado
+✔ 11 · cómputo de FIXTURE sobre filas con marcas exactas: cuentan los pares cuyo tramo rige antes de T, con primera positiva en [T(M-1), T(M)) y sin suspensión vigente
+
+— Limpieza (base compartida) —
+   cuentas: 45, participantes: 42; restos (cuentas|participantes|sesiones|locks consultivos): 0|0|0|0
+   log de Postgres de esta corrida: 3 esperas registradas, 3 adquiridas tras esperar, 1 deadlock, 1 lock timeout
+
+21 de 21 pasaron.
+exit 0
+
+### pruebas-concurrencia.mjs (con 013 corregida) — corrida 3 de 5 (2026-10-24T17:33:24-03:00)
+docker: desktop-linux (config.json) → npipe:////./pipe/dockerDesktopLinuxEngine
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321
+inicio: 2026-10-24 20:33:31.527017+00
+
+— Permisos de las primitivas (SQL con SET ROLE) —
+✔ anon, authenticated y service_role no ejecutan ninguna primitiva de 013 (42501)
+✔ catálogo: ninguna función del esquema comunidad es ejecutable por PUBLIC ni por los roles de la API
+
+— El guardián del orden (nivel por transacción) —
+✔ fuera de orden → CB002 en el acto, sin esperar ningún lock: sin paso 1, nivel repetido, retroceso, lock tras la marca, paso 1 dos veces
+✔ la marca se toma DESPUÉS de los locks: una operación que esperó un lock marca después de que lo soltó quien lo tenía
+
+— Actores cruzados (auditoría de E2c, A1) —
+   filas de participante tras el paso de cuenta: A=libre, B=libre
+✔ cruce · A evalúa la reseña de B y B la de A, coordinados después del paso de cuenta: los dos confirman, sin deadlock ni CB002
+
+— Caso 1: dos sesiones sobre el mismo (evaluador, versión) (preliminar; gate en E3a) —
+✔ 1a · votar ‖ retirar, gana votar: B espera, relee el voto y lo retira; marcas monótonas; igual al serial votar→retirar
+✔ 1b · retirar ‖ votar, gana retirar (no hay voto: no-op); el voto entra después; igual al serial retirar→votar
+
+— Caso 2: edición y voto sobre la misma versión (preliminar; gate en E3a) —
+✔ 2a · la edición confirma primero: el voto esperó la fila del autor, relee, ve la versión reemplazada y se rechaza (CB003); no escribe nada
+✔ 2b · el voto confirma primero: la edición espera, relee y lo reinicia con su marca (posterior); cierra su tramo
+
+— Caso 3: dos ediciones con la misma versión esperada (preliminar; gate en E3a) —
+✔ 3 · la segunda espera, relee la vigente y da conflicto (CB003); hay UNA versión nueva
+
+— Caso 4: reintento con el mismo id_intento (preliminar; gate en E3a) —
+✔ 4 · dos envíos del mismo intento a la vez: UNA versión y UN reinicio de votos; el segundo devuelve la misma
+
+— Caso 5: suspensión y voto del suspendido (preliminar; gate en E4) —
+✔ 5a · la suspensión confirma primero: el voto espera la fila, relee la suspensión y se rechaza (CB004)
+✔ 5b · el voto confirma primero: la suspensión espera y su desde es POSTERIOR a la marca del voto
+
+— El orden importa: una sesión que lo viola produce el deadlock —
+   abortada: dl-fuera-de-orden
+✔ una sesión fuera del protocolo (versión → participante) contra una en orden: deadlock 40P01; la abortada no deja nada
+
+— Errores y tiempos de espera: nada a medias —
+✔ lock_timeout: una cuenta nueva espera la fila del autor más de 1 s → 55P03; tampoco queda el participante que creó el paso 1
+✔ error después de la marca y de escrituras parciales (texto inválido): la edición se revierte entera
+
+— Casos 6 y 7: frente a la consolidación (preliminar: consolidación de FIXTURE; gate en E7) —
+✔ 6 · operación con el compartido tomado y marca < T, que confirma DESPUÉS de T mientras la consolidación espera: la consolidación la ve y la cuenta
+✔ 7a · operación que llega con la consolidación CALCULANDO: espera; su marca es > L; el cómputo al corte L no la incluye
+✔ 7b · operación que llega con la consolidación ESPERANDO: no se cuela delante; marca > L; la anterior sí cuenta
+
+— Caso 11: igualdad exacta en T(M) (primitivas reales; cómputo de FIXTURE, gate en E7) —
+✔ 11 · corte_de_mes, mes_ar y rige_antes_de en T(M) y a 1 µs de cada lado
+✔ 11 · cómputo de FIXTURE sobre filas con marcas exactas: cuentan los pares cuyo tramo rige antes de T, con primera positiva en [T(M-1), T(M)) y sin suspensión vigente
+
+— Limpieza (base compartida) —
+   cuentas: 45, participantes: 42; restos (cuentas|participantes|sesiones|locks consultivos): 0|0|0|0
+   log de Postgres de esta corrida: 3 esperas registradas, 3 adquiridas tras esperar, 1 deadlock, 1 lock timeout
+
+21 de 21 pasaron.
+exit 0
+
+### pruebas-concurrencia.mjs (con 013 corregida) — corrida 4 de 5 (2026-10-24T17:36:40-03:00)
+docker: desktop-linux (config.json) → npipe:////./pipe/dockerDesktopLinuxEngine
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321
+inicio: 2026-10-24 20:36:48.434149+00
+
+— Permisos de las primitivas (SQL con SET ROLE) —
+✔ anon, authenticated y service_role no ejecutan ninguna primitiva de 013 (42501)
+✔ catálogo: ninguna función del esquema comunidad es ejecutable por PUBLIC ni por los roles de la API
+
+— El guardián del orden (nivel por transacción) —
+✔ fuera de orden → CB002 en el acto, sin esperar ningún lock: sin paso 1, nivel repetido, retroceso, lock tras la marca, paso 1 dos veces
+✔ la marca se toma DESPUÉS de los locks: una operación que esperó un lock marca después de que lo soltó quien lo tenía
+
+— Actores cruzados (auditoría de E2c, A1) —
+   filas de participante tras el paso de cuenta: A=libre, B=libre
+✔ cruce · A evalúa la reseña de B y B la de A, coordinados después del paso de cuenta: los dos confirman, sin deadlock ni CB002
+
+— Caso 1: dos sesiones sobre el mismo (evaluador, versión) (preliminar; gate en E3a) —
+✔ 1a · votar ‖ retirar, gana votar: B espera, relee el voto y lo retira; marcas monótonas; igual al serial votar→retirar
+✔ 1b · retirar ‖ votar, gana retirar (no hay voto: no-op); el voto entra después; igual al serial retirar→votar
+
+— Caso 2: edición y voto sobre la misma versión (preliminar; gate en E3a) —
+✔ 2a · la edición confirma primero: el voto esperó la fila del autor, relee, ve la versión reemplazada y se rechaza (CB003); no escribe nada
+✔ 2b · el voto confirma primero: la edición espera, relee y lo reinicia con su marca (posterior); cierra su tramo
+
+— Caso 3: dos ediciones con la misma versión esperada (preliminar; gate en E3a) —
+✔ 3 · la segunda espera, relee la vigente y da conflicto (CB003); hay UNA versión nueva
+
+— Caso 4: reintento con el mismo id_intento (preliminar; gate en E3a) —
+✔ 4 · dos envíos del mismo intento a la vez: UNA versión y UN reinicio de votos; el segundo devuelve la misma
+
+— Caso 5: suspensión y voto del suspendido (preliminar; gate en E4) —
+✔ 5a · la suspensión confirma primero: el voto espera la fila, relee la suspensión y se rechaza (CB004)
+✔ 5b · el voto confirma primero: la suspensión espera y su desde es POSTERIOR a la marca del voto
+
+— El orden importa: una sesión que lo viola produce el deadlock —
+   abortada: dl-en-orden
+✔ una sesión fuera del protocolo (versión → participante) contra una en orden: deadlock 40P01; la abortada no deja nada
+
+— Errores y tiempos de espera: nada a medias —
+✔ lock_timeout: una cuenta nueva espera la fila del autor más de 1 s → 55P03; tampoco queda el participante que creó el paso 1
+✔ error después de la marca y de escrituras parciales (texto inválido): la edición se revierte entera
+
+— Casos 6 y 7: frente a la consolidación (preliminar: consolidación de FIXTURE; gate en E7) —
+✔ 6 · operación con el compartido tomado y marca < T, que confirma DESPUÉS de T mientras la consolidación espera: la consolidación la ve y la cuenta
+✔ 7a · operación que llega con la consolidación CALCULANDO: espera; su marca es > L; el cómputo al corte L no la incluye
+✔ 7b · operación que llega con la consolidación ESPERANDO: no se cuela delante; marca > L; la anterior sí cuenta
+
+— Caso 11: igualdad exacta en T(M) (primitivas reales; cómputo de FIXTURE, gate en E7) —
+✔ 11 · corte_de_mes, mes_ar y rige_antes_de en T(M) y a 1 µs de cada lado
+✔ 11 · cómputo de FIXTURE sobre filas con marcas exactas: cuentan los pares cuyo tramo rige antes de T, con primera positiva en [T(M-1), T(M)) y sin suspensión vigente
+
+— Limpieza (base compartida) —
+   cuentas: 45, participantes: 42; restos (cuentas|participantes|sesiones|locks consultivos): 0|0|0|0
+   log de Postgres de esta corrida: 3 esperas registradas, 3 adquiridas tras esperar, 1 deadlock, 1 lock timeout
+
+21 de 21 pasaron.
+exit 0
+
+### pruebas-concurrencia.mjs (con 013 corregida) — corrida 5 de 5 (2026-10-24T17:39:59-03:00)
+docker: desktop-linux (config.json) → npipe:////./pipe/dockerDesktopLinuxEngine
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321
+inicio: 2026-10-24 20:40:06.717005+00
+
+— Permisos de las primitivas (SQL con SET ROLE) —
+✔ anon, authenticated y service_role no ejecutan ninguna primitiva de 013 (42501)
+✔ catálogo: ninguna función del esquema comunidad es ejecutable por PUBLIC ni por los roles de la API
+
+— El guardián del orden (nivel por transacción) —
+✔ fuera de orden → CB002 en el acto, sin esperar ningún lock: sin paso 1, nivel repetido, retroceso, lock tras la marca, paso 1 dos veces
+✔ la marca se toma DESPUÉS de los locks: una operación que esperó un lock marca después de que lo soltó quien lo tenía
+
+— Actores cruzados (auditoría de E2c, A1) —
+   filas de participante tras el paso de cuenta: A=libre, B=libre
+✔ cruce · A evalúa la reseña de B y B la de A, coordinados después del paso de cuenta: los dos confirman, sin deadlock ni CB002
+
+— Caso 1: dos sesiones sobre el mismo (evaluador, versión) (preliminar; gate en E3a) —
+✔ 1a · votar ‖ retirar, gana votar: B espera, relee el voto y lo retira; marcas monótonas; igual al serial votar→retirar
+✔ 1b · retirar ‖ votar, gana retirar (no hay voto: no-op); el voto entra después; igual al serial retirar→votar
+
+— Caso 2: edición y voto sobre la misma versión (preliminar; gate en E3a) —
+✔ 2a · la edición confirma primero: el voto esperó la fila del autor, relee, ve la versión reemplazada y se rechaza (CB003); no escribe nada
+✔ 2b · el voto confirma primero: la edición espera, relee y lo reinicia con su marca (posterior); cierra su tramo
+
+— Caso 3: dos ediciones con la misma versión esperada (preliminar; gate en E3a) —
+✔ 3 · la segunda espera, relee la vigente y da conflicto (CB003); hay UNA versión nueva
+
+— Caso 4: reintento con el mismo id_intento (preliminar; gate en E3a) —
+✔ 4 · dos envíos del mismo intento a la vez: UNA versión y UN reinicio de votos; el segundo devuelve la misma
+
+— Caso 5: suspensión y voto del suspendido (preliminar; gate en E4) —
+✔ 5a · la suspensión confirma primero: el voto espera la fila, relee la suspensión y se rechaza (CB004)
+✔ 5b · el voto confirma primero: la suspensión espera y su desde es POSTERIOR a la marca del voto
+
+— El orden importa: una sesión que lo viola produce el deadlock —
+   abortada: dl-fuera-de-orden
+✔ una sesión fuera del protocolo (versión → participante) contra una en orden: deadlock 40P01; la abortada no deja nada
+
+— Errores y tiempos de espera: nada a medias —
+✔ lock_timeout: una cuenta nueva espera la fila del autor más de 1 s → 55P03; tampoco queda el participante que creó el paso 1
+✔ error después de la marca y de escrituras parciales (texto inválido): la edición se revierte entera
+
+— Casos 6 y 7: frente a la consolidación (preliminar: consolidación de FIXTURE; gate en E7) —
+✔ 6 · operación con el compartido tomado y marca < T, que confirma DESPUÉS de T mientras la consolidación espera: la consolidación la ve y la cuenta
+✔ 7a · operación que llega con la consolidación CALCULANDO: espera; su marca es > L; el cómputo al corte L no la incluye
+✔ 7b · operación que llega con la consolidación ESPERANDO: no se cuela delante; marca > L; la anterior sí cuenta
+
+— Caso 11: igualdad exacta en T(M) (primitivas reales; cómputo de FIXTURE, gate en E7) —
+✔ 11 · corte_de_mes, mes_ar y rige_antes_de en T(M) y a 1 µs de cada lado
+✔ 11 · cómputo de FIXTURE sobre filas con marcas exactas: cuentan los pares cuyo tramo rige antes de T, con primera positiva en [T(M-1), T(M)) y sin suspensión vigente
+
+— Limpieza (base compartida) —
+   cuentas: 45, participantes: 42; restos (cuentas|participantes|sesiones|locks consultivos): 0|0|0|0
+   log de Postgres de esta corrida: 3 esperas registradas, 3 adquiridas tras esperar, 1 deadlock, 1 lock timeout
+
+21 de 21 pasaron.
+exit 0

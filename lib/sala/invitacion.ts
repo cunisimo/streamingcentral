@@ -1,6 +1,7 @@
 // La vista previa del enlace de invitación a una sala (WhatsApp y cualquier
 // cliente que lea Open Graph). Client-safe y PURO: lo usan el lobby (arma el
-// enlace), la página `/sala/[id]` (arma la metadata) y los tests.
+// enlace y el mensaje para compartirlo), la página `/sala/[id]` (arma la
+// metadata) y los tests.
 //
 // Lo que se ve al pegar el enlace en WhatsApp (dueño, 28/09):
 //   título       Yump
@@ -22,7 +23,7 @@
 // colapsados, de 1 a 24 caracteres. Si falta o no pasa, el texto genérico.
 // El escape lo hace Next al renderizar la metadata: acá no se arma HTML.
 import type { Metadata } from "next";
-import { SITIO_PUBLICO, urlDeSala } from "../compartir.ts";
+import { SITIO_PUBLICO, urlDeSala, type MensajeCompartir } from "../compartir.ts";
 
 export const PARAM_ORGANIZADOR = "organizador";
 /** El mismo máximo que `sala_nombre_valido` (009_salas.sql). */
@@ -56,6 +57,24 @@ export function enlaceDeInvitacion(roomId: string, organizador: string | null | 
   const nombre = nombreParaInvitacion(organizador);
   const base = urlDeSala(roomId);
   return nombre ? `${base}?${PARAM_ORGANIZADOR}=${encodeURIComponent(nombre)}` : base;
+}
+
+export const TEXTO_INVITACION = "¡Sumate a mi sala de Yumpeá! Elegimos juntos qué ver:";
+
+/**
+ * El mensaje con el que se comparte la invitación desde el lobby (20/10).
+ *
+ * Mismo contrato que la ficha y el match (`MensajeCompartir`): el texto y la
+ * url van APARTE, porque `navigator.share` y el plugin los quieren en campos
+ * separados y el fallback de WhatsApp los une con un salto de línea.
+ *
+ * La url es EXACTAMENTE la de "Copiar enlace" (`enlaceDeInvitacion`): dominio
+ * público, `/sala/<uuid>` y `?organizador=` para la vista previa. Se arma sólo
+ * con el id y el nombre: la credencial de participante (`token-store.ts`) no
+ * entra acá ni por error.
+ */
+export function mensajeInvitacion(roomId: string, organizador: string | null | undefined): MensajeCompartir {
+  return { titulo: TITULO_INVITACION, texto: TEXTO_INVITACION, url: enlaceDeInvitacion(roomId, organizador) };
 }
 
 /**

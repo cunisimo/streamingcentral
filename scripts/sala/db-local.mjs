@@ -28,6 +28,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { dockerVerificado } from "../comunidad/docker-local.mjs";
 
 /** El `project_id` declarado en supabase/config.toml, o null si no está. */
 export function projectIdDe(configToml) {
@@ -63,8 +64,29 @@ export function archivosAAplicar({ conCatalogo, cargas }) {
     "supabase/migrations/001_chip_titles.sql",
     "supabase/migrations/002_roulette.sql",
     "supabase/migrations/003_lock_roulette.sql",
+    // is_admin_mfa() (admin + aal2 + dos TOTP): la necesitan las pruebas de
+    // reseñas de la comunidad con MFA real (plan de reseñas, §4 y E2a).
+    "supabase/migrations/007_top_manual.sql",
     "supabase/migrations/009_salas.sql",
     ...(conCatalogo ? cargas : []),
+    // Reseñas de la comunidad: esquema privado (E2a), contrato de baja (E2b),
+    // protocolo de locks (E2c), escritura (E3a), moderación (E3b), admin (E4), lectura (E5a), utilidad (E5b),
+    // perfiles (E6), Top Yumpers (E7), purga (E8)
+    // y cierre de user_reviews (E2a).
+    // 022 va después de schema.sql, que vuelve a crear las policies viejas en
+    // cada corrida; así siempre las deja cerradas.
+    "supabase/migrations/011_comunidad_esquema.sql",
+    "supabase/migrations/012_comunidad_baja.sql",
+    "supabase/migrations/013_comunidad_protocolo.sql",
+    "supabase/migrations/014_comunidad_escritura.sql",
+    "supabase/migrations/015_comunidad_moderacion_datos.sql",
+    "supabase/migrations/016_comunidad_admin.sql",
+    "supabase/migrations/017_comunidad_lectura.sql",
+    "supabase/migrations/018_comunidad_utilidad.sql",
+    "supabase/migrations/019_comunidad_perfiles.sql",
+    "supabase/migrations/020_comunidad_top.sql",
+    "supabase/migrations/021_comunidad_purga.sql",
+    "supabase/migrations/022_cerrar_user_reviews.sql",
     "scripts/sala/fixtures-local.sql",
   ];
 }
@@ -83,7 +105,16 @@ function main() {
   const ARCHIVOS = archivosAAplicar({ conCatalogo, cargas });
 
   const projectId = projectIdDe(readFileSync("supabase/config.toml", "utf8"));
-  const corriendo = execFileSync("docker", ["ps", "--format", "{{.Names}}"], { encoding: "utf8" })
+  // El motor Docker tiene que ser de esta computadora (contexto efectivo, no
+  // sólo DOCKER_HOST); cada `docker` de abajo usa ese endpoint fijo.
+  let env;
+  try {
+    env = dockerVerificado().env;
+  } catch (e) {
+    console.error(e.message);
+    process.exit(1);
+  }
+  const corriendo = execFileSync("docker", ["ps", "--format", "{{.Names}}"], { encoding: "utf8", env })
     .trim().split("\n").filter(Boolean);
   let nombre;
   try {
@@ -98,7 +129,7 @@ function main() {
   for (const f of ARCHIVOS) {
     if (!existsSync(f)) { console.log(`– ${f} (no existe todavía, se saltea)`); continue; }
     const r = spawnSync("docker", ["exec", "-i", nombre, "psql", "-q", "-v", "ON_ERROR_STOP=1", "-U", "postgres", "-d", "postgres"], {
-      input: readFileSync(f, "utf8"), encoding: "utf8", maxBuffer: 64 * 1024 * 1024,
+      input: readFileSync(f, "utf8"), encoding: "utf8", maxBuffer: 64 * 1024 * 1024, env,
     });
     if (r.status !== 0) {
       console.error(`✖ ${f}\n${r.stderr}`);

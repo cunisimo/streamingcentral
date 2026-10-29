@@ -1,0 +1,201 @@
+Salidas de las correcciones A1/A2 de E3a (25/10/2026, Claude). Sólo Supabase local y servidor local.
+Commits: 98eba43 (copia de la auditoría), 8bdfe3f (A1), d66244b (A2).
+
+=== A1 · ANTES: pruebas-escritura.mjs (SOLO='A1 ·') sobre el código de faabf5a con la batería nueva ===
+docker: desktop-linux (config.json) → npipe:////./pipe/dockerDesktopLinuxEngine
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321 · app http://localhost:3100
+— Matriz de autorización por operación (§2.1.2), con las funciones reales —
+— Revisión §3.4.1: qué se conserva en cada resultado de una edición —
+— Idempotencia: respuesta perdida y mismo id_intento —
+— A1 · confirmación perdida entre el servidor y Supabase (auditoría E3a) —
+✖ A1 · publicar: la respuesta se pierde tras el commit → se reconcilia con el mismo id_intento: 'publicada', UNA reseña, UN cupo
+    {"resultado":"error"}
+✖ A1 · editar con votos: la respuesta se pierde tras el commit → 'publicada' recuperada; votos reiniciados UNA vez, UNA edición
+    {"resultado":"error"}
+✖ A1 · se pierden las DOS respuestas (red) → 'sin_confirmar' (nunca 'error'); el reintento normal con el mismo id_intento recupera sin duplicar
+    Expected values to be strictly deep-equal:
+✖ A1 · se pierden las DOS respuestas (502) → 'sin_confirmar' (nunca 'error'); el reintento normal con el mismo id_intento recupera sin duplicar
+    Expected values to be strictly deep-equal:
+✖ A1 · votar, retirar y borrar con la respuesta perdida tras el commit: se reconcilian sin duplicar
+    TypeError: fetch failed (respuesta descartada por la prueba)
+✖ A1 · un rechazo CONFIRMADO de la base no se reintenta ni se presenta como incierto: 'error', versión, votos y cupo intactos
+    23514 new row for relation "versiones" violates check constraint "versiones_texto_forma"
+— Límites por día con carreras —
+— Gates de integración (§5.0) con las FUNCIONES REALES y sesiones concurrentes —
+— Rutas HTTP (servidor local) —
+— Limpieza (base compartida) —
+   cuentas: 15; restos (cuentas|participantes|sesiones|locks|interruptores encendidos): 0|0|0|0|false
+0 de 6 pasaron.
+Fallaron:
+ - A1 · publicar: la respuesta se pierde tras el commit → se reconcilia con el mismo id_intento: 'publicada', UNA reseña, UN cupo
+ - A1 · editar con votos: la respuesta se pierde tras el commit → 'publicada' recuperada; votos reiniciados UNA vez, UNA edición
+ - A1 · se pierden las DOS respuestas (red) → 'sin_confirmar' (nunca 'error'); el reintento normal con el mismo id_intento recupera sin duplicar
+ - A1 · se pierden las DOS respuestas (502) → 'sin_confirmar' (nunca 'error'); el reintento normal con el mismo id_intento recupera sin duplicar
+ - A1 · votar, retirar y borrar con la respuesta perdida tras el commit: se reconcilian sin duplicar
+ - A1 · un rechazo CONFIRMADO de la base no se reintenta ni se presenta como incierto: 'error', versión, votos y cupo intactos
+
+=== A1 · DESPUÉS: SOLO='A1 ·' ===
+docker: desktop-linux (config.json) → npipe:////./pipe/dockerDesktopLinuxEngine
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321 · app http://localhost:3100
+— Matriz de autorización por operación (§2.1.2), con las funciones reales —
+— Revisión §3.4.1: qué se conserva en cada resultado de una edición —
+— Idempotencia: respuesta perdida y mismo id_intento —
+— A1 · confirmación perdida entre el servidor y Supabase (auditoría E3a) —
+✔ A1 · publicar: la respuesta se pierde tras el commit → se reconcilia con el mismo id_intento: 'publicada', UNA reseña, UN cupo
+✔ A1 · editar con votos: la respuesta se pierde tras el commit → 'publicada' recuperada; votos reiniciados UNA vez, UNA edición
+✔ A1 · se pierden las DOS respuestas (red) → 'sin_confirmar' (nunca 'error'); el reintento normal con el mismo id_intento recupera sin duplicar
+✔ A1 · se pierden las DOS respuestas (502) → 'sin_confirmar' (nunca 'error'); el reintento normal con el mismo id_intento recupera sin duplicar
+✔ A1 · votar, retirar y borrar con la respuesta perdida tras el commit: se reconcilian sin duplicar
+✔ A1 · un rechazo CONFIRMADO de la base no se reintenta ni se presenta como incierto: 'error', versión, votos y cupo intactos
+— Límites por día con carreras —
+— Gates de integración (§5.0) con las FUNCIONES REALES y sesiones concurrentes —
+— Rutas HTTP (servidor local) —
+— Limpieza (base compartida) —
+   cuentas: 15; restos (cuentas|participantes|sesiones|locks|interruptores encendidos): 0|0|0|0|false
+6 de 6 pasaron.
+
+=== Revisión §3.4.1 (incluye lock_timeout y fallo técnico confirmados): SOLO='§3.4.1' ===
+docker: desktop-linux (config.json) → npipe:////./pipe/dockerDesktopLinuxEngine
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321 · app http://localhost:3100
+— Matriz de autorización por operación (§2.1.2), con las funciones reales —
+— Revisión §3.4.1: qué se conserva en cada resultado de una edición —
+✔ §3.4.1 · texto idéntico tras normalizar → 'sin_cambios'; versión y votos intactos; no consume límite
+✔ §3.4.1 · rechazo de formato → anterior intacta y publicada, votos intactos, sin tocar la base
+✔ §3.4.1 · rechazo por regla de contenido → anterior intacta, votos intactos; consume UNA edición; no guarda el texto
+✔ §3.4.1 · versión esperada distinta de la vigente → 'conflicto' (version), intacta
+✔ §3.4.1 · fallo técnico en la base (texto que el CHECK rechaza, llamado directo) → error; anterior, votos y límite intactos
+   edición con la reseña retenida: error en 5040 ms
+✔ §3.4.1 · lock_timeout (otra transacción retiene la reseña > 5 s) → error; anterior y votos intactos
+✔ §3.4.1 · edición aceptada y publicada → anterior reemplazada, tramos cerrados, votos reiniciados UNA vez; la nueva en cero
+✔ §3.4.1 · edición aceptada y retenida → anterior reemplazada (deja de verse), votos reiniciados una vez, nueva 'retenida'
+✔ §3.4.1 · admisión cerrada (cola llena) → NO APLICA en E3a: la admisión es de E3b (sin probar acá)
+— Idempotencia: respuesta perdida y mismo id_intento —
+— A1 · confirmación perdida entre el servidor y Supabase (auditoría E3a) —
+— Límites por día con carreras —
+— Gates de integración (§5.0) con las FUNCIONES REALES y sesiones concurrentes —
+— Rutas HTTP (servidor local) —
+— Limpieza (base compartida) —
+   cuentas: 25; restos (cuentas|participantes|sesiones|locks|interruptores encendidos): 0|0|0|0|false
+9 de 9 pasaron.
+
+=== Idempotencia por id_intento: SOLO='id_intento' ===
+docker: desktop-linux (config.json) → npipe:////./pipe/dockerDesktopLinuxEngine
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321 · app http://localhost:3100
+— Matriz de autorización por operación (§2.1.2), con las funciones reales —
+— Revisión §3.4.1: qué se conserva en cada resultado de una edición —
+— Idempotencia: respuesta perdida y mismo id_intento —
+✔ mismo id_intento con OTRO contenido → conflicto genérico, sin datos del primero; nada cambia
+— A1 · confirmación perdida entre el servidor y Supabase (auditoría E3a) —
+✔ A1 · publicar: la respuesta se pierde tras el commit → se reconcilia con el mismo id_intento: 'publicada', UNA reseña, UN cupo
+✔ A1 · se pierden las DOS respuestas (red) → 'sin_confirmar' (nunca 'error'); el reintento normal con el mismo id_intento recupera sin duplicar
+✔ A1 · se pierden las DOS respuestas (502) → 'sin_confirmar' (nunca 'error'); el reintento normal con el mismo id_intento recupera sin duplicar
+— Límites por día con carreras —
+— Gates de integración (§5.0) con las FUNCIONES REALES y sesiones concurrentes —
+✔ gate caso 4 · el mismo id_intento en dos sesiones a la vez: UNA versión, UN reinicio; la segunda devuelve el mismo resultado
+— Rutas HTTP (servidor local) —
+— Limpieza (base compartida) —
+   cuentas: 13; restos (cuentas|participantes|sesiones|locks|interruptores encendidos): 0|0|0|0|false
+5 de 5 pasaron.
+
+=== Gates 1–4 con funciones reales: SOLO='gate caso' ===
+docker: desktop-linux (config.json) → npipe:////./pipe/dockerDesktopLinuxEngine
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321 · app http://localhost:3100
+— Matriz de autorización por operación (§2.1.2), con las funciones reales —
+— Revisión §3.4.1: qué se conserva en cada resultado de una edición —
+— Idempotencia: respuesta perdida y mismo id_intento —
+— A1 · confirmación perdida entre el servidor y Supabase (auditoría E3a) —
+— Límites por día con carreras —
+— Gates de integración (§5.0) con las FUNCIONES REALES y sesiones concurrentes —
+✔ gate caso 1 · votar ‖ retirar del mismo evaluador: el segundo espera, relee y retira; igual al serial
+✔ gate caso 2a · la edición confirma primero: el voto a la versión vieja espera, relee y se rechaza (version_no_disponible)
+✔ gate caso 2b · el voto confirma primero: la edición espera y lo reinicia (votos_reiniciados = 1)
+✔ gate caso 3 · dos ediciones con la misma versión esperada: la segunda da conflicto; UNA versión nueva
+✔ gate caso 4 · el mismo id_intento en dos sesiones a la vez: UNA versión, UN reinicio; la segunda devuelve el mismo resultado
+— Rutas HTTP (servidor local) —
+— Limpieza (base compartida) —
+   cuentas: 10; restos (cuentas|participantes|sesiones|locks|interruptores encendidos): 0|0|0|0|false
+5 de 5 pasaron.
+
+=== Rutas HTTP con el servidor local (después de A1 y A2): SOLO='rutas ·' ===
+docker: desktop-linux (config.json) → npipe:////./pipe/dockerDesktopLinuxEngine
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321 · app http://localhost:3100
+— Matriz de autorización por operación (§2.1.2), con las funciones reales —
+— Revisión §3.4.1: qué se conserva en cada resultado de una edición —
+— Idempotencia: respuesta perdida y mismo id_intento —
+— A1 · confirmación perdida entre el servidor y Supabase (auditoría E3a) —
+— Límites por día con carreras —
+— Gates de integración (§5.0) con las FUNCIONES REALES y sesiones concurrentes —
+— Rutas HTTP (servidor local) —
+✔ rutas · sin sesión → 401 en las cinco; con sesión y cuerpo inválido → 400; sin caché
+✔ rutas · publicar, rechazar, retener y editar de punta a punta con el JWT; el uid sale del token, no del cuerpo
+✔ rutas · votar y retirar por HTTP; con el módulo apagado la lectura responde { activo: false } y nada más
+— Limpieza (base compartida) —
+   cuentas: 5; restos (cuentas|participantes|sesiones|locks|interruptores encendidos): 0|0|0|0|true
+   (nota: "true" porque esta corrida se hizo durante el recorrido, con los interruptores encendidos por él; la batería restaura el valor previo. Al cerrar, el recorrido los apagó: false/false/false y límites 5/10/100.)
+3 de 3 pasaron.
+
+=== node --test lib/comunidad/*.test.ts (escritura 29 + editor-estado 8) ===
+✔ A2 · editando V1 con borrador llega V2 por una recarga: texto, base y versión esperada intactos; aviso con decisión (13.9112ms)
+✔ A2 · decisiones explícitas ante V2: cargarla descarta el borrador; mantenerlo pasa V2 a ser la base (intento nuevo) (2.4611ms)
+✔ A2 · borrado remoto con borrador: no se vacía el texto; publicar como nueva o descartar, a elección (3.4943ms)
+✔ A2 · reseña nueva en borrador y otra sesión publica una del mismo título: aviso, el borrador queda (1.5819ms)
+✔ A2 · el guardado propio confirmado SÍ actualiza el editor (sin aviso), llegue antes o después la recarga (2.5826ms)
+✔ A2 · sin borrador no hay nada que conservar: la versión nueva (o el borrado) se toma (0.9086ms)
+✔ A2 · cuenta y título: otra clave monta otro editor, sin borrador ni intento del anterior (12.4077ms)
+✔ A2 · el componente no decide por su cuenta: el envío usa la base del estado, no la prop (1.8191ms)
+✔ normalizarTexto es la normalización de las reglas de E1 (7.8413ms)
+✔ los largos son los de E1 y los del CHECK de la base (35.3113ms)
+✔ el largo cuenta puntos de código, como char_length (emojis compuestos incluidos) (2.3005ms)
+✔ los caracteres que la base rechaza se rechazan antes (tabulación e invisibles incluidos) (158.1379ms)
+✔ orden: forma → texto → contexto → reglas → hash → función (65.9594ms)
+✔ pedido inválido o texto de formato inválido: no se toca la base (1.093ms)
+✔ reglas: rechazo de contenido llega a la base (cuenta para el límite) con el motivo de las reglas (5.9767ms)
+✔ reglas: retención llega como 'retener' con sus reglas (7.2231ms)
+✔ fallos: contexto que falla, reglas que lanzan o dan error, base que lanza → 'error', nunca publicado (5.0176ms)
+✔ A1: una excepción sin clasificar o un cuerpo ilegible NO es 'error': pudo haberse guardado (4.9959ms)
+✔ A1: clasificación de los errores de supabase.rpc (formas medidas contra Supabase local) (2.6482ms)
+✔ A1: confirmación perdida → se repite UNA vez con el mismo id_intento y hash y se recupera el resultado (6.2116ms)
+✔ A1: si el reintento tampoco confirma (o la base lo rechaza), 'sin_confirmar', nunca 'error' (5.4437ms)
+✔ A1: conReconciliacion para las demás mutaciones (votar, retirar, borrar, términos) (2.6776ms)
+✔ A1: HTTP y mensajes de sin_confirmar: 503, no afirma nada y conserva el intento (1.0449ms)
+✔ la baja en curso (CB001) de la base se informa como tal (1.562ms)
+✔ el hash firma acción, ids y texto normalizado: un reintento igual, el mismo; otro texto, otro (0.4147ms)
+✔ el texto de retención es el de E1 (0.1845ms)
+✔ la versión de los términos es la que la migración 014 pone en la base (9.126ms)
+✔ cada motivo de cuenta que devuelve la base tiene su texto (0.9774ms)
+✔ ningún mensaje afirma un resultado sin confirmar (0.5698ms)
+✔ aviso de reinicio: sólo al cambiar un texto persistido (0.2482ms)
+✔ id_intento: el mismo envío reusa el id; otro envío, id nuevo (0.4527ms)
+✔ el contador avisa ANTES de enviar lo que la ruta rechazaría (emoji con ZWJ incluido) y no deja enviar (0.504ms)
+✔ puedeEnviar: largo válido, distinto del persistido y no enviando (0.302ms)
+✔ una respuesta de otra cuenta o de otra carga se descarta (0.3202ms)
+✔ evaluación: conteo explícito, botón elegido retira, la propia no se evalúa (0.5715ms)
+✔ la página de revisión local sólo se habilita fuera de producción y con la variable local (23.6731ms)
+✔ la página de revisión local no viaja en el artefacto Android (0.6613ms)
+ℹ tests 37
+ℹ suites 0
+ℹ pass 37
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2490.0294
+
+=== npx tsc --noEmit --incremental false ===
+exit 0, sin salida
+
+=== npm test (con el .next de next dev apartado; ver informe) ===
+ℹ tests 2417
+ℹ suites 0
+ℹ pass 2399
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 18
+ℹ todo 0
+ℹ duration_ms 58424.5352
+
+=== Limpieza final (recorrido-a2 limpiar + control) ===
+limpio: 0|0|false|5/10/100    (cuentas del recorrido | participantes | algún interruptor encendido | límites)
+config: modulo/publicacion/top = false/false/false; límites 5/10/100
+auth.users del recorrido o de la batería (recorrido-a2-*, escr-*): 0; reseñas en 9701/9702: 0; sesiones conc-*: 0
+@comunidad.test restantes: 42 (el informe de E3a contaba 34). Todas creadas el 24/10 entre 15:31 y 23:46 (prefijos admin/ajeno/autor/suspendido, n=10 c/u, y prueba, n=2: los de la batería de permisos y sus fixtures); las 8 posteriores a ese conteo son de corridas del 24/10 que no son de esta entrega (la última, 23:46, es posterior a faabf5a). Ninguna es del 25/10 y no se tocaron.

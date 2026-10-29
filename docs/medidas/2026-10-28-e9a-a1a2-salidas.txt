@@ -1,0 +1,133 @@
+# E9a — corrección A1/A2 (28/10/2026): salidas
+Claude, feat/resenas-reglas desde 187be15. Sólo Supabase local y datos ficticios. Ninguna bajada de migraciones ejecutada.
+
+## 1. A2 — frenos (sin base): node --test scripts/comunidad/frenos-arneses.test.mjs
+✔ el parser de migraciones ve tablas, funciones, procedimientos, triggers y columnas de config (15.6835ms)
+✔ defaults literales (1.8277ms)
+✔ up-down-up.mjs: admite sin esquema y 011–014 vacía (7.6915ms)
+✔ up-down-up.mjs: rechaza 015 sin 016 (el hueco del freno anterior) (5.7618ms)
+✔ up-down-up.mjs: rechaza el estado actual (011–022) (14.0352ms)
+✔ up-down-up.mjs: rechaza filas que la bajada de 011 perdería, aun con 011–014 sola (3.1707ms)
+✔ up-down-up.mjs: rechaza config cambiada (la bajada la vuelve a los defaults) (2.6649ms)
+✔ up-down-up.mjs: rechaza un trigger ajeno sobre comunidad (p. ej. el registro del recorrido) (2.5986ms)
+✔ up-down-up-020.mjs: admite 011–019 y 011–020 sin meses consolidados (21.0528ms)
+✔ up-down-up-020.mjs: rechaza 021 (reaplicar 020 pisaría sus protecciones) y el estado actual (23.1849ms)
+✔ up-down-up-020.mjs: rechaza meses consolidados y la falta de esquema (8.8755ms)
+✔ up-down-up.mjs real, estado actual 011–022: sale con 2 ANTES de la primera mutación (477.5111ms)
+✔ up-down-up.mjs real, 015 sin 016: sale con 2 ANTES de la primera mutación (231.4561ms)
+✔ up-down-up.mjs real, 011–014 con filas: sale con 2 ANTES de la primera mutación (489.9419ms)
+✔ up-down-up-020.mjs real, estado actual 011–022: sale con 2 ANTES de la primera mutación (584.6926ms)
+✔ up-down-up-020.mjs real, 021 aplicada: sale con 2 ANTES de la primera mutación (398.6621ms)
+✔ up-down-up-020.mjs real, 011–020 con un mes consolidado: sale con 2 ANTES de la primera mutación (533.1666ms)
+✔ up-down-up.mjs real, estado compatible: el freno deja pasar y la primera mutación viene DESPUÉS de leer el estado (955.0795ms)
+✔ up-down-up-020.mjs real, estado compatible: la primera mutación (reaplicar 020) viene DESPUÉS del freno (637.0296ms)
+ℹ tests 19
+ℹ suites 0
+ℹ pass 19
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5038.7792
+
+## 2. A2 — frenos evaluados sobre el estado REAL de la base compartida (una consulta de sólo lectura, sin correr los arneses)
+estado real (sólo lectura): esquema true | tablas 24 | funciones 105 | triggers 8
+up-down-up.mjs → [
+ "tablas de migraciones no admitidas: corroboraciones, decisiones, denuncias_cerradas, denuncias_excedentes, huellas, meses_sin_historial, ordenes_utiles, ordenes_utiles_tramos, purga_config, purga_ejecuciones, top_meses, top_resultados",
+ "funciones de migraciones no admitidas: comunidad.admision, comunidad.antecedentes, comunidad.avatar_publico, comunidad.cola_denuncias, comunidad.consolidar_mes, comunidad.decision_previa, comunidad.duplicado, comunidad.exigir_admin (+52)",
+ "columnas de config de migraciones no admitidas: admision_global, admision_por_autor, denuncias_filas_por_version, denuncias_por_hora, muestreo_activo",
+ "la bajada de 011 borraría filas: purga_config 1"
+]
+up-down-up-020.mjs → [
+ "tablas de migraciones no admitidas: meses_sin_historial, purga_config, purga_ejecuciones",
+ "funciones de migraciones no admitidas: comunidad.historial_libre, comunidad.marcar_sin_historial, comunidad.mas_plazo, comunidad.mes_conservado, comunidad.par_con_memoria, comunidad.purga_lote, comunidad.purga_tomar, comunidad.purgar (+3)"
+]
+con 011–022 admitidas (control: nada fuera de las migraciones) → []
+
+## 3. A1 — núcleo de la limpieza: node --test scripts/comunidad/recorrido-e9a-nucleo.test.mjs
+✔ objetivos: lo guardado ∪ el registro, sin duplicados; nada más (6.1827ms)
+✔ meses: sólo se borra un ranking formado enteramente por datos propios (1.7482ms)
+✔ un mes ajeno que no toca participantes propios ni siquiera se evalúa (no entra en la lista) (0.5125ms)
+✔ sin objetivos, los borrados no alcanzan ninguna fila (el caso de la auditoría) (1.7006ms)
+✔ con objetivos, sólo listas de ids validadas (0.8181ms)
+✔ verificación: cualquier resto o discrepancia impide informar éxito (0.6974ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 299.1517
+
+## 4. A1 — aislamiento en la base local real: node --env-file=.env.comunidad-local scripts/comunidad/pruebas-recorrido-e9a.mjs (corrida 5, la final)
+# Las líneas '│' son la salida de recorrido-e9a.mjs en su proceso; se omiten las trazas de pila de los cortes de prueba.
+base: supabase_db_streamingcentral
+
+✔ punto de partida: sin archivo, sin registro, sin cuentas @recorrido.test, agosto y septiembre sin consolidar
+     │ Error: CORTE DE PRUEBA en "preparar-autores"
+     │ objetivos: 2 cuenta(s), 2 participante(s), 2 versión(es)
+     │ limpieza verificada (intento 1): 2 cuenta(s) y 2 participante(s) propios, sin restos; meses propios borrados: ninguno
+     │ conteos globales de la comunidad (informativo; la actividad ajena los mueve): iguales a los de antes
+     │ interruptores: false/false/false/false | purga: false | permisos restaurados: sí | registro quitado: sí
+✔ preparar cortado tras dos autores: deja el archivo y el registro; limpiar lo deja todo como antes
+     │ Preparado. Credenciales en .recorrido-e9a.local.json (cuentas ficticias locales).
+     │   ficha principal: http://localhost:3100/titulo/movie/550  (7 reseñas ajenas + la editorial ficticia)
+     │   segunda ficha:   http://localhost:3100/titulo/movie/603
+     │   Top Yumpers de septiembre de 2026, una denuncia abierta en /admin/moderacion
+     │   registrá tu cuenta nueva con un correo que termine en @recorrido.test (queda registrada como propia del recorrido)
+✔ preparar completo
+     ajeno: {"participantes" : 1, "intentos" : 1, "huellas" : 0, "agosto" : "1:5:b5a406fd-59f5-4817-9178-2260bbbb6d5e", "agosto_mes" : 1}
+✔ durante el recorrido: identidad AJENA dada de baja, ranking AJENO de agosto, cuentas propias hechas a mano (una dada de baja)
+     │ objetivos: 14 cuenta(s), 13 participante(s), 9 versión(es)
+     │ Error: CORTE DE PRUEBA en "tras-objetivos"
+✔ limpiar cortado tras guardar los objetivos: sale con error, sin éxito, nada borrado, objetivos = el registro
+     │ objetivos: 14 cuenta(s), 13 participante(s), 9 versión(es)
+     │ Error: CORTE DE PRUEBA en "tras-comunidad"
+✔ entre intentos nace otra identidad ajena; el corte siguiente (tras comunidad) no la incluye
+     │ objetivos: 14 cuenta(s), 13 participante(s), 9 versión(es)
+     │ limpieza verificada (intento 3): 14 cuenta(s) y 13 participante(s) propios, sin restos; meses propios borrados: 2026-09-01
+     │ conteos globales de la comunidad (informativo; la actividad ajena los mueve): participantes 0→2, intentos 0→1, top_meses 0→1, top_resultados 0→1
+     │ interruptores: false/false/false/false | purga: false | permisos restaurados: sí | registro quitado: sí
+✔ reintento completo: éxito verificado; quita archivo y registro
+✔ lo propio se limpió: cuentas de preparar y a mano, el participante desvinculado y septiembre
+✔ lo ajeno sobrevivió: la identidad dada de baja con sus filas, el ranking de agosto y la cuenta viva
+     │ Error: No hay .recorrido-e9a.local.json: no sé qué restaurar ni qué es propio.
+✔ limpiar repetido sin archivo: no borra nada y lo dice
+     │ Preparado. Credenciales en .recorrido-e9a.local.json (cuentas ficticias locales).
+     │   ficha principal: http://localhost:3100/titulo/movie/550  (7 reseñas ajenas + la editorial ficticia)
+     │   segunda ficha:   http://localhost:3100/titulo/movie/603
+     │   Top Yumpers de septiembre de 2026, una denuncia abierta en /admin/moderacion
+     │   registrá tu cuenta nueva con un correo que termine en @recorrido.test (queda registrada como propia del recorrido)
+     │ objetivos: 12 cuenta(s), 11 participante(s), 8 versión(es)
+     │ LIMPIEZA DETENIDA antes de borrar. Se conservan el archivo y el registro para reintentar:
+     │   - 2026-09-01: ranking con 1 tramo(s) y 0 resultado(s) ajenos; no se toca
+✔ discrepancia real: con un voto AJENO en septiembre, la limpieza se detiene ANTES de borrar, sale con 1 y conserva archivo y registro
+     │ objetivos: 12 cuenta(s), 11 participante(s), 8 versión(es)
+     │ limpieza verificada (intento 2): 12 cuenta(s) y 11 participante(s) propios, sin restos; meses propios borrados: 2026-09-01
+     │ conteos globales de la comunidad (informativo; la actividad ajena los mueve): participantes 2→3, contadores 0→1
+     │ interruptores: false/false/false/false | purga: false | permisos restaurados: sí | registro quitado: sí
+✔ resuelta la discrepancia (se quita el voto ajeno de prueba), el reintento verifica y borra septiembre
+✔ limpieza de las fixtures ajenas de esta prueba (por id) y base como al principio
+
+13 de 13 pasaron.
+
+## 5. Corridas anteriores de la prueba de aislamiento (no se ocultan)
+- Corridas 1 y 2: 4/11 y 5/11. Defecto de la PRUEBA: los textos de las reseñas de prueba llevaban un correo y luego dígitos, y la regla de contacto los rechazó ("Sacá la dirección de correo…", "Sacá el número de teléfono…"). Las pruebas siguientes dependían de esa publicación. En las dos, la limpieza del recorrido NO borró la identidad ajena; la fixture ajena que quedó se borró a mano por id (participante 86d0c68a…).
+- Corrida 3: 11/11 (sin el escenario de discrepancia).
+- Corrida 4: 12/13. Defecto del SCRIPT: con un voto ajeno en septiembre, la limpieza conservaba el ranking pero borraba el tramo ajeno sobre una reseña propia. Se cambió: ante una discrepancia de ranking, la limpieza se detiene ANTES de borrar nada.
+- Corrida 5: 13/13 (sección 4).
+
+## 6. Controles afectados
+scripts/comunidad: ℹ tests 41
+scripts/comunidad: ℹ pass 41
+scripts/comunidad: ℹ fail 0
+scripts/sala: ℹ tests 7
+scripts/sala: ℹ pass 7
+scripts/sala: ℹ fail 0
+tsc --noEmit --incremental false: exit 0
+git diff --check: limpio
+
+## 7. Estado final de la base local (consulta de sólo lectura)
+{"participantes" : 0, "versiones" : 0, "suspensiones" : 0, "cuentas_comunidad_test" : 42, "cuentas_recorrido_o_auditoria" : 0, "tablas_comunidad" : 24, "interruptores" : "false/false/false/false", "purga" : false, "plazo_rankings" : "1 year", "cron" : ["sala-barrido"], "esquemas_recorrido_o_reloj" : 0, "triggers_recorrido" : 0, "top_meses" : 0, "editorial_550" : 0, "privilegios_anon_authenticated_en_tablas_del_recorrido" : "REFERENCES,TRIGGER,TRUNCATE"}
+archivo .recorrido-e9a.local.json: no existe

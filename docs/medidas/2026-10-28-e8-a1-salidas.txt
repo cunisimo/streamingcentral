@@ -1,0 +1,207 @@
+# E8 A1 (auditoría 95c09b2): salidas de la corrección (28/10/2026). Base LOCAL; sin claves ni tokens.
+
+## 1. Reproducción ANTES de corregir (021 de a730934; batería con la prueba A1 nueva)
+✔ preparación: meses libres, registro de purga vacío, purga APAGADA; reloj forzado; módulo y publicación encendidos; admin con dos TOTP
+✔ apagada: con candidatos vencidos, `purgar` no hace nada ni deja registro
+✔ intentos: justo antes se conserva; en y después se borra; idempotente; un reintento con un intento purgado no duplica
+✔ órdenes: vigente (1 µs antes) se conserva; vencida en y después se borra con sus tramos; la del generador real se conserva
+✔ órdenes, concurrencia: un título que el generador está regenerando (lock 7311 tomado) se saltea sin esperar; la corrida siguiente lo borra
+✔ denuncias: cerradas justo antes se conservan; en y después se borran; con otra abierta en la misma versión, se conservan; las abiertas nunca
+✔ denuncias_cerradas (historial mínimo de la baja): 30 días desde el cierre, mismo criterio
+✔ decisiones: justo antes se conserva; en y después se borra; se conservan las de casos abiertos, la suspensión vigente y el último estado de la publicación
+✔ reemplazadas: justo antes se conserva; en y después se borra (con sus votos y huellas; los tramos quedan); con denuncia abierta o cerrada sin vencer, se conserva
+✔ retiradas: justo antes se conserva; en y después se borra la reseña entera; con una versión anterior denunciada, se conserva; restaurar sigue andando
+✔ retiradas, concurrencia: una reseña tomada por un borrado en vuelo se saltea SIN esperar (nowait); al confirmar, ya no es candidata
+✔ borradas: justo antes se conserva; en y después se borra; retenida, rechazada o denunciada, se conserva; el autor puede volver a publicar
+✔ tramos: mes sin margen → nada; en el margen → se borran los cerrados que no hacen falta y queda UNO por par vivo; mes sin consolidar → nada; votar, retirar y restaurar siguen con el mes original
+✔ suspensiones: dentro de un mes, 12 meses desde el fin (antes/en/después); cruzando un corte, se conserva hasta consolidar + margen; abierta, nunca
+✔ rankings: 1 µs antes del vencimiento se conserva; en y después se borra; un mes purgado NO se reconstruye vacío
+✔ ventana de lectura (Top Yumpers, JWT real): un mes fuera de la conservación da 400 y no se consolida; uno dentro, 200 (plazo acortado sólo en esta prueba)
+✔ rankings, concurrencia: con K_CORTE exclusivo tomado (una consolidación), la purga espera el compartido y termina al soltarlo; si pasa lock_timeout, registra el SQLSTATE y sigue
+✔ participantes: un desvinculado se borra sólo sin referencias (intentos, bloqueos de otros, tramos, suspensiones); los vinculados nunca
+✔ lotes: con lote = 2, cinco intentos vencidos salen en 3 lotes confirmados; el registro lleva sólo cantidades
+✔ una corrida por vez: con otra en curso, la segunda queda registrada como `ocupada` y no borra nada
+✔ interrupción: cancelada mientras espera en rankings, quedan confirmados SÓLO los lotes anteriores; el lote en curso no deja nada; reintentar completa; repetir no borra más
+✔ apagar en curso: la corrida termina el lote que estaba haciendo y no empieza otro (`apagada_en_curso`)
+✔ edición en vuelo: la purga borra la reemplazada VIEJA de esa misma reseña sin esperar; la edición confirma y su anterior queda (recién reemplazada)
+✔ baja en vuelo: la corrida diaria completa termina sin esperar (saltea lo que la baja tiene tomado) y la baja confirma igual
+✖ A1: purgar (plazo corto) → ampliar a 12 meses o dejar sin plazo → el mes purgado, consolidado o no, se rechaza sin crear filas; el conservado sin historial se sigue leyendo; el de historial completo consolida; los demás meses no cambian 
+    enero con plazo interval '12 months': {"mes": "2026-01", "mia": null, "corte": "2026-02-01T03:00:00+00:00", "items": [], "activo": true, "autores": 0}
+✔ permisos: nadie de la API ejecuta la purga ni ve su configuración (SQL y REST)
+✔ ningún job programado: cron-comunidad.sql no se ejecutó (sólo `sala-barrido` en cron.job)
+✔ datos ajenos intactos después de todas las corridas
+   cuentas: 37; restos (cuentas|participantes|meses|órdenes|ejecuciones|locks|decisiones|reloj|proto_marca igual|interruptores|purga): 0|0|0|0|0|0|0|0|true|false|false
+27 de 28 pasaron.
+
+## 2. Batería real de purga DESPUÉS de corregir
+✔ preparación: meses libres, registro de purga vacío, purga APAGADA; reloj forzado; módulo y publicación encendidos; admin con dos TOTP
+✔ apagada: con candidatos vencidos, `purgar` no hace nada ni deja registro
+— Intentos de recuperación: 7 días —
+✔ intentos: justo antes se conserva; en y después se borra; idempotente; un reintento con un intento purgado no duplica
+— Órdenes de «Más útiles»: al vencer sus 2 horas (cada hora) —
+✔ órdenes: vigente (1 µs antes) se conserva; vencida en y después se borra con sus tramos; la del generador real se conserva
+✔ órdenes, concurrencia: un título que el generador está regenerando (lock 7311 tomado) se saltea sin esperar; la corrida siguiente lo borra
+— Denuncias resueltas: 30 días después del cierre —
+✔ denuncias: cerradas justo antes se conservan; en y después se borran; con otra abierta en la misma versión, se conservan; las abiertas nunca
+✔ denuncias_cerradas (historial mínimo de la baja): 30 días desde el cierre, mismo criterio
+— Historial de moderación sin texto: 12 meses —
+✔ decisiones: justo antes se conserva; en y después se borra; se conservan las de casos abiertos, la suspensión vigente y el último estado de la publicación
+— Versiones reemplazadas: 30 días, salvo denuncia pendiente —
+✔ reemplazadas: justo antes se conserva; en y después se borra (con sus votos y huellas; los tramos quedan); con denuncia abierta o cerrada sin vencer, se conserva
+— Textos retirados por moderación: 30 días, salvo denuncia pendiente —
+✔ retiradas: justo antes se conserva; en y después se borra la reseña entera; con una versión anterior denunciada, se conserva; restaurar sigue andando
+✔ retiradas, concurrencia: una reseña tomada por un borrado en vuelo se saltea SIN esperar (nowait); al confirmar, ya no es candidata
+— Textos borrados por el autor: 30 días (interpretación de «textos retirados») —
+✔ borradas: justo antes se conserva; en y después se borra; retenida, rechazada o denunciada, se conserva; el autor puede volver a publicar
+— Historial de puntos: tramos, mes consolidado + 30 días —
+✔ tramos: mes sin margen → nada; en el margen → se borran los cerrados que no hacen falta y queda UNO por par vivo; mes sin consolidar → nada; votar, retirar y restaurar siguen con el mes original
+— Suspensiones: 12 meses desde su fin y meses del corte liberados —
+✔ suspensiones: dentro de un mes, 12 meses desde el fin (antes/en/después); cruzando un corte, se conserva hasta consolidar + margen; abierta, nunca
+— Rankings: 12 meses desde el corte; la ventana de lectura —
+✔ rankings: 1 µs antes del vencimiento se conserva; en y después se borra; un mes purgado NO se reconstruye vacío
+✔ ventana de lectura (Top Yumpers, JWT real): un mes fuera de la conservación da 400 y no se consolida; uno dentro, 200 (plazo acortado sólo en esta prueba)
+✔ rankings, concurrencia: con K_CORTE exclusivo tomado (una consolidación), la purga espera el compartido y termina al soltarlo; si pasa lock_timeout, registra el SQLSTATE y sigue
+— Participantes huérfanos —
+✔ participantes: un desvinculado se borra sólo sin referencias (intentos, bloqueos de otros, tramos, suspensiones); los vinculados nunca
+— Lotes, progreso, reintentos e interrupciones —
+✔ lotes: con lote = 2, cinco intentos vencidos salen en 3 lotes confirmados; el registro lleva sólo cantidades
+✔ una corrida por vez: con otra en curso, la segunda queda registrada como `ocupada` y no borra nada
+✔ interrupción: cancelada mientras espera en rankings, quedan confirmados SÓLO los lotes anteriores; el lote en curso no deja nada; reintentar completa; repetir no borra más
+✔ apagar en curso: la corrida termina el lote que estaba haciendo y no empieza otro (`apagada_en_curso`)
+— Concurrencia con operaciones reales —
+✔ edición en vuelo: la purga borra la reemplazada VIEJA de esa misma reseña sin esperar; la edición confirma y su anterior queda (recién reemplazada)
+✔ baja en vuelo: la corrida diaria completa termina sin esperar (saltea lo que la baja tiene tomado) y la baja confirma igual
+— A1 (auditoría 95c09b2): un mes cuyo historial se purgó no se reconstruye aunque cambie el plazo —
+✔ A1: purgar (plazo corto) → ampliar a 12 meses o dejar sin plazo → el mes purgado, consolidado o no, se rechaza sin crear filas; el conservado sin historial se sigue leyendo; el de historial completo consolida; los demás meses no cambian
+— Permisos —
+✔ permisos: nadie de la API ejecuta la purga ni ve su configuración (SQL y REST)
+✔ ningún job programado: cron-comunidad.sql no se ejecutó (sólo `sala-barrido` en cron.job)
+✔ datos ajenos intactos después de todas las corridas
+— Limpieza (base compartida): sólo lo de esta corrida —
+   cuentas: 37; restos (cuentas|participantes|meses|órdenes|ejecuciones|marcas|locks|decisiones|reloj|proto_marca igual|interruptores|purga): 0|0|0|0|0|0|0|0|0|true|false|false
+28 de 28 pasaron.
+
+## 3. up → down → up de 021
+base: supabase_db_streamingcentral
+
+   volcado 0-sin-021: 15827 líneas, sha256 5bdc790699e97e63…
+✔ antes: sin 021 (el volcado de partida), con 020 aplicada
+   volcado 1-con-021: 16602 líneas, sha256 069a6cdb950708ef…
+✔ 021 up: tablas, funciones y procedimiento; purga APAGADA; plazos del dueño; huellas y excepción sin configurar
+   volcado 2-sin-021: 15827 líneas, sha256 5bdc790699e97e63…
+✔ 021_down: vuelve EXACTAMENTE al volcado de antes (020 restaurada) y no toca datos
+   volcado 3-sin-021-otra-vez: 15827 líneas, sha256 5bdc790699e97e63…
+✔ 021_down repetida: inocua
+   volcado 4-con-021: 16602 líneas, sha256 069a6cdb950708ef…
+   volcado 5-con-021-repetida: 16602 líneas, sha256 069a6cdb950708ef…
+✔ 021 up: vuelve exactamente al volcado con 021; repetida, inocua
+   volcado 6-sin-021: 15827 líneas, sha256 5bdc790699e97e63…
+   volcado 7-con-021: 16602 líneas, sha256 069a6cdb950708ef…
+✔ segunda vuelta down → up: mismos volcados; datos ajenos intactos
+
+6 de 6 pasaron.
+(El volcado sin 021 ya no es el 3e41cc8f… del 27/10 porque Realtime rota sus particiones diarias realtime.messages_AAAA_MM_DD; dentro de la corrida, antes de subir = después de bajar.)
+
+## 4. Regresiones
+### pruebas-top
+✔ preparación: meses de prueba libres; reloj forzado instalado; módulo y Top Yumpers encendidos; admin con dos TOTP
+✔ un punto por evaluador DISTINTO y autor: dos positivos de la misma persona suman 1; publicar no suma; un negativo no resta; retirar o pasar a negativo dentro del mes deja 0; abril no cuenta
+✔ caso 11: tramo que empieza, tramo que termina, suspensión (de autor y de evaluador) que empieza y que termina EXACTAMENTE en T(M) y a 1 µs de cada lado
+✔ suspender NO cierra tramos (conciliación del 25/10): los votos del autor y del evaluador suspendidos siguen abiertos; el cómputo los excluye sólo mientras la suspensión rige antes del corte
+✔ caso 10: edición, retiro por moderación, suspensión y bajas ENTRE el corte y la primera consulta no cambian el mes; restaurar antes del corte cuenta y después no; cierre repetido sin cambios
+✔ reproducible: un voto con marca de julio que llega DESPUÉS de consolidar (fixture de reloj) no cambia el mes consolidado, aunque el cómputo de hoy sí lo vería
+✔ proyección: sólo posición, puntos, estado y, para cuentas activas, id de participante, nombre comunitario, avatar del catálogo y propio; nunca user_id, correo, display_name ni semilla
+✔ bloqueo: quien bloqueó a D lo ve como «Usuario bloqueado» (con su posición y puntos, sin id ni nombre); otro lector lo ve normal
+✔ permisos: anon y service_role no leen (401/403 42501); las funciones internas y las tablas no tienen grants; el interruptor sólo para service_role
+✔ ruta: sin sesión 401 SÓLO {resultado, activo}; con sesión 200 privado y sin caché; mes inválido 400; interruptores apagados → {activo:false} y el selector desaparece
+   cuentas: 48; restos (cuentas|participantes|meses|locks|decisiones|reloj|proto_marca igual|interruptores): 0|0|0|0|0|0|true|false
+10 de 10 pasaron.
+### pruebas-top-concurrencia
+✔ preparación: meses libres, reloj forzado, interruptores encendidos
+✔ caso 6: un voto que tomó el compartido ANTES de T(M) y confirma DESPUÉS, mientras la consolidación espera el exclusivo: la consolidación lo espera y lo cuenta
+✔ caso 7a: con la consolidación CALCULANDO (exclusivo tomado), un voto con marca después de T(M) espera el compartido; el mes no lo incluye y coincide con el cómputo exacto
+✔ caso 7b: con la consolidación ESPERANDO el exclusivo, un voto nuevo (marca después de T(M)) queda detrás de ella; el previo cuenta, el nuevo no
+✔ 50 lecturas concurrentes después del corte: UN solo cálculo y la misma respuesta; después, 50 más se resuelven sin pedir el exclusivo (con un compartido retenido) mientras un mes sin consolidar sí lo espera
+✔ B8: borrado por Auth SIN paso 1, con un voto real de otra cuenta en vuelo y una consolidación real esperando: o termina (tramos cerrados con UNA marca, participante sin user_id) o se revierte entera y el reintento termina; la consolidación termina y coincide con el cómputo exacto
+   cuentas: 18; restos (cuentas|participantes|meses|locks|reloj|proto_marca igual|interruptores): 0|0|0|0|0|true|false
+6 de 6 pasaron.
+### pruebas-permisos
+✔ el esquema tiene exactamente las veinticuatro tablas previstas (11 de E2a + intentos de E3a + 3 de E3b + 2 de E4 + 2 de E5b + 2 de E7 + 3 de E8)
+✔ catálogo: ningún privilegio de tabla para PUBLIC, anon, authenticated ni service_role
+✔ catálogo: ningún privilegio de columna para esos roles
+✔ catálogo: el esquema niega USAGE y CREATE; secuencias y funciones cerradas
+✔ control: una función nueva en el esquema SIN su revoke queda ejecutable por PUBLIC (default de PostgreSQL); la frena sólo el esquema
+✔ catálogo: RLS activada en las quince y ninguna policy
+✔ control positivo: el dueño (postgres) sí lee las quince tablas
+✔ control positivo: SET ROLE cambia de verdad el rol (current_user = anon)
+✔ 1a · esquema: 360 intentos reales → 42501
+✔ 1b · grants de tabla (USAGE concedido y revertido): 360 intentos → 42501
+✔ 1c · RLS sin policies (grants concedidos y revertidos, con fixtures): anon y authenticated no ven ni tocan nada
+✔ 1c · service_role tiene BYPASSRLS: con grants vería todo (por eso su cierre son 1a y 1b)
+✔ 1c · después de revertir, los grants de prueba no quedaron
+✔ crear autor, ajeno, suspendido y admin; participantes, reseña y suspensión puestas por el dueño
+✔ is_admin_mfa(): admin AAL1 → false
+✔ is_admin_mfa(): admin AAL2 con UN factor verificado → false
+✔ is_admin_mfa(): admin AAL2 con DOS factores TOTP verificados → true
+✔ is_admin_mfa(): el mismo admin con dos factores pero sesión nueva AAL1 → false
+✔ is_admin_mfa(): usuario común (sin is_admin) → false
+✔ REST: 7 credenciales × 24 tablas × 4 métodos × 2 perfiles → nunca 2xx; 404 PGRST205 / 406 PGRST106
+✔ REST: el OpenAPI no menciona ninguna tabla de comunidad; de las RPC (E2b, E3a y E3b), anon no ve ninguna y service_role ve exactamente las del inventario
+✔ GraphQL: pg_graphql no está habilitada en la base local; el endpoint lo informa y no expone nada
+✔ las únicas public.comunidad_* son las del inventario (E2b, E3a, E3b, E4, E5a, E5b, E6 y E7), security definer y search_path vacío
+✔ catálogo: EXECUTE sólo service_role en las de E2b–E3b, y sólo authenticated en las de moderación (E4) y en la lectura (E5a) y el perfil (E6)
+✔ RPC real por REST: anon y cada JWT reciben 401/403 en todas; service_role ejecuta (uid inexistente: sin efectos)
+✔ RPC real por REST a la lectura (E5a): anon y service_role → 401/403 sin datos; cada JWT real (autor, ajeno, suspendido, admin AAL1 y AAL2) → 200 como sí mismo
+✔ RPC real por REST a las de moderación (E4): anon, autor, ajeno, suspendido, admin AAL1 y service_role → 401/403 con 42501; el admin AAL2 con dos factores → 200 (pedidos sin efecto); nada se registra
+✔ ninguna función del esquema comunidad es ejecutable por PUBLIC ni por los roles de la API
+✔ RPC por REST a una función del esquema: 406 PGRST106 con el perfil, 404 sin él, para cada credencial
+   cuentas: 4; restos (cuentas|participantes): 0|0
+29 de 29 pasaron.
+
+## 5. Unitarias (purga, Top Yumpers, Top manual)
+✔ barrido 021: interruptor propio APAGADO; plazos del dueño cargados; huellas sin configurar; la excepción de la baja identificada y bloqueada (13.717ms)
+✔ barrido 021: retenidos, denuncias abiertas y rechazadas no tienen plazo (no hay columna) y nada los borra por antigüedad (7.4439ms)
+✔ barrido 021: el procedimiento confirma cada lote, no tiene SET, no avanza el reloj, y registra sólo cantidades y SQLSTATE (3.2975ms)
+✔ barrido 021: la purga no espera locks de filas (nowait / skip locked); los únicos que espera son K_CORTE compartido y nada más (13.7202ms)
+✔ barrido 021: tramos conservan UN tramo por par mientras la versión pueda volver a votarse o restaurarse; sólo de meses liberados (5.1125ms)
+✔ barrido 021: el Top Yumpers no lee ni reconstruye un mes fuera de la conservación (lectura y consolidación, antes y después del exclusivo) (8.4805ms)
+✔ barrido 021 A1: todo borrado de ranking o historial marca el mes en la misma transacción; consolidar_mes rechaza un mes marcado antes y después del exclusivo; la marca no depende de ningún plazo (6.287ms)
+✔ barrido 021: permisos cerrados (nada nuevo ejecutable por la API) y sin cron ni solo_local (8.6029ms)
+✔ barrido 021_down: restaura consolidar_mes y la lectura EXACTAMENTE como en 020, borra sólo lo de 021 y avisa que lo purgado no vuelve (6.8771ms)
+✔ cron-comunidad.sql: unschedule idempotente; cada hora las órdenes, una vez al día el resto; SQL puro en Supabase; no enciende nada ni toca otros jobs (12.8579ms)
+✔ respuesta: eliminada y bloqueado no toman id, nombre ni avatar aunque vengan; activo exige id uuid y avatar con forma de catálogo (9.8455ms)
+✔ textos: mes en español rioplatense, puntos en singular y plural (1.2068ms)
+✔ pedido: sin mes, el último cerrado (lo decide la base); con mes, YYYY-MM válido (2.2695ms)
+✔ barrido 020: el cómputo es el de §2.2.2 (mes de la primera positiva, tramo y suspensiones con la MISMA condición al corte, pares distintos) (9.1655ms)
+✔ barrido 020: consolidar_mes = comprobación rápida SIN lock → exclusivo real → nueva comprobación → UNA sentencia; huérfanos sin id (24.6613ms)
+✔ barrido 020: la lectura exige sesión (auth.uid), consolida antes de leer y proyecta sin user_id, correo ni semilla; permisos explícitos (4.4892ms)
+✔ barrido 020: el down no toca tramos, votos, suspensiones ni participantes (3.8364ms)
+✔ el Top Yumpers no comparte fuente, caché ni sessionStorage con el Top de plataformas (22.6911ms)
+✔ el selector: Top semanal plataformas (público, con su toggle Películas/Series) y Top Yumpers (sin toggle); aparece sólo con el interruptor (5.0146ms)
+✔ un bloque publicado conserva EXACTAMENTE la selección y el orden manual (13.8057ms)
+✔ TMDB sólo enriquece: se le piden EXACTAMENTE los títulos del bloque, en su orden (3.7944ms)
+✔ las seis plataformas usan su propia publicación, Netflix incluida (4.0649ms)
+✔ un bloque sin publicar dice que no está disponible; los demás se ven igual (2.2661ms)
+✔ el tipo cuenta: Películas publicado no cubre Series (1.9598ms)
+✔ las plataformas del usuario van primero; el resto, abajo; en el orden del selector (1.5918ms)
+✔ una lectura fallida es un ERROR, no un Top vacío ni otro ranking (1.2824ms)
+✔ sin publicaciones NO es un error: los doce bloques dicen «todavía no disponible» (1.2894ms)
+✔ reintentar después de un fallo devuelve el Top publicado (2.3515ms)
+✔ un fallo de TMDB al enriquecer NO esconde el bloque: sale con sus títulos y degradado (6.1431ms)
+✔ la lectura real LANZA ante un error de Supabase, y no lo guarda en caché (5.005ms)
+✔ la ruta responde 503 ante la lectura fallida, y la vista ofrece reintentar (10.5556ms)
+✔ el Top no tiene ningún camino hacia el ranking automático ni la popularidad (9.0857ms)
+✔ la disponibilidad ignora el top automático aunque traiga un dato «reciente» (1.548ms)
+✔ ningún código de la app lee `netflix_top10` ni importa la ingesta (789.2902ms)
+✔ no queda programación de cron en el repo (2.1592ms)
+✔ la ruta antigua no existe: /api/cron/netflix-top10 ya no puede ejecutar nada (0.4816ms)
+ℹ tests 36
+ℹ pass 36
+ℹ fail 0
+
+## 6. npm test y tsc
+ℹ tests 2535
+ℹ pass 2519
+ℹ fail 0
+ℹ skipped 16
+tsc --noEmit: 0

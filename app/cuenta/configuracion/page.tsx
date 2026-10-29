@@ -8,6 +8,7 @@ import { useAuth } from "@/components/AuthContext";
 import { useTheme } from "@/components/ThemeContext";
 import InstallRow from "@/components/pwa/InstallRow";
 import EliminarCuenta from "@/components/cuenta/EliminarCuenta";
+import FilaBloqueados from "@/components/comunidad/FilaBloqueados";
 import { COUNTRIES } from "@/components/data";
 
 const PAIS_KEY = "sc:pais";
@@ -69,6 +70,8 @@ export default function ConfiguracionPage() {
 
           <InstallRow />
 
+          <FilaBloqueados />
+
           <div className="cfg-row off">
             <div className="cfg-info">
               <div className="cfg-lbl">Idioma</div>
@@ -79,7 +82,7 @@ export default function ConfiguracionPage() {
 
           {/* ÚLTIMA sección de la página y visualmente separada: una acción
               irreversible no puede quedar al lado de un toggle de tema. */}
-          <EliminarCuenta email={user.email ?? ""} />
+          <EliminarCuenta email={user.email ?? ""} uid={user.id} />
         </div>
       </main>
       <BottomNav />

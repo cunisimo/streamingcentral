@@ -25,7 +25,7 @@ export default function CompartirMatch({ card, union }: { card: CardSala; union:
     .filter((n): n is string => !!n);
 
   return (
-    <button type="button" className="rlt-btn" onClick={() => void compartir(mensajeMatch({ title: card.titulo, type: "movie", id: card.tmdb_id }, nombres))}>
+    <button type="button" className="rlt-btn sala-compartir-match" onClick={() => void compartir(mensajeMatch({ title: card.titulo, type: "movie", id: card.tmdb_id }, nombres))}>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
         <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
         <path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" />

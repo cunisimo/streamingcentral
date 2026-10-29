@@ -1,0 +1,84 @@
+Salidas de la corrección A1 de E5a (Claude, 26/10/2026, feat/resenas-reglas).
+Base: Supabase local (supabase start), datos ficticios @comunidad.test, corridas en secuencia.
+Reales: la lectura, los votos, la reconciliación y la base. Simulada: la PÉRDIDA de respuesta
+(un fetch que hace el pedido real y descarta la respuesta después del commit).
+
+===== 1. Unitaria nueva ANTES de la corrección: falla =====
+node --test lib/comunidad/lectura.test.ts
+✖ A1 (auditoría de E5a): los resultados IDEMPOTENTES de una confirmación recuperada también se reflejan, sin contar dos veces
+    actual: [ null, 2, 3 ],  expected: [ 'util', 3, 4 ]
+ℹ pass 11 · ℹ fail 1
+
+===== 2. pruebas-voto-lista.mjs contra el núcleo ANTERIOR (lista-nucleo.ts de b7ba962): falla =====
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321 · núcleo: C:/Users/CUNO/AppData/Local/Temp/claude/D--DESARROLLO-stream-central/096f2611-0f5f-4489-9807-267744a54602/scratchpad/nucleo-b7ba962/lista-nucleo.ts
+
+✔ preparación: 7 reseñas reales (dos páginas: 5 + 2), un lector con sesión real y otra cuenta que ya votó dos
+✔ positivo SIN pérdida: voto_registrado; pantalla = base; el siguiente toque RETIRA
+✖ positivo con la PRIMERA respuesta perdida: la reconciliación confirma sin_cambios; pantalla = base (util, sin contar dos veces); el siguiente toque RETIRA
+    Expected values to be strictly deep-equal:
+✖ negativo con la primera respuesta perdida (reseña con un voto ajeno negativo): sin_cambios; pantalla = base
+    Expected values to be strictly deep-equal:
+✖ CAMBIO de voto (útil → no útil) con la primera respuesta perdida: sin_cambios; útiles −1, total igual; pantalla = base
+    Expected values to be strictly deep-equal:
+✖ RETIRO con la primera respuesta perdida: la reconciliación confirma sin_efecto; pantalla = base (sin voto); el siguiente toque VOTA
+    Expected values to be strictly deep-equal:
+✔ retiro SIN pérdida (voto_retirado) sobre una reseña con voto ajeno: pantalla = base
+✖ pérdida de AMBAS respuestas: sin_confirmar, la pantalla NO cambia y avisa la incertidumbre; el reintento posterior confirma sin_cambios y la pantalla queda = base
+    Expected values to be strictly deep-equal:
+✖ pérdida de AMBAS respuestas al retirar: sin_confirmar sin cambio visible; el reintento confirma sin_efecto y la pantalla queda sin voto = base
+    Expected values to be strictly deep-equal:
+✖ al final: TODA la lista (las dos páginas) coincide con la base, reseña por reseña
+    versión 2151
+
+— Limpieza (base compartida): sólo lo de esta corrida —
+   cuentas: 9; restos (cuentas|participantes|interruptores): 0|0|false
+
+3 de 10 pasaron.
+Fallaron:
+ - positivo con la PRIMERA respuesta perdida: la reconciliación confirma sin_cambios; pantalla = base (util, sin contar dos veces); el siguiente toque RETIRA
+ - negativo con la primera respuesta perdida (reseña con un voto ajeno negativo): sin_cambios; pantalla = base
+ - CAMBIO de voto (útil → no útil) con la primera respuesta perdida: sin_cambios; útiles −1, total igual; pantalla = base
+ - RETIRO con la primera respuesta perdida: la reconciliación confirma sin_efecto; pantalla = base (sin voto); el siguiente toque VOTA
+ - pérdida de AMBAS respuestas: sin_confirmar, la pantalla NO cambia y avisa la incertidumbre; el reintento posterior confirma sin_cambios y la pantalla queda = base
+ - pérdida de AMBAS respuestas al retirar: sin_confirmar sin cambio visible; el reintento confirma sin_efecto y la pantalla queda sin voto = base
+ - al final: TODA la lista (las dos páginas) coincide con la base, reseña por reseña
+
+===== 3. pruebas-voto-lista.mjs con la corrección (se agregó el caso «negativo SIN pérdida»: 11 pruebas) =====
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321 · núcleo: lib/comunidad/lista-nucleo.ts
+
+✔ preparación: 7 reseñas reales (dos páginas: 5 + 2), un lector con sesión real y otra cuenta que ya votó dos
+✔ positivo SIN pérdida: voto_registrado; pantalla = base; el siguiente toque RETIRA
+✔ positivo con la PRIMERA respuesta perdida: la reconciliación confirma sin_cambios; pantalla = base (util, sin contar dos veces); el siguiente toque RETIRA
+✔ negativo SIN pérdida: voto_registrado; pantalla = base; el siguiente toque del mismo pulgar RETIRA
+✔ negativo con la primera respuesta perdida (reseña con un voto ajeno negativo): sin_cambios; pantalla = base
+✔ CAMBIO de voto (útil → no útil) con la primera respuesta perdida: sin_cambios; útiles −1, total igual; pantalla = base
+✔ RETIRO con la primera respuesta perdida: la reconciliación confirma sin_efecto; pantalla = base (sin voto); el siguiente toque VOTA
+✔ retiro SIN pérdida (voto_retirado) sobre una reseña con voto ajeno: pantalla = base
+✔ pérdida de AMBAS respuestas: sin_confirmar, la pantalla NO cambia y avisa la incertidumbre; el reintento posterior confirma sin_cambios y la pantalla queda = base
+✔ pérdida de AMBAS respuestas al retirar: sin_confirmar sin cambio visible; el reintento confirma sin_efecto y la pantalla queda sin voto = base
+     respuestas perdidas simuladas: 8
+✔ al final: TODA la lista (las dos páginas) coincide con la base, reseña por reseña
+
+— Limpieza (base compartida): sólo lo de esta corrida —
+   cuentas: 9; restos (cuentas|participantes|interruptores): 0|0|false
+
+11 de 11 pasaron.
+
+===== 4. Unitarias focalizadas (lectura, estado del editor, frontera de cuenta, moderación, reseñas, marca, CORS) =====
+ℹ tests 78
+ℹ pass 78
+ℹ fail 0
+ℹ skipped 0
+
+===== 5. tsc --noEmit --incremental false: exit 0. git diff --check: sin errores =====
+
+===== 6. Recorrido en navegador local (escritorio y 375 px; pérdida simulada con un interceptor de fetch en la página) =====
+útil con la respuesta perdida → «No sabemos si se guardó…», sin cambio; la ruta había devuelto voto_registrado
+reintento → sin_cambios → pulgar marcado, «1 de 1»; lista con 10 (dos páginas) y «Cargar más»
+retiro con la respuesta perdida → incierto; reintento → sin_efecto → sin voto
+cambio a «No me sirvió» con la respuesta perdida → incierto; reintento → sin_cambios → «0 de 1», pulgar abajo
+base, leída como el lector: {"mi_voto":"no_util","utiles":0,"total":1} (= pantalla)
+375 px: útil perdido → incierto; reintento → sin_cambios reflejado; tercera página: 13 sin repetir; ancho 375 = 375
+
+===== 7. Estado final de la base =====
+6 participantes | 2 versiones | 42 cuentas | 2 suspensiones | 0 evaluaciones | 0 locks | interruptores false | grant profiles false

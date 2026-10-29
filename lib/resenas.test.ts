@@ -33,7 +33,8 @@ test("el encabezado cuenta las reseñas: \"RESEÑAS · n\"", () => {
 });
 
 test("acordeón: arranca SIEMPRE cerrado, con la bajada de spoilers y accesible", () => {
-  const s = fuente("components/ResenasAcordeon.tsx");
+  // E5a: el armazón vive en ResenasSeccion (lo usan la sección sin sesión y la con sesión).
+  const s = fuente("components/ResenasSeccion.tsx");
   assert.match(s, /useState\(false\)/, "tiene que arrancar cerrado");
   assert.match(s, /Cuidado, puede contener spoilers\./);
   assert.match(s, /aria-expanded=\{abierto\}/);
