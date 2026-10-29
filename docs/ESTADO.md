@@ -1393,9 +1393,17 @@ AAB tiene que ser `5` o mayor.
        `vector`, que sólo recoge logs para Studio, se reinicia en bucle sin
        afectar a la app: no se tocó). Línea base confirmada por consulta
        antes de preparar (0/0/0, 42 cuentas antiguas, sin archivo, registro
-       ni reloj). `recorrido-e9a.mjs preparar` y la web local en
-       `http://localhost:3100` quedaron levantados para la prueba del dueño,
-       **pendiente**; limpiar con `limpiar` al terminar.
+       ni reloj). **`preparar` FALLÓ** al crear la primera cuenta: la API
+       local (`127.0.0.1:54321`) rechaza conexiones porque Windows reservó el
+       rango TCP 54234–54933 (`netsh interface ipv4 show excludedportrange`,
+       típico de WinNAT/Hyper-V) y Docker no publica 54321–54323 (los
+       contenedores muestran el puerto sin mapeo; reiniciar Kong no alcanzó).
+       Queda el registro de recuperación (`.recorrido-e9a.local.json`, fase
+       `preparando`): registro instalado, 19 permisos temporales, editorial
+       ficticia e interruptores encendidos; 0 cuentas creadas, reloj quitado.
+       No se limpió ni se levantó la web. Liberar las reservas exige un
+       cambio de sistema con permisos de administrador (por ejemplo,
+       reiniciar el servicio `winnat`): lo decide y ejecuta el dueño.
    - decidir si el CHECK de 011 sigue prohibiendo U+200D (ZWJ), que
      bloquea los emojis compuestos. Es una restricción de E2a que no se
      reabrió;
