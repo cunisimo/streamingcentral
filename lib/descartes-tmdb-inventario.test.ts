@@ -570,6 +570,7 @@ const INVENTARIO: Fila[] = [
   { archivo: "lib/supabase.ts", ancla: "catch", clase: "no-tmdb", motivo: "Supabase" },
   { archivo: "lib/supabase.ts", ancla: "catch", clase: "no-tmdb", motivo: "Supabase" },
   { archivo: "lib/admin-auth.ts", ancla: "} catch {", clase: "no-tmdb", motivo: "Supabase auth" },
+  { archivo: "lib/reco-descartes-servidor.ts", ancla: "} catch (e) {", clase: "no-tmdb", motivo: "Supabase: lectura de user_items (descartes) → null, el riel se arma sin esas exclusiones" },
   { archivo: "lib/admin-auth-nucleo.ts", ancla: "} catch {", clase: "no-tmdb", motivo: "token" },
   { archivo: "lib/api-base.ts", ancla: "} catch {", clase: "no-tmdb", motivo: "URL en el navegador" },
   { archivo: "lib/barra-estado.ts", ancla: "} catch {", clase: "no-tmdb", motivo: "navegador" },

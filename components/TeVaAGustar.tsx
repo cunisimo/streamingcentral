@@ -129,9 +129,10 @@ export default function TeVaAGustar({ enHome }: { enHome: string[] }) {
     const k = clave(t.type, t.id);
     const id = ++proximaAccion.current;
     registrarAccion(k, id);
-    // Optimista: la tarjeta se va ya. No se re-pide el riel ni se rellena el
-    // hueco, así que esto no dispara NINGUNA llamada a TMDB, a Upstash ni al
-    // recomendador — solo el INSERT de abajo, que va a Supabase.
+    // Optimista: la tarjeta se va ya. En la sesión no se re-pide el riel, así
+    // que esto no dispara NINGUNA llamada a TMDB, a Upstash ni al recomendador
+    // — solo el INSERT de abajo, que va a Supabase. El hueco se rellena en la
+    // carga siguiente: el servidor lee los descartes y los excluye.
     setDescartados((prev) => new Set(prev).add(k));
     setAviso({ id, k, titulo: t.title });
     setErrorDescarte(null);

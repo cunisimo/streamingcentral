@@ -1517,6 +1517,42 @@ reusa su diseño, no se mergea.
 
 ## Evidencia y alcance de esta actualización
 
+- **"Elegidas para vos" no se reponía al descartar (2026-10-29; rama
+  `fix/descartes-rellenan-riel`, MERGEADA `50ebc93` y DESPLEGADA — deploy
+  Production 7419445647 `success`; Preview de la rama `success`).** **Informado por
+  el dueño:** un usuario quedó con 4 y después 3 tarjetas tras ir tocando "No
+  es para mí", y el dueño lo reprodujo en su cuenta. **Causa, comprobada en
+  código:** los descartes se filtraban SÓLO en el cliente (`visibles()` en
+  `components/reco-descartes.ts`) y nunca llegaban al recomendador, así que
+  `/api/te-va-a-gustar` devolvía siempre los mismos ≤ 20 (`OBJETIVO`) —misma
+  clave `reco:`, TTL 6 h, y aun rearmado da lo mismo porque las señales no
+  cambian— y cada descarte restaba uno para siempre. El piso de 10 se mide
+  sobre lo que trae el servidor, por eso el riel seguía visible con 3.
+  **Arreglo:** la ruta lee los descartes con el token del usuario
+  (`lib/reco-descartes-servidor.ts`, `supabaseComoUsuario` + RLS de
+  `user_items`, paginado con `paginar`) en paralelo con la validación del
+  token, y los suma a `excluir` después del recorte de 2000. Entran en la
+  huella de `reco:`, así que la carga siguiente rearma y rellena con el
+  próximo candidato. En la sesión la tarjeta se sigue yendo en el cliente sin
+  re-pedir. **Se hizo en el servidor y no en el cliente a propósito:** el
+  bundle de Android es local, así que vale para 1.2.0 sin AAB nuevo. Si la
+  lectura falla → `null`, se arma como antes y el cliente sigue filtrando
+  (nada descartado reaparece). **Costo:** 1 consulta a Supabase por pedido
+  del riel (en paralelo, no suma latencia en serie) y un rearmado de `reco:`
+  por carga después de descartar (los `reco:mismo/perfil/cruce` y `pv3:` son
+  por título y siguen cacheados). **Verificado:** `tsc --noEmit` 0 errores;
+  `npm test` 2224/2224 (nuevo `lib/reco-descartes-cableado.test.ts` con
+  controles mutados; el `catch` nuevo clasificado en
+  `descartes-tmdb-inventario`). **NO probado:** en navegador ni en Producción
+  (requiere sesión real). **Limitación que queda:** el universo sale de 6
+  orígenes (`MAX_ORIGENES`) × ventana de 80; quien descarte muchísimo agota
+  candidatos y, bajo 10, el riel se oculta (`filtrado`) en vez de mostrar 3.
+  **Merge:** el dueño pidió mergear sin prueba manual previa en Preview.
+  **Producción (29/10):** `POST /api/te-va-a-gustar` sin token → 401 y Home
+  → 200; el camino con sesión (lectura de descartes y relleno) NO se observó.
+  **Siguiente paso:** prueba del dueño en Producción (descartar 3-4,
+  recargar, ver que vuelve a 20), en web y en Android 1.2.0.
+
 - **Reseñas de usuarios y Top Yumpers — diseño de Codex registrado y
   preparación de Claude (2026-10-21). Sólo documentación: SIN código, SQL,
   migraciones, servicios pagos, consultas a Producción, push, merge, deploy

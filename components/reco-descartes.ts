@@ -6,11 +6,14 @@
 //
 // QUÉ DESCARTA Y QUÉ NO. Descarta ESE título y nada más. No lo marca visto, no
 // lo vota Malaso y no toca su temática: descartar una película navideña no tiene
-// que bajar las navideñas que vengan después. Por eso el descarte no viaja al
-// recomendador ni entra en su clave de cache — se filtra entero acá, del lado
-// del cliente, sobre lo que el servidor ya devolvió.
+// que bajar las navideñas que vengan después. El recomendador lo recibe sólo
+// como exclusión exacta —lo lee el servidor, ver lib/reco-descartes-servidor.ts—
+// y por eso en la carga siguiente el hueco se rellena con el próximo candidato.
+// Hasta el 29/10 no viajaba y el riel se achicaba para siempre.
 //
-// EL EFECTO DE FILTRAR EN EL CLIENTE es que Deshacer sale gratis y exacto. La
+// EN LA SESIÓN se sigue filtrando acá, del lado del cliente, sobre lo que el
+// servidor ya devolvió: la tarjeta se va al instante sin re-pedir el riel.
+// El efecto es que Deshacer sale gratis y exacto. La
 // lista visible se DERIVA del payload del servidor menos un `Set`, así que sacar
 // una clave del `Set` devuelve la tarjeta a su lugar original sola, sin llevar
 // índices ni reinsertar en una posición guardada. Un índice guardado se
