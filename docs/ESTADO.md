@@ -1422,7 +1422,7 @@ AAB tiene que ser `5` o mayor.
        Producción usa los privilegios por defecto VIEJOS de Supabase (la
        batería local de permisos no prueba lo mismo: verificación de
        permisos efectivos preparada para después de aplicar); las 41 cuentas
-       se autoconfirmaron (P4 activa); sin copias de seguridad ni PITR; base
+       se confirmaron al instante (sugiere autoconfirmación; Auth no consultado); sin copias automáticas ni PITR; base
        de 27 MB. Android 1.2.0 compatible con el servidor nuevo **si 011–022
        van antes del deploy**. Fusión de prueba con `origin/main` (`ca02c4f`,
        con «Elegidas para vos»): sólo ESTADO en conflicto. Vercel sin acceso
@@ -1431,6 +1431,16 @@ AAB tiene que ser `5` o mayor.
        Preview y autorizaciones: `docs/medidas/2026-10-29-informe-claude-e0-lanzamiento-web.md`;
        evidencia: `docs/medidas/2026-10-29-e0-resenas-salidas.txt`.
        **Pendiente de auditoría de Codex y de autorización del dueño.**
+     - **Correcciones de la auditoría sobre `35235d4` (29/10, Claude):**
+       `022_down` no reabre nada (informe corregido, SQL intacto); sin
+       autopublicación en `user_reviews` (trigger `user_reviews_protect_estado`
+       habilitado en Producción, consulta de sólo lectura); `purga.test.ts`
+       independiente del salto de línea (21 archivos de test con SQL: 319/319
+       en LF y en CRLF simulado con `scripts/crlf-sql.mjs`; CRLF real 10/10).
+       Vercel sigue sin sesión: una acción del dueño (iniciar sesión en el
+       panel de navegador). Checklist remoto de la Preview, listo para
+       autorizar: `docs/medidas/2026-10-29-informe-claude-preview-resenas.md`
+       (vigente; el de E0 queda como antecedente).
    - decidir si el CHECK de 011 sigue prohibiendo U+200D (ZWJ), que
      bloquea los emojis compuestos. Es una restricción de E2a que no se
      reabrió;

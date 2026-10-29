@@ -1,5 +1,11 @@
 # Reseñas: E0 y preparación del lanzamiento web (29/10/2026)
 
+> **Corregido el 29/10 tras la auditoría sobre `35235d4`** (A1–A3; ver
+> `2026-10-29-informe-claude-preview-resenas.md`, que es el vigente):
+> `022_down` no reabre nada, no hay autopublicación en `user_reviews`, y
+> quedan precisadas la reversión web y la capacidad. Este informe queda como
+> antecedente.
+
 Claude, en `feat/resenas-reglas` (desde `09f2a9b`). Autorizado: E0 (sólo
 lectura de Producción y paneles), documentación y scripts de verificación.
 **No se ejecutó el lanzamiento:**
@@ -33,10 +39,13 @@ configuración de la app, pero es un objeto de Auth de la base.
     `authenticated` tienen todos los privilegios.
   - `supabase_migrations.schema_migrations` existe, pero con sólo 3 entradas
     sueltas: ESTADO decía que no había tabla; no sirve como registro.
-- **`user_reviews`:** 0 filas. Hoy cualquier usuario con sesión puede
-  insertar ahí por la API una fila propia con `estado = 'aprobada'`, porque la
-  política sólo exige ser el autor. Esa fila queda legible para `anon`. La app
-  no la muestra, pero es una vía abierta, y la 022 la cierra.
+- **`user_reviews`:** 0 filas. *(Corregido.)* Un usuario con sesión puede
+  escribir filas propias por la API, pero el trigger
+  `user_reviews_protect_estado` está habilitado en Producción, con un cuerpo
+  igual al del repo: fuerza `pendiente` al insertar y conserva el estado al
+  actualizar. **No hay autopublicación.** `anon` sólo leería filas `aprobada`,
+  y no hay ninguna. Aun así, la escritura directa y la lectura anónima no son
+  el contrato del módulo nuevo, y la 022 las cierra.
 - **Privilegios por defecto de `public`:** los viejos de Supabase. Toda tabla
   o función nueva nace con todos los permisos para `anon` y `authenticated`.
   - **La base local** (CLI nueva) es estricta: por eso a la local le faltaban
@@ -54,8 +63,9 @@ configuración de la app, pero es un objeto de Auth de la base.
 - **Cuentas:**
   - 41 en total, todas con correo y contraseña; 2 admins y 4 factores TOTP
     verificados.
-  - **Las 41 se confirmaron en menos de 5 s:** el alta no exige confirmar el
-    correo. **La condición P4 está activa** y la decisión es tuya.
+  - **Las 41 se confirmaron en menos de 5 s:** sugiere que el alta no exige
+    confirmar el correo. *(Corregido.)* La configuración de Auth no se
+    consultó.
 - **`is_admin_mfa()`:** exige admin, `aal2` y 2 factores TOTP, como el repo.
 - **`auth.users`:**
   - un solo trigger, `on_auth_user_created`;
@@ -71,8 +81,9 @@ configuración de la app, pero es un objeto de Auth de la base.
   - extensiones: `pgcrypto`, `pg_cron`, `pg_net`, `uuid-ossp`, `vault` y
     `pg_stat_statements`.
 - **Copias de seguridad:** `backups: null`, **PITR desactivado** (propio del
-  plan Free). Nada se puede «restaurar»: revertir es bajar con los `_down`, y
-  eso borra lo que la comunidad haya escrito.
+  plan Free). *(Corregido.)* No hay copias automáticas, pero sí se puede
+  hacer un respaldo manual (por ejemplo, `supabase db dump`) antes de una
+  bajada. Bajar con los `_down` borra lo que la comunidad haya escrito.
 - **Web en Producción:** `ca02c4f`, desplegado hoy (`success`, 7419487297), con
   el arreglo de «Elegidas para vos» (`50ebc93`, 7419445647).
 
@@ -128,15 +139,15 @@ con todo apagado, la purga apagada y sin `cron`.
 | # | Paso | Cómo se verifica | Cómo se detiene o revierte |
 |---|---|---|---|
 | 0 | Foto previa: `e0-produccion.mjs sql` → `comparar`, más los conteos de la sección 2 de las salidas | Igual a E0 | — |
-| 1 | Aplicar **022** (SQL Editor, un archivo) | `user_reviews`: 0 políticas, sin privilegios de `anon` ni `authenticated`; la app sigue igual | `022_down` restaura las políticas (no hay datos que perder) |
+| 1 | Aplicar **022** (SQL Editor, un archivo) | `user_reviews`: 0 políticas, sin privilegios de `anon` ni `authenticated`; la app sigue igual | *(Corregido.)* `022_down` **no reabre nada**: sólo comprueba que la tabla y su trigger sigan. El cierre se conserva aunque se revierta la web; reabrir sería otra decisión y otra migración |
 | 2 | Aplicar **011 → 021** en orden, un archivo por vez | Tras cada una, `comparar`: esa migración «presente». Al final, `comparar-permisos` → ✔, `config` 4×false y purga false | Antes de que entren datos reales, `021_down` → `011_down` en orden inverso. **Con datos reales no se baja: se apaga (paso 7)** |
 | 3 | Prueba de humo con la web y la app actuales: entrar, ficha, pulgar y una baja de cuenta de prueba | Funcionan como hoy; la baja de una cuenta sin comunidad no deja restos | Mismo que el paso 2 |
 | 4 | Crear `COMUNIDAD_HMAC_DUPLICADOS` en Vercel, **mismo valor en Production y Preview** (comparten base: con otro valor no detectan duplicados entre sí). Aleatorio de 32 o más caracteres, sólo servidor, nuevo, sin el prefijo `local-prueba-` | El panel lo muestra en los dos entornos; publicar en el paso 5 no da «error» | Borrar la variable (la escritura se niega, nada se rompe) |
 | 5 | **Tu prueba en una Preview** (sección 5) | Tu recorrido | Apagar con el SQL de la sección 5 |
-| 6 | Fusionar en `main` y desplegar Producción, con todo apagado | Home, ficha, `/top`, cuenta y baja igual que antes (E9a: 12 pares iguales); app Android: entrar, ficha, pulgar | **Promote** del deploy anterior en Vercel: instantáneo, compatible (sección 2) |
+| 6 | Fusionar en `main` y desplegar Producción, con todo apagado | Home, ficha, `/top`, cuenta y baja igual que antes (E9a: 12 pares iguales); app Android: entrar, ficha, pulgar | *(Corregido.)* Volver al deploy anterior en Vercel (Instant Rollback o Promote; el mecanismo disponible se confirma en el panel). Compatible (sección 2) |
 | 7 | Apertura (E9c): sólo con lo de la sección 6 resuelto. `modulo_activo` y `publicacion_activa`, después `top_yumpers_activo` | Ficha con sesión, panel de moderación | **Detener sin perder datos:** `update comunidad.config set modulo_activo = false, publicacion_activa = false, top_yumpers_activo = false where id;` lo oculta todo y rechaza escrituras al instante; los datos quedan. Pausar sólo la publicación: el panel (`comunidad_admin_publicacion`) |
 
-**Sin copias de seguridad:**
+**Sin copias automáticas** (un respaldo manual sigue siendo posible):
 - Lo único destructivo son los `_down` de 011–021, que borran el esquema
   `comunidad` con sus filas.
 - Apagar es siempre la primera opción.
@@ -198,16 +209,18 @@ con todo apagado, la purga apagada y sin `cron`.
 - **Privacidad:** `yump.ar/privacidad` no menciona reseñas, nombre comunitario
   ni perfil público, denuncias y bloqueos, moderación (con su retención) ni
   las huellas HMAC de duplicados.
-- **Retención (P3):** plazos validados. Sin eso, la purga y su `cron` quedan
-  apagados (hoy lo están).
+- **Retención:** *(corregido)* se conservan los plazos acordados en E8; sus
+  excepciones siguen pendientes de la validación de privacidad. La purga y su
+  `cron` siguen apagados.
 - **Eliminar cuenta:** el diálogo de la app no menciona las reseñas;
   `yump.ar/eliminar-cuenta` dice «si existieran». Es tu decisión de texto.
-- **Cuentas autoconfirmadas (P4):** las 41 se confirmaron solas. Hay que
-  decidir si publicar exige correo confirmado.
-- **Revisión aceptable (P6):** fijar los topes reales de admisión (hoy 2 por
-  autor y 50 global) y si se usa el muestreo.
+- **Cuentas autoconfirmadas (P4):** confirmar en Auth si el alta exige
+  correo.
+- **Revisión (P6):** decidido; el dueño revisa las colas a diario.
 - **Capacidad:**
-  - la base (27 MB) y las conexiones (60) sobran para la comunidad;
+  - la base ocupa 27 MB y tiene 60 conexiones configuradas. *(Corregido.)*
+    Con eso solo no se puede afirmar que haya holgura: falta contrastarlo con
+    cuota, uso y carga;
   - el historial de `cron` crece unas 1.440 filas por día por `sala-barrido`;
     no es urgente;
   - el uso de Vercel no se pudo ver.
