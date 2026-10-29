@@ -1,6 +1,6 @@
 # Estado de Yump
 
-> **Estado canónico. Actualizado el 21 de octubre de 2026.**
+> **Estado canónico. Actualizado el 29 de octubre de 2026.**
 > Leer este bloque antes de los antecedentes históricos. Arquitectura y reglas:
 > [`CLAUDE.md`](../CLAUDE.md). Problemas históricos: [`ISSUES.md`](ISSUES.md).
 > No duplicar este estado en otros manuales: enlazarlo.
@@ -16,7 +16,11 @@ debajo de "Antecedentes anteriores al 09/09/2026" es histórico. Categorías de 
 pública de deployments de GitHub, estado `success`), **dueño** (informado por
 el dueño), **Producción** (comprobado contra `app.yump.ar`).
 
-**Producción web.** Último cambio de CÓDIGO en `main`: `09cc2ee` (Top
+**Producción web (29/10/2026).** `main` = `3a58eb6` (merge de reseñas de la
+comunidad, APAGADAS, con «Elegidas para vos» incluido), desplegado: deploy
+Production 7424014089 `success`. Reseñas: migraciones 022 y 011–021 aplicadas
+en Producción el 29/10, todo apagado; ver la entrada de reseñas.
+**Antecedente:** último cambio de CÓDIGO en `main` hasta el 20/10: `09cc2ee` (Top
 exclusivamente manual), desplegado el 20/10 con `main` = `915ef2e` (deploy
 7210383316). Los commits posteriores en `main` son sólo de
 documentación (su deploy se registra en la entrada de cada uno). Todo el
@@ -77,6 +81,12 @@ El proyecto no usa el historial del CLI (`[db.migrations] enabled = false`).
 aplicado. Lo que hay se comprueba por catálogo
 (`scripts/comunidad/e0-produccion.mjs`): 001–003 y 006–010 presentes;
 **011–021 ausentes y 022 sin aplicar** (ver la entrada de reseñas, E0).
+**Aplicadas el 29/10/2026 (Claude, autorizado por el dueño):** 022 y después
+011–021, en orden, con `supabase db query --linked -f`; cada una verificada
+«presente» por catálogo y permisos efectivos iguales a las migraciones al
+final. Interruptores, muestreo y purga apagados; sin cron nuevo.
+Respaldo previo de catálogo fuera del repo. Evidencia:
+`docs/medidas/2026-10-29-lanzamiento-web-resenas-salidas.txt`.
 
 **Google Play (informado por el dueño):** AAB `2 (1.0.0)` en Alpha (28/09);
 AAB `3 (1.1.0)` en Alpha (3/10) y acceso a Producción pedido a Google
@@ -1440,7 +1450,26 @@ AAB tiene que ser `5` o mayor.
        Vercel sigue sin sesión: una acción del dueño (iniciar sesión en el
        panel de navegador). Checklist remoto de la Preview, listo para
        autorizar: `docs/medidas/2026-10-29-informe-claude-preview-resenas.md`
-       (vigente; el de E0 queda como antecedente).
+       (vigente; el de E0 queda como antecedente). *Supersedido el 29/10: el
+       dueño descartó la Preview y decidió probar en Producción.*
+     - **LANZAMIENTO WEB APAGADO (29/10, Claude, autorizado por el dueño).**
+       Integración de `main` (`724c05c`, «Elegidas para vos» conservado);
+       controles una vez: `tsc` 0, `npm test` 2528/0/10, scripts 55/55, SQL
+       con CRLF 319/319, build OK. Respaldo de catálogo de `public` fuera del
+       repo (`pg_dump` por Docker no conectó). **Aplicadas en Producción 022 y
+       011–021**, cada una «presente»; permisos efectivos ✔; `config` 4×false,
+       purga false, `cron` sin cambios, datos existentes iguales. Merge
+       `3a58eb6` en `main`, deploy Production 7424014089 `success`; humo sin
+       sesión OK (rutas nuevas 401 `activo:false`, Home/ficha/top/cuenta 200,
+       CORS de la app 204, votos agregados, baja sin sesión 401). **No
+       comprobado por Claude:** ingreso, pulgar y baja CON sesión (no crea
+       cuentas en Producción) ni la app 1.2.0 en el teléfono: paso 0 de la
+       prueba del dueño. **Pendiente:** el dueño crea
+       `COMUNIDAD_HMAC_DUPLICADOS` (sólo Production, Sensitive) y redeploy;
+       Vercel sin sesión para leer. **Encendido NO ejecutado**: se enciende
+       cuando el dueño esté para probar; su prueba **pendiente**. Top Yumpers
+       apagado en esta etapa. Informe y lista de prueba:
+       `docs/medidas/2026-10-29-informe-claude-lanzamiento-web-resenas.md`.
    - decidir si el CHECK de 011 sigue prohibiendo U+200D (ZWJ), que
      bloquea los emojis compuestos. Es una restricción de E2a que no se
      reabrió;

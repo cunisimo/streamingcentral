@@ -1,0 +1,83 @@
+# Lanzamiento web de reseñas, apagado — salidas (29/10/2026, Claude)
+
+## 1. Integración (rama feat/resenas-reglas, merge 724c05c con origin/main ca02c4f)
+tsc --noEmit --incremental false: exit 0
+npm test: ℹ tests 2538
+npm test: ℹ pass 2528
+npm test: ℹ fail 0
+npm test: ℹ skipped 10
+scripts comunidad+sala: ℹ tests 55
+scripts comunidad+sala: ℹ pass 55
+scripts comunidad+sala: ℹ fail 0
+tests de SQL con CRLF simulado: ℹ tests 319
+tests de SQL con CRLF simulado: ℹ pass 319
+tests de SQL con CRLF simulado: ℹ fail 0
+npm run build: exit 0, sin avisos; árbol sin cambios
+
+## 2. Respaldo previo (fuera del repo)
+supabase db dump --linked: cortado a los 300 s (pg_dump en un contenedor de Docker Desktop que no conectó); archivo vacío, borrado.
+Respaldo de catálogo (sólo lectura): D:\DESARROLLO\stream central\respaldos-produccion\2026-10-29-esquema-public-antes-de-resenas.json — 47 funciones (con ACL y definición), 23 tablas/vistas (columnas, restricciones, índices, ACL, RLS), 22 políticas, 13 triggers, privilegios por defecto y esquemas; tomado 2026-10-29T20:43:21Z. Sin secretos.
+
+## 3. Antes de aplicar (catálogo de hoy)
+011–021 AUSENTES; 022: user_reviews con 2 políticas, anon SELECT y authenticated INSERT; 0 filas; sin esquema comunidad.
+
+## 4. Aplicación (supabase db query --linked -f <archivo>; cada archivo con su transacción), en orden
+022_cerrar_user_reviews.sql: rc 0, errores: 0
+011_comunidad_esquema.sql: rc 0, errores: 0
+012_comunidad_baja.sql: rc 0, errores: 0
+013_comunidad_protocolo.sql: rc 0, errores: 0
+014_comunidad_escritura.sql: rc 0, errores: 0
+015_comunidad_moderacion_datos.sql: rc 0, errores: 0
+016_comunidad_admin.sql: rc 0, errores: 0
+017_comunidad_lectura.sql: rc 0, errores: 0
+018_comunidad_utilidad.sql: rc 0, errores: 0
+019_comunidad_perfiles.sql: rc 0, errores: 0
+020_comunidad_top.sql: rc 0, errores: 0
+021_comunidad_purga.sql: rc 0, errores: 0
+022 verificada: user_reviews 0 políticas, anon SELECT false, authenticated INSERT false, 0 filas.
+
+## 5. Inventario final (e0-produccion.mjs comparar)
+001_chip_titles.sql                       12/12  presente
+002_roulette.sql                           6/6   presente
+003_lock_roulette.sql                      1/1   presente
+005_dismissed.sql                          0/0   sin objetos comprobables
+006_backfill_upcoming_idioma.sql           1/1   presente
+007_top_manual.sql                        26/26  presente
+008_upcoming_original_language.sql         1/1   presente
+009_salas.sql                             38/38  presente
+010_ruleta_exclusiones.sql                 3/3   presente
+011_comunidad_esquema.sql                 33/33  presente
+012_comunidad_baja.sql                    15/15  presente
+013_comunidad_protocolo.sql               15/15  presente
+014_comunidad_escritura.sql               18/18  presente
+015_comunidad_moderacion_datos.sql        35/35  presente
+016_comunidad_admin.sql                   33/33  presente
+017_comunidad_lectura.sql                  4/4   presente
+018_comunidad_utilidad.sql                 6/6   presente
+019_comunidad_perfiles.sql                 4/4   presente
+020_comunidad_top.sql                      9/9   presente
+021_comunidad_purga.sql                   22/22  presente
+022_cerrar_user_reviews.sql                0/0   sin objetos comprobables
+
+## 6. Permisos efectivos (e0-produccion.mjs comparar-permisos)
+✔ permisos efectivos iguales a los de las migraciones
+
+## 7. Estado tras aplicar (sólo lectura)
+config: modulo/publicacion/top_yumpers/muestreo = false/false/false/false; terminos_version borrador-local-1; límites 5/10/100/10/3/50; admisión 2/50
+purga_activa false; plazo_rankings 1 year; cron: sala-barrido, tmdb-sync-upcoming-daily (sin cambios)
+comunidad: 0 participantes, 0 reseñas, 0 versiones, 0 meses; public: 41 usuarios, 41 perfiles, 209 votos, 2 editoriales, 0 user_reviews (iguales a E0); auth.users: sólo on_auth_user_created
+
+## 8. Push, merge y deploy
+push feat/resenas-reglas (724c05c) → Vercel armó una Preview (7423994593), que no se usa
+merge --no-ff en main: 3a58eb6 (árbol idéntico a la rama verificada; archivos de «Elegidas para vos» sin cambios respecto de ca02c4f); push main ca02c4f..3a58eb6
+deploy Production 7424014089 (GitHub deployments): success 2026-10-29T20:57:49Z
+
+## 9. Humo en https://app.yump.ar (sin sesión)
+rutas nuevas (prueba de que corre el código nuevo): /api/comunidad/resenas/lista 401 {resultado:sin_sesion, activo:false}; /api/cuenta/estado-baja 401; /api/comunidad/top-yumpers 401 {activo:false}
+/ 200; /titulo/movie/550 200; /top 200; /cuenta 200; /api/title/movie/550 200 (sin datos de la comunidad); /api/health 200; /api/home 200
+CORS origen de la app (https://localhost): OPTIONS /api/title y /api/cuenta/eliminar → 204 con Access-Control-Allow-Origin
+/api/mas-votados: 20 títulos (votos existentes); POST /api/cuenta/eliminar sin sesión → 401
+NO comprobado por Claude (requiere crear o usar cuentas en Producción): ingreso, pulgar y baja con sesión, en web y en la app 1.2.0 → paso 0 de la prueba del dueño
+
+## 10. Vercel
+Sin sesión (CLI vencida el 21/09; panel en el navegador integrado sin sesión). Variables, uso y COMUNIDAD_HMAC_DUPLICADOS: pendientes de una acción del dueño.
