@@ -1269,8 +1269,9 @@ AAB tiene que ser `5` o mayor.
      autorizada por el dueño sólo en local; `supabase start`, la app local
      y datos ficticios). Auditada por Codex sobre `187be15`
      (`docs/medidas/2026-10-28-auditoria-e9a-187be15.md`): pendiente de A1/A2
-     en las herramientas de prueba, corregidos abajo y PENDIENTES DE
-     REVISIÓN. NO cierra E9a**:
+     en las herramientas de prueba, corregidos abajo y **CERRADOS** por Codex
+     el 29/10 (`docs/medidas/2026-10-29-auditoria-e9a-a1-residual-6a6a42e.md`).
+     NO cierra E9a**:
      el plan exige E0, cuyas consultas a Producción no están autorizadas, y
      faltan el secreto HMAC de Producción, aplicar 011–022 allá, las cuotas
      con datos reales, el deploy y la prueba del dueño. Teléfono real y
@@ -1334,8 +1335,8 @@ AAB tiene que ser `5` o mayor.
      Informe: `docs/medidas/2026-10-28-informe-claude-e9a.md`; salidas:
      `docs/medidas/2026-10-28-e9a-salidas.txt`; capturas:
      `docs/medidas/2026-10-28-e9a-recorrido/`.
-     - **Corrección A1/A2 de la auditoría de E9a (28/10, Claude, local,
-       PENDIENTE DE REVISIÓN de Codex):**
+     - **Corrección A1/A2 de la auditoría de E9a (28/10, Claude, local;
+       CERRADA por Codex el 29/10):**
        - **A1, limpieza del recorrido:** `recorrido-e9a.mjs` ya no deduce
          propiedad por fecha, por participante sin cuenta ni por mes nuevo.
          `preparar` instala un registro (`recorrido-e9a-registro.sql`, esquema
@@ -1374,7 +1375,7 @@ AAB tiene que ser `5` o mayor.
      - **Revisión de Codex sobre `092aceb`** (`docs/medidas/2026-10-28-auditoria-e9a-a1a2-092aceb.md`):
        A2 CERRADA. A1 con un residual: un voto ajeno sobre una reseña del
        recorrido en un mes SIN consolidar no frenaba la limpieza, que lo
-       borraba. **Corregido (28/10, Claude, local, PENDIENTE DE REVISIÓN):**
+       borraba. **Corregido (28/10, Claude, local; CERRADO por Codex el 29/10):**
        `limpiar` cuenta la actividad ajena que el borrado de lo propio
        arrastraría, en cualquier mes (votos y tramos, denuncias, bloqueos y
        decisiones de otro admin), y se detiene antes del primer borrado,
@@ -1385,6 +1386,16 @@ AAB tiene que ser `5` o mayor.
        Base al terminar en la línea base, sin datos preparados ni servidores.
        Informe: `docs/medidas/2026-10-28-informe-claude-e9a-a1-residual.md`;
        salidas: `docs/medidas/2026-10-28-e9a-a1-residual-salidas.txt`.
+     - **Cierre de A1/A2 (Codex, 29/10, sobre `6a6a42e`):** sin hallazgos
+       bloqueantes; Codex no pudo reconsultar la base porque el motor de
+       Docker devolvía 500. **Entorno de la prueba del dueño (29/10, Claude):**
+       Docker respondió y Supabase local está arriba (el contenedor auxiliar
+       `vector`, que sólo recoge logs para Studio, se reinicia en bucle sin
+       afectar a la app: no se tocó). Línea base confirmada por consulta
+       antes de preparar (0/0/0, 42 cuentas antiguas, sin archivo, registro
+       ni reloj). `recorrido-e9a.mjs preparar` y la web local en
+       `http://localhost:3100` quedaron levantados para la prueba del dueño,
+       **pendiente**; limpiar con `limpiar` al terminar.
    - decidir si el CHECK de 011 sigue prohibiendo U+200D (ZWJ), que
      bloquea los emojis compuestos. Es una restricción de E2a que no se
      reabrió;
