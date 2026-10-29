@@ -7,7 +7,11 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 
-const leer = (f: string) => readFileSync(new URL(`../../${f}`, import.meta.url), "utf8");
+// Los barridos comparan texto con `\n`: en una copia de Windows con
+// core.autocrlf los SQL llegan con CRLF, y sin normalizar fallaban dos
+// barridos por el salto de línea, no por el SQL (scripts/crlf-sql.mjs lo
+// simula). Sólo se normaliza el salto; el resto del texto se compara igual.
+const leer = (f: string) => readFileSync(new URL(`../../${f}`, import.meta.url), "utf8").replace(/\r\n/g, "\n");
 const sinComentarios = (s: string) => s.replace(/^\s*--.*$/gm, "").replace(/\s--\s.*$/gm, "");
 const sql = () => leer("supabase/migrations/021_comunidad_purga.sql");
 const bajada = () => leer("supabase/migrations/021_comunidad_purga_down.sql");
