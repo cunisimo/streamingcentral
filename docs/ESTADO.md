@@ -179,7 +179,8 @@ reusa su diseño, no se mergea.
 ## Evidencia y alcance de esta actualización
 
 - **"Elegidas para vos" no se reponía al descartar (2026-10-29; rama
-  `fix/descartes-rellenan-riel`, SIN mergear ni desplegar).** **Informado por
+  `fix/descartes-rellenan-riel`, MERGEADA `50ebc93` y DESPLEGADA — deploy
+  Production 7419445647 `success`; Preview de la rama `success`).** **Informado por
   el dueño:** un usuario quedó con 4 y después 3 tarjetas tras ir tocando "No
   es para mí", y el dueño lo reprodujo en su cuenta. **Causa, comprobada en
   código:** los descartes se filtraban SÓLO en el cliente (`visibles()` en
@@ -207,8 +208,11 @@ reusa su diseño, no se mergea.
   (requiere sesión real). **Limitación que queda:** el universo sale de 6
   orígenes (`MAX_ORIGENES`) × ventana de 80; quien descarte muchísimo agota
   candidatos y, bajo 10, el riel se oculta (`filtrado`) en vez de mostrar 3.
-  **Siguiente paso:** prueba del dueño en Preview (descartar 3-4, recargar,
-  ver que vuelve a 20) antes de mergear.
+  **Merge:** el dueño pidió mergear sin prueba manual previa en Preview.
+  **Producción (29/10):** `POST /api/te-va-a-gustar` sin token → 401 y Home
+  → 200; el camino con sesión (lectura de descartes y relleno) NO se observó.
+  **Siguiente paso:** prueba del dueño en Producción (descartar 3-4,
+  recargar, ver que vuelve a 20), en web y en Android 1.2.0.
 
 - **Top exclusivamente manual: auditoría de cachés y compatibilidad con
   Android 1.2.0 (2026-10-20, antes del merge; sin cambios de código).**
