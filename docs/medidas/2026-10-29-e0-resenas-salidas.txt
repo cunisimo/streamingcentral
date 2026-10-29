@@ -1,0 +1,368 @@
+# E0 de reseñas — salidas (29/10/2026, Claude)
+Proyecto Supabase de Producción aibqqebwlladjjkeqllo (streamcentral Project, us-west-2, ACTIVE_HEALTHY, Postgres 17.6.1.127).
+Método: `supabase db query --linked` (CLI 2.111, sesión del llavero de Windows; el token del entorno SUPABASE_ACCESS_TOKEN es inválido, 401).
+Cada consulta: UNA transacción `begin transaction read only; … rollback;` (comprobado: transaction_read_only = on). Sólo agregados y nombres de objetos; ningún correo, id de persona ni secreto.
+Efecto lateral del mecanismo de la CLI: crea/renueva el rol de servicio cli_login_postgres (sin superusuario, contraseña con vencimiento de 1 h).
+
+## 1. Migraciones por catálogo: node scripts/comunidad/e0-produccion.mjs comparar (consulta: … sql)
+001_chip_titles.sql                       12/12  presente
+002_roulette.sql                           6/6   presente
+003_lock_roulette.sql                      1/1   presente
+005_dismissed.sql                          0/0   sin objetos comprobables
+006_backfill_upcoming_idioma.sql           1/1   presente
+007_top_manual.sql                        26/26  presente
+008_upcoming_original_language.sql         1/1   presente
+009_salas.sql                             38/38  presente
+010_ruleta_exclusiones.sql                 3/3   presente
+011_comunidad_esquema.sql                  0/33  AUSENTE
+012_comunidad_baja.sql                     0/15  AUSENTE
+013_comunidad_protocolo.sql                0/15  AUSENTE
+014_comunidad_escritura.sql                0/18  AUSENTE
+015_comunidad_moderacion_datos.sql         0/35  AUSENTE
+016_comunidad_admin.sql                    0/33  AUSENTE
+017_comunidad_lectura.sql                  0/4   AUSENTE
+018_comunidad_utilidad.sql                 0/6   AUSENTE
+019_comunidad_perfiles.sql                 0/4   AUSENTE
+020_comunidad_top.sql                      0/9   AUSENTE
+021_comunidad_purga.sql                    0/22  AUSENTE
+022_cerrar_user_reviews.sql                0/0   sin objetos comprobables
+
+## 2. Configuración, user_reviews, permisos de API, conteos, cron (sin comandos), tamaño
+{
+ "version": "PostgreSQL 17.6 on aarch64-unknown-linux-gnu, compiled by gcc (GCC) 15.2.0, 64-bit",
+ "extensiones": {
+  "plpgsql": "1.0",
+  "pg_stat_statements": "1.11",
+  "uuid-ossp": "1.1",
+  "pgcrypto": "1.3",
+  "supabase_vault": "0.3.1",
+  "pg_cron": "1.6.4",
+  "pg_net": "0.20.3"
+ },
+ "aislamiento": "read committed",
+ "is_normalized": [
+  "i"
+ ],
+ "max_connections": "60",
+ "tamano_db": "27 MB",
+ "tamano_db_bytes": 28748947,
+ "tablas_mas_grandes": [
+  {
+   "t": "cron.job_run_details",
+   "s": "7352 kB"
+  },
+  {
+   "t": "public.roulette_titles",
+   "s": "3504 kB"
+  },
+  {
+   "t": "public.title_availability",
+   "s": "728 kB"
+  },
+  {
+   "t": "public.upcoming_content",
+   "s": "512 kB"
+  },
+  {
+   "t": "public.top_ranking_entries",
+   "s": "392 kB"
+  },
+  {
+   "t": "auth.users",
+   "s": "280 kB"
+  },
+  {
+   "t": "public.news_items",
+   "s": "224 kB"
+  },
+  {
+   "t": "public.view_history",
+   "s": "224 kB"
+  }
+ ],
+ "user_reviews": {
+  "existe": true,
+  "rls": true,
+  "forzada": false,
+  "dueno": "postgres"
+ },
+ "user_reviews_filas": 0,
+ "user_reviews_politicas": [
+  "el autor gestiona la suya (ALL)",
+  "lectura publica aprobadas (SELECT)"
+ ],
+ "user_reviews_privilegios": {
+  "anon": {
+   "sel": true,
+   "ins": true,
+   "upd": true,
+   "del": true
+  },
+  "authenticated": {
+   "sel": true,
+   "ins": true,
+   "upd": true,
+   "del": true
+  },
+  "service_role": {
+   "sel": true,
+   "ins": true,
+   "upd": true,
+   "del": true
+  }
+ },
+ "privilegios_api": {
+  "public.profiles anon": "SIUD",
+  "public.votes anon": "SIUD",
+  "public.user_items anon": "SIUD",
+  "public.view_history anon": "SIUD",
+  "public.editorial_reviews anon": "SIUD",
+  "public.providers anon": "SIUD",
+  "public.profiles authenticated": "SIUD",
+  "public.votes authenticated": "SIUD",
+  "public.user_items authenticated": "SIUD",
+  "public.view_history authenticated": "SIUD",
+  "public.editorial_reviews authenticated": "SIUD",
+  "public.providers authenticated": "SIUD"
+ },
+ "profiles_columnas": [
+  "id",
+  "display_name",
+  "is_admin",
+  "created_at",
+  "avatar_seed",
+  "avatar_style",
+  "onboarding_completed",
+  "platforms",
+  "country_code"
+ ],
+ "votes_columnas": [
+  "id",
+  "user_id",
+  "tmdb_id",
+  "tipo",
+  "rating",
+  "created_at"
+ ],
+ "conteos": {
+  "usuarios": 41,
+  "perfiles": 41,
+  "admins": 2,
+  "votos": 209,
+  "editoriales": 2,
+  "factores_mfa_verificados": 4
+ },
+ "cron": [
+  {
+   "job": "tmdb-sync-upcoming-daily",
+   "cuando": "0 6 * * *",
+   "activo": true
+  },
+  {
+   "job": "sala-barrido",
+   "cuando": "* * * * *",
+   "activo": true
+  }
+ ],
+ "esquemas": [
+  "auth",
+  "cron",
+  "extensions",
+  "graphql",
+  "graphql_public",
+  "net",
+  "public",
+  "realtime",
+  "storage",
+  "supabase_migrations",
+  "vault"
+ ]
+}
+
+## 3. Historial supabase_migrations, RLS de public, políticas de user_reviews, triggers y FK hacia auth.users
+{
+ "tablas_migraciones": [
+  "schema_migrations"
+ ],
+ "historial": [
+  {
+   "v": "20260809170305",
+   "n": "netflix_top10"
+  },
+  {
+   "v": "20260819215120",
+   "n": "005_dismissed"
+  },
+  {
+   "v": "20260901000007",
+   "n": "top_manual"
+  }
+ ],
+ "rls_public": {
+  "editorial_reviews": true,
+  "votes": true,
+  "user_reviews": true,
+  "user_items": true,
+  "view_history": true,
+  "providers": true,
+  "upcoming_content_providers": true,
+  "title_availability": true,
+  "chip_blocklist": true,
+  "chip_titles": true,
+  "upcoming_content": true,
+  "news_items": true,
+  "profiles": true,
+  "netflix_top10": true,
+  "top_rankings": true,
+  "top_ranking_entries": true,
+  "roulette_titles": true,
+  "rooms": true,
+  "room_participants": true,
+  "room_rounds": true,
+  "room_titles": true,
+  "room_votes": true,
+  "sala_config": true
+ },
+ "user_reviews_columnas": [
+  "id:uuid",
+  "user_id:uuid",
+  "tmdb_id:integer",
+  "tipo:text",
+  "texto:text",
+  "estado:text",
+  "created_at:timestamp with time zone"
+ ],
+ "user_reviews_politicas_def": [
+  {
+   "p": "el autor gestiona la suya",
+   "roles": [
+    "public"
+   ],
+   "cmd": "ALL",
+   "using": "(auth.uid() = user_id)",
+   "check": "(auth.uid() = user_id)"
+  },
+  {
+   "p": "lectura publica aprobadas",
+   "roles": [
+    "public"
+   ],
+   "cmd": "SELECT",
+   "using": "(estado = 'aprobada'::text)",
+   "check": null
+  }
+ ],
+ "triggers_auth_users": [
+  "on_auth_user_created"
+ ],
+ "fk_a_auth_users": [
+  "auth.identities:c",
+  "auth.sessions:c",
+  "auth.mfa_factors:c",
+  "auth.one_time_tokens:c",
+  "auth.oauth_authorizations:c",
+  "auth.oauth_consents:c",
+  "auth.webauthn_credentials:c",
+  "auth.webauthn_challenges:c",
+  "profiles:c",
+  "votes:c",
+  "user_reviews:c",
+  "user_items:c",
+  "view_history:c",
+  "top_rankings:n",
+  "top_rankings:n",
+  "auth.scim_users:n",
+  "auth.mfa_recovery_code_sets:c",
+  "rooms:c",
+  "room_participants:n"
+ ]
+}
+
+## 4. Cuentas (agregados), proveedores, is_admin_mfa / is_admin, privilegios por defecto de public, historial de cron
+{
+ "cuentas": {
+  "total": 41,
+  "sin_confirmar": 0,
+  "confirmadas_en_menos_de_5s": 41,
+  "confirmadas_despues": 0,
+  "anonimas": 0
+ },
+ "proveedores": {
+  "email": 41
+ },
+ "is_admin_mfa": "CREATE OR REPLACE FUNCTION public.is_admin_mfa()\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\r\n  select coalesce(\r\n    (select is_admin from public.profiles where id = auth.uid()),\r\n    false\r\n  ) and coalesce(auth.jwt() ->> 'aal', '') = 'aal2'\r\n    and factores_totp_verificados() >= 2;\r\n$function$\n",
+ "is_admin": "CREATE OR REPLACE FUNCTION public.is_admin()\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\r\n  select exists (\r\n    select 1 from public.profiles\r\n    where id = auth.uid() and is_admin\r\n  );\r\n$function$\n",
+ "acl_por_defecto_public": [
+  {
+   "rol": "postgres",
+   "tipo": "r",
+   "acl": "{postgres=arwdDxtm/postgres,anon=arwdDxtm/postgres,authenticated=arwdDxtm/postgres,service_role=arwdDxtm/postgres}"
+  },
+  {
+   "rol": "postgres",
+   "tipo": "f",
+   "acl": "{postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}"
+  },
+  {
+   "rol": "postgres",
+   "tipo": "S",
+   "acl": "{postgres=rwU/postgres,anon=rwU/postgres,authenticated=rwU/postgres,service_role=rwU/postgres}"
+  },
+  {
+   "rol": "supabase_admin",
+   "tipo": "S",
+   "acl": "{postgres=rwU/supabase_admin,anon=rwU/supabase_admin,authenticated=rwU/supabase_admin,service_role=rwU/supabase_admin}"
+  },
+  {
+   "rol": "supabase_admin",
+   "tipo": "r",
+   "acl": "{postgres=arwdDxtm/supabase_admin,anon=arwdDxtm/supabase_admin,authenticated=arwdDxtm/supabase_admin,service_role=arwdDxtm/supabase_admin}"
+  },
+  {
+   "rol": "supabase_admin",
+   "tipo": "f",
+   "acl": "{postgres=X/supabase_admin,anon=X/supabase_admin,authenticated=X/supabase_admin,service_role=X/supabase_admin}"
+  }
+ ],
+ "cron_historial_filas": 46035,
+ "cron_historial_mas_viejo": "2026-08-02"
+}
+
+## 5. Privilegios por defecto (todos los esquemas)
+postgres r public {postgres=arwdDxtm/postgres,anon=arwdDxtm/postgres,authenticated=arwdDxtm/postgres,service_role=arwdDxtm/postgres}
+postgres f public {postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}
+postgres S public {postgres=rwU/postgres,anon=rwU/postgres,authenticated=rwU/postgres,service_role=rwU/postgres}
+supabase_admin S public {postgres=rwU/supabase_admin,anon=rwU/supabase_admin,authenticated=rwU/supabase_admin,service_role=rwU/supabase_admin}
+supabase_admin r public {postgres=arwdDxtm/supabase_admin,anon=arwdDxtm/supabase_admin,authenticated=arwdDxtm/supabase_admin,service_role=arwdDxtm/supabase_admin}
+supabase_admin f public {postgres=X/supabase_admin,anon=X/supabase_admin,authenticated=X/supabase_admin,service_role=X/supabase_admin}
+postgres r storage {postgres=arwdDxtm/postgres,anon=arwdDxtm/postgres,authenticated=arwdDxtm/postgres,service_role=arwdDxtm/postgres}
+postgres f storage {postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}
+postgres S storage {postgres=rwU/postgres,anon=rwU/postgres,authenticated=rwU/postgres,service_role=rwU/postgres}
+supabase_auth_admin r auth {postgres=arwdDxtm/supabase_auth_admin,dashboard_user=arwdDxtm/supabase_auth_admin}
+supabase_auth_admin S auth {postgres=rwU/supabase_auth_admin,dashboard_user=rwU/supabase_auth_admin}
+supabase_auth_admin f auth {postgres=X/supabase_auth_admin,dashboard_user=X/supabase_auth_admin}
+supabase_admin S realtime {postgres=rwU/supabase_admin,dashboard_user=rwU/supabase_admin}
+supabase_admin f realtime {postgres=X/supabase_admin,dashboard_user=X/supabase_admin}
+supabase_admin S graphql_public {postgres=rwU/supabase_admin,anon=rwU/supabase_admin,authenticated=rwU/supabase_admin,service_role=rwU/supabase_admin}
+supabase_admin r graphql_public {postgres=arwdDxtm/supabase_admin,anon=arwdDxtm/supabase_admin,authenticated=arwdDxtm/supabase_admin,service_role=arwdDxtm/supabase_admin}
+supabase_admin f graphql_public {postgres=X/supabase_admin,anon=X/supabase_admin,authenticated=X/supabase_admin,service_role=X/supabase_admin}
+supabase_admin r extensions {postgres=a*r*w*d*D*x*t*m*/supabase_admin}
+supabase_admin f extensions {postgres=X*/supabase_admin}
+supabase_admin S extensions {postgres=r*w*U*/supabase_admin}
+supabase_admin r graphql {postgres=arwdDxtm/supabase_admin,anon=arwdDxtm/supabase_admin,authenticated=arwdDxtm/supabase_admin,service_role=arwdDxtm/supabase_admin}
+supabase_admin f graphql {postgres=X/supabase_admin,anon=X/supabase_admin,authenticated=X/supabase_admin,service_role=X/supabase_admin}
+supabase_admin S graphql {postgres=rwU/supabase_admin,anon=rwU/supabase_admin,authenticated=rwU/supabase_admin,service_role=rwU/supabase_admin}
+supabase_admin S cron {postgres=r*w*U*/supabase_admin}
+supabase_admin r cron {postgres=a*r*w*d*D*x*t*m*/supabase_admin}
+supabase_admin f cron {postgres=X*/supabase_admin}
+supabase_admin r realtime {postgres=a*r*wdDxtm/supabase_admin,dashboard_user=arwdDxtm/supabase_admin}
+
+## 6. Copias de seguridad: supabase backups list
+{"backups": null, "physical_backup_data": {}, "pitr_enabled": false, "region": "us-west-2", "walg_enabled": true}
+
+## 7. Vercel
+API con la sesión de la CLI: vencida el 2026-09-21 → HTTP 403. Panel en el navegador integrado: sin sesión. No se inició sesión. Sin datos de variables, protección de Previews ni uso.
+Deploys por la API pública de GitHub (cunisimo/streamingcentral): Production ca02c4f5c 2026-10-29T17:28:14Z success (7419487297); Production 50ebc9334 2026-10-29T17:26:22Z success (7419445647).
+
+## 8. Legales públicos (GET, yump.ar)
+/privacidad 200: 0 menciones de reseña, comunidad o denuncia. /terminos 200: dice que Yump no publica actualmente reseñas personales ni perfiles públicos. /eliminar-cuenta 200: menciona «las reseñas de usuario asociadas, si existieran».

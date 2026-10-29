@@ -230,6 +230,14 @@ que todavía no existen.
 
 ### E0 — Verificación de partida (sólo lectura)
 
+**Hecha el 29/10/2026 (Claude, sólo lectura, autorizada por el dueño):**
+`docs/medidas/2026-10-29-informe-claude-e0-lanzamiento-web.md` y
+`docs/medidas/2026-10-29-e0-resenas-salidas.txt`. Se corrió por la CLI
+(`supabase db query --linked`), cada bloque en `begin transaction read only;
+… rollback;`, en lugar del SQL Editor. Sin acceso a Vercel. Las consultas de
+abajo quedan como antecedente; la herramienta vigente es
+`scripts/comunidad/e0-produccion.mjs`.
+
 - **Objetivo:** reemplazar los [no verificado] de §2 por evidencia, sin
   escribir nada.
 - **Depende de:** P5. **No se ejecuta sin esa autorización.**

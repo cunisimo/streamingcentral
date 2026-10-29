@@ -70,8 +70,13 @@ estén aplicadas: cada una tiene su evidencia, de distinta fuerza.
   se comprobó. Que esté sin verificar **no autoriza ejecutarla**: es una
   decisión del dueño, aparte.
 
-El proyecto no usa el historial del CLI (`[db.migrations] enabled = false`),
-así que no hay una tabla de migraciones aplicadas que consultar.
+El proyecto no usa el historial del CLI (`[db.migrations] enabled = false`).
+**Corrección (E0, 29/10, sólo lectura):** en Producción SÍ existe
+`supabase_migrations.schema_migrations`, pero con sólo 3 entradas sueltas
+(`netflix_top10`, `005_dismissed`, `top_manual`): no es un registro de lo
+aplicado. Lo que hay se comprueba por catálogo
+(`scripts/comunidad/e0-produccion.mjs`): 001–003 y 006–010 presentes;
+**011–021 ausentes y 022 sin aplicar** (ver la entrada de reseñas, E0).
 
 **Google Play (informado por el dueño):** AAB `2 (1.0.0)` en Alpha (28/09);
 AAB `3 (1.1.0)` en Alpha (3/10) y acceso a Producción pedido a Google
@@ -1404,6 +1409,28 @@ AAB tiene que ser `5` o mayor.
        No se limpió ni se levantó la web. Liberar las reservas exige un
        cambio de sistema con permisos de administrador (por ejemplo,
        reiniciar el servicio `winnat`): lo decide y ejecuta el dueño.
+       **Deshecho el 29/10** con `limpiar` (sólo la base local, sin tocar la
+       red): limpieza verificada, 0 cuentas, interruptores y permisos
+       restaurados, registro quitado; línea base intacta (0/0/0, 42 cuentas).
+       Copia del archivo de recuperación fuera del repo. La reserva de
+       puertos sigue: la prueba local del dueño no está disponible hasta que
+       se resuelva.
+     - **E0 de reseñas y preparación del lanzamiento web (29/10, Claude,
+       autorizado: sólo lectura de Producción; NADA aplicado):** por catálogo,
+       Producción tiene 001–010 y **no tiene 011–021 ni la 022**;
+       `user_reviews` (0 filas) sigue abierta a escritura propia por la API;
+       Producción usa los privilegios por defecto VIEJOS de Supabase (la
+       batería local de permisos no prueba lo mismo: verificación de
+       permisos efectivos preparada para después de aplicar); las 41 cuentas
+       se autoconfirmaron (P4 activa); sin copias de seguridad ni PITR; base
+       de 27 MB. Android 1.2.0 compatible con el servidor nuevo **si 011–022
+       van antes del deploy**. Fusión de prueba con `origin/main` (`ca02c4f`,
+       con «Elegidas para vos»): sólo ESTADO en conflicto. Vercel sin acceso
+       (sesión de la CLI vencida): variables, protección de Previews y uso,
+       pendientes. Orden de lanzamiento, reversión, prueba del dueño en una
+       Preview y autorizaciones: `docs/medidas/2026-10-29-informe-claude-e0-lanzamiento-web.md`;
+       evidencia: `docs/medidas/2026-10-29-e0-resenas-salidas.txt`.
+       **Pendiente de auditoría de Codex y de autorización del dueño.**
    - decidir si el CHECK de 011 sigue prohibiendo U+200D (ZWJ), que
      bloquea los emojis compuestos. Es una restricción de E2a que no se
      reabrió;
