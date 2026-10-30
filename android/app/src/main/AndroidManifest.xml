@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <application
+        android:name=".YumpApp"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
@@ -87,14 +88,23 @@
 
         <!-- SDK de Meta (facebook-core): medicion de campanas.
 
-             Se inicializa solo, por el ContentProvider que trae la libreria, y
-             registra solo dos cosas: la instalacion (primer arranque) y cada
+             Registra solo dos cosas: la instalacion (primer arranque) y cada
              apertura. Con eso Meta atribuye que anuncio trajo cada instalacion
              y la campana puede optimizar por instalaciones en vez de por clics.
              No hay eventos propios: nada de lo que la persona hace adentro de
-             Yump (busquedas, plataformas, ruleta, salas, cuenta) sale hacia
-             Meta. Tiene que estar declarado en yump.ar/privacidad y en Data
-             Safety ANTES de publicar la version. -->
+             Yump (busquedas, plataformas, ruleta, salas, cuenta, resenas) sale
+             hacia Meta. Activada por defecto y desactivable en Sobre Yump
+             (decision del duenio, 30/10/2026). Tiene que estar declarado en
+             yump.ar/privacidad y en Data Safety ANTES de publicar la version.
+
+             EL INICIALIZADOR AUTOMATICO DEL SDK SE QUITA: arrancaria (y
+             consultaria a Meta) antes de que la app pueda leer si la persona
+             desactivo la medicion. Lo inicializa YumpApp, solo si esta activa.
+             Ver MedicionMeta.java. -->
+        <provider
+            android:name="com.facebook.internal.FacebookInitProvider"
+            android:authorities="${applicationId}.FacebookInitProvider"
+            tools:node="remove" />
         <meta-data
             android:name="com.facebook.sdk.ApplicationId"
             android:value="@string/facebook_app_id" />

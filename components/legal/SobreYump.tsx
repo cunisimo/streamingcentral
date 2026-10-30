@@ -1,4 +1,5 @@
 import { PAGINAS_LEGALES, TMDB } from "@/lib/legal";
+import MedicionMetaOpcion from "./MedicionMetaOpcion";
 
 // "Sobre Yump": la sección legal.
 //
@@ -38,6 +39,12 @@ export default function SobreYump() {
           </li>
         ))}
       </ul>
+
+      {/* --- Medición de campañas con Meta ----------------------------------
+          Sólo en la app Android (en la web no hay SDK de Meta). Va acá, fuera
+          de cualquier condición de sesión, para que se pueda desactivar sin
+          cuenta. Ver lib/medicion-meta.ts. */}
+      <MedicionMetaOpcion />
 
       {/* --- Independencia -------------------------------------------------- */}
       <p className="sy-p">

@@ -1,5 +1,7 @@
 package ar.yump.app;
 
+import android.os.Bundle;
+
 import com.getcapacitor.BridgeActivity;
 
 // 🔴 ACÁ NO VA UN RouteProcessor, Y NO ES PORQUE NO SE HAYA INTENTADO.
@@ -22,4 +24,12 @@ import com.getcapacitor.BridgeActivity;
 //
 // Arreglarlo pediría reemplazar el servidor local (`shouldInterceptRequest`), que es justo lo que
 // el dueño excluyó. El detalle está en el plan de Etapa 3.
-public class MainActivity extends BridgeActivity {}
+public class MainActivity extends BridgeActivity {
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        // El plugin local de la opción de Meta en Sobre Yump (ver MedicionMeta).
+        // Se registra ANTES de super.onCreate, que es cuando el bridge arranca.
+        registerPlugin(MedicionMetaPlugin.class);
+        super.onCreate(savedInstanceState);
+    }
+}

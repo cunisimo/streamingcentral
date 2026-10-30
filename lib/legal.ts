@@ -26,6 +26,22 @@ export const PAGINAS_LEGALES: readonly PaginaLegal[] = Object.freeze([
 ]);
 
 /**
+ * El aviso de la pantalla de registro (decisión del dueño, 30/10/2026). Informa
+ * qué se acepta al crear la cuenta y enlaza las dos páginas, que viven en
+ * `yump.ar` y edita el dueño. No es un consentimiento para la medición de Meta,
+ * que está activada por defecto y se desactiva en Sobre Yump
+ * (`lib/medicion-meta.ts`): el texto no vale para nada anterior al registro ni
+ * para quien usa la app sin cuenta.
+ */
+export const AVISO_REGISTRO = Object.freeze({
+  ANTES: "Al continuar, aceptás nuestros ",
+  TERMINOS: Object.freeze({ texto: "Términos y Condiciones", href: "https://yump.ar/terminos/" }),
+  ENTRE: " y la ",
+  PRIVACIDAD: Object.freeze({ texto: "Política de Privacidad", href: "https://yump.ar/privacidad/" }),
+  DESPUES: " sobre el uso de datos para medición y mejora de la app.",
+});
+
+/**
  * La atribución de TMDB.
  *
  * ⚠️ `TEXTO` ES LITERAL Y NO SE TOCA. Es el que exige la **sección 3

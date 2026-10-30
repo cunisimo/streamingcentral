@@ -529,6 +529,7 @@ const INVENTARIO: Fila[] = [
   { archivo: "lib/admin-acceso.ts", ancla: "try { r = await leer(userId); } catch (e)", clase: "no-tmdb", motivo: "acceso a /admin: una lectura de perfil que lanza se informa como error (reintentable), nunca como \"sin permisos\"" },
   { archivo: "lib/compartir-accion.ts", ancla: "} catch (e) {", clase: "no-tmdb", motivo: "compartir en el contenedor: si el plugin falló se cae a WhatsApp; si el usuario canceló, no" },
   { archivo: "lib/compartir-accion.ts", ancla: "} catch (err) {", clase: "no-tmdb", motivo: "compartir: navigator.share falló; AbortError es que el usuario cerró la hoja, el resto cae a WhatsApp" },
+  { archivo: "lib/medicion-meta.ts", ancla: "} catch {", clase: "no-tmdb", motivo: "puente nativo de la opción de Meta en Sobre Yump: si falla, la opción muestra el error y no cambia nada" },
   // Etapa 3.b: el fondo. Con UB, un rechazo del productor ya lo atrapó el catch de arriba (sirve el UB);
   // lo que llega acá son errores de turno/Redis: se anota, se libera y se relanza al programador, que lo contiene y lo loguea entero.
   { archivo: "lib/home-servir.ts", ancla: "} catch (error) {", clase: "no-tmdb", motivo: "fondo 3.b: errores de turno/Redis tras componer; se relanzan al programador que los loguea" },
