@@ -2281,6 +2281,30 @@ reusa su diseño, no se mergea.
   token de la CLI está vencido): que el proyecto ya no declare el cron lo
   tiene que confirmar el dueño; la prueba en la web de Producción y en el
   teléfono.
+- **SDK de Meta en Android: integración mínima en rama (2026-10-22; sin merge,
+  sin AAB, sin publicar).** Decisión del dueño (21/10): medir las campañas de
+  Meta, porque la campaña de Google App (15/10, pausada por el dueño el 22/10)
+  trajo 238 adquisiciones y solo 31 primeros accesos en 28 días, con 28
+  dispositivos activos al mes (Play Console, captura del dueño).
+  **Hecho en `feat/meta-sdk`:**
+  - `facebook-core` 18.3.0 y la app de Meta 1114281058003052, con su token de
+    cliente en `strings.xml`.
+  - `AutoLogAppMetadataEnabled=false`.
+  - AD_ID declarado; los cuatro `ACCESS_ADSERVICES_*` quitados.
+  - `lib/meta-sdk.test.ts`.
+
+  **Comprobado:**
+  - `assembleDebug` compila con el JBR 21.
+  - El manifest fusionado trae AD_ID y `BIND_GET_INSTALL_REFERRER_SERVICE`, y ningún `ACCESS_ADSERVICES_*`.
+  - `npm test`: 0 fallos.
+
+  **No probado:** nada se probó en un teléfono, y que lleguen eventos a Meta no está verificado.
+
+  **Pendiente antes del AAB:**
+  - Esta rama NO toca versionCode ni versionName. Sale junto con la versión 5, que trae reseñas y otras correcciones (decisión del dueño, 22/10). El número lo fija esa integración: hoy el mayor subido a Play es 4, confirmado por el dueño el 22/10.
+  - El texto de Meta en `yump.ar/privacidad`.
+  - En Play Console: ID de publicidad "Sí" y Data Safety con *ID de dispositivo u otros* e *Interacciones con la app*, compartidos con Meta.
+
 - **Top exclusivamente manual: auditoría de cachés y compatibilidad con
   Android 1.2.0 (2026-10-20, antes del merge; sin cambios de código).**
   **Cachés — comprobado por código:** la única puerta del ranking automático a
