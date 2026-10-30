@@ -442,7 +442,7 @@ qué. Acá va la excepción concreta en cada fila.
 | **Pósters de TMDB** (`image.tmdb.org`) | ⚠️ ver 2.g | ⚠️ ver 2.g | ⚠️ ver 2.g | 🔍 **VERIFICACIÓN PENDIENTE** | Obligatorio | App functionality |
 | **Tráilers de YouTube** (`youtube-nocookie.com`) | ⚠️ ver 2.g | ⚠️ ver 2.g | ⚠️ ver 2.g | 🔍 **VERIFICACIÓN PENDIENTE** | Opcional (solo al reproducir) | App functionality |
 | Google Calendar | Calendar → **Calendar events** | **No** | **No** | **User-initiated transfer**: lo abre la persona, con divulgación previa | — | — |
-| Advertising ID | Device or other IDs | **No** — no se usa | No | — | — | — |
+| Advertising ID | Device or other IDs | **Sí, desde el AAB 5** (SDK de Meta, sólo Android) | **Sí** (Meta) | — | ver 2.h | Analytics, Advertising or marketing |
 
 ### 2.b 🔵 DECISIÓN — Vercel Analytics y Speed Insights
 
@@ -740,6 +740,44 @@ problema en vez de discutirlo:
    dejar la fila del formulario como pendiente hasta consultarlo.
 
 ---
+
+### 2.h 🔵 SDK de Meta (AAB 5): lo que cambia en Play Console
+
+Desde el AAB 5 la app Android trae `facebook-core` (ver `CLAUDE.md`, "SDK de
+Meta"): **activado por defecto** y desactivable en Sobre Yump. Sólo instalación
+y aperturas, sin eventos propios. Meta no es un *service provider* nuestro: usa
+los datos para atribuir y optimizar campañas, así que **es "compartido"**. En la
+web y la PWA no hay SDK de Meta: esto vale sólo para la app.
+
+**ID de publicidad** (Contenido de la app → ID de publicidad): **Sí**. Usos:
+**Analytics** y **Advertising or marketing** (atribución de campañas). El
+manifest conserva `com.google.android.gms.permission.AD_ID`; con "Sí", Play
+rechaza una versión sin ese permiso.
+
+**Data Safety**, filas nuevas:
+
+| Dato | Tipo exacto de Play | ¿Recogido? | ¿Compartido? | Con quién | Finalidad |
+|---|---|---|---|---|---|
+| ID de publicidad (y el ID anónimo del SDK) | Device or other IDs → **Device or other IDs** | Sí | **Sí** | Meta | Analytics, Advertising or marketing |
+| Instalación y aperturas de la app | App activity → **App interactions** | Sí | **Sí** | Meta | Analytics, Advertising or marketing |
+
+- **¿Opcional u obligatorio?** 🔵 decisión del dueño. Play admite "opcional"
+  cuando la persona puede elegir si se recoge; acá se recoge por defecto y se
+  puede desactivar. **Recomendación: "obligatorio"**, que es lo conservador:
+  marcar "opcional" algo que arranca activado puede leerse como engañoso.
+- **Cifrado en tránsito:** sí (el SDK usa HTTPS).
+- **Pedido de eliminación:** la baja de cuenta de Yump **no** borra lo que Meta
+  ya recibió (no está ligado a la cuenta; es del dispositivo). La forma de
+  dejar de enviar es la opción de Sobre Yump.
+- **"Contains ads":** el SDK de Meta **no** muestra anuncios en Yump; la
+  decisión de 2.e (por el reproductor de YouTube) no cambia por esto.
+- La fila "Advertising ID — No" de la matriz 2.a quedó corregida por esta
+  sección.
+
+**Páginas de `yump.ar`** (las edita el dueño; la app sólo las enlaza): la
+política de privacidad tiene que nombrar a Meta, qué se envía (instalación,
+aperturas, ID de publicidad), para qué y cómo desactivarlo desde Sobre Yump.
+El aviso del registro enlaza Términos y Privacidad.
 
 ## 3. Eliminación de cuenta
 
