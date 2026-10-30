@@ -49,7 +49,8 @@ Convención del dueño (5/10/2026), en `android/app/build.gradle` y fijada por
   - **PATCH** (`1.2.1`): correcciones, textos o ajustes sin funcionalidad nueva.
 
 Historial: `1 (1.0.0)` y `2 (1.0.0)` (Yumpeá), `3 (1.1.0)` (filmografía v2),
-`4 (1.2.0)` (acordeón de reseñas y filtro de Mi lista). Qué está subido y en
+`4 (1.2.0)` (acordeón de reseñas y filtro de Mi lista), `5 (1.3.0)` (reseñas
+de usuarios, compartir invitaciones, géneros y Meta desactivable). Qué está subido y en
 qué canal lo dice `docs/ESTADO.md`.
 
 `app/layout.tsx` monta Vercel Analytics y Speed Insights sólo cuando

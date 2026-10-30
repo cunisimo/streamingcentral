@@ -172,7 +172,7 @@ test("🔴 keystore.properties y los keystores están fuera de Git", () => {
 // 4. LA CONFIGURACIÓN DE RELEASE
 // ============================================================================
 
-test("versionCode 4, versionName 1.2.0 y release no depurable", () => {
+test("versionCode 5, versionName 1.3.0 y release no depurable", () => {
   // 27/09: pasó de 1 a 2 para la segunda subida al canal cerrado, la que lleva
   // Yumpeá. El dueño confirmó en Play Console que 1 era el mayor subido a
   // cualquier canal, y Play exige estrictamente mayor. Cuando haya una tercera
@@ -184,8 +184,11 @@ test("versionCode 4, versionName 1.2.0 y release no depurable", () => {
   // 5/10: 3 → 4 y 1.1.0 → 1.2.0 (MINOR: funcionalidad visible nueva, el
   // acordeón de reseñas y el filtro de Mi lista). La convención de versionado
   // está en CLAUDE.md ("Versionado de la app Android").
-  assert.match(GRADLE, /versionCode 4\b/, "cambió el versionCode de la cuarta subida");
-  assert.match(GRADLE, /versionName "1\.2\.0"/, "el versionName no es 1.2.0");
+  // 30/10: 4 → 5 y 1.2.0 → 1.3.0 (MINOR: reseñas de usuarios, compartir
+  // invitaciones, géneros y la opción de Meta). El mayor subido a Play es 4,
+  // confirmado por el dueño el 22/10.
+  assert.match(GRADLE, /versionCode 5\b/, "cambió el versionCode de la quinta subida");
+  assert.match(GRADLE, /versionName "1\.3\.0"/, "el versionName no es 1.3.0");
   assert.match(GRADLE, /debuggable false/, "la release no declara debuggable false");
   assert.match(GRADLE, /minifyEnabled false/, "cambió minifyEnabled sin decidirlo");
   assert.match(GRADLE, /applicationId "ar\.yump\.app"/, "cambió el package definitivo");
