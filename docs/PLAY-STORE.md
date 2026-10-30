@@ -761,10 +761,18 @@ rechaza una versión sin ese permiso.
 | ID de publicidad (y el ID anónimo del SDK) | Device or other IDs → **Device or other IDs** | Sí | **Sí** | Meta | Analytics, Advertising or marketing |
 | Instalación y aperturas de la app | App activity → **App interactions** | Sí | **Sí** | Meta | Analytics, Advertising or marketing |
 
-- **¿Opcional u obligatorio?** 🔵 decisión del dueño. Play admite "opcional"
-  cuando la persona puede elegir si se recoge; acá se recoge por defecto y se
-  puede desactivar. **Recomendación: "obligatorio"**, que es lo conservador:
-  marcar "opcional" algo que arranca activado puede leerse como engañoso.
+- **¿Opcional u obligatorio? → "Opcional", en las dos filas** (corregido el
+  30/10: la recomendación anterior de "obligatorio" por arrancar activado no
+  seguía la definición de Google). La ayuda de Data Safety dice que
+  *"'Optional' includes the ability to opt into or opt out of data
+  collection"*, que se puede declarar opcional *"where a user has control over
+  its collection and can use the app without providing it"*, y que sólo vale si
+  *"all users – regardless of device or region – can … opt-out"*. Las dos
+  condiciones se cumplen en la app: la opción de Sobre Yump está para todos,
+  con y sin cuenta, y Yump funciona igual desactivada. El arranque activado no
+  cambia la categoría: "opt-out" es justamente un control sobre algo activado.
+  ⚠️ Vale **sólo para la app Android**: si alguna vez se declarara para la web,
+  allí no hay SDK de Meta ni opción.
 - **Cifrado en tránsito:** sí (el SDK usa HTTPS).
 - **Pedido de eliminación:** la baja de cuenta de Yump **no** borra lo que Meta
   ya recibió (no está ligado a la cuenta; es del dispositivo). La forma de

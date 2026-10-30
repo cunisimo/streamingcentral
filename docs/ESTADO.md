@@ -94,17 +94,18 @@ y `publicacion_activa` están en `true` (encendido hecho por el dueño, que el
 permiso de la sesión lo bloqueó). `top_yumpers_activo` y `muestreo_activo`
 siguen en `false`.
 
-**AAB 5 — integración en rama, SIN versión, SIN AAB (30/10/2026).** Rama local
-`release/aab5-integracion` (worktree `wt-aab5`, desde `main` `e8929e5`, sin
-push): reseñas y compartir invitaciones ya estaban en `main`; se suman los
-géneros debajo de Música (`6fbf1af`), el SDK de Meta (`f91add1`, `ec7aeef`) y
-la medición de Meta **activada por defecto y desactivable** en Sobre Yump,
-más el aviso legal del registro. Detalle y pendientes en la entrada "AAB 5" de
-"Evidencia y alcance". **Falta antes de generar el AAB:** prueba en teléfono o
-emulador (no hay ninguno disponible), `versionCode`/`versionName` (los decide
-el dueño), las páginas `yump.ar/terminos` y `yump.ar/privacidad` (las edita el
-dueño) y las declaraciones de Play Console. **No publicar en Google Play
-todavía** (indicación del dueño, 30/10).
+**AAB `5 (1.3.0)` — GENERADO Y FIRMADO, SIN SUBIR (30/10/2026).** Desde la rama
+local `release/aab5-integracion` (`0b7a9f5`, worktree `wt-aab5`; sin push ni
+merge): reseñas de usuarios, compartir invitaciones, géneros debajo de Música y
+el SDK de Meta con su opción de desactivación. Copia estable
+`D:\DESARROLLO\stream central\releases\Yump-1.3.0-vc5.aab`, SHA-256
+`ae96f9855aff76386ef33c8d7820e5cd79f3ee2b85a9179149c3454781a32c80`. El dueño
+informó que hizo las pruebas y que actualizó las páginas legales; el tráfico
+hacia Meta no lo verificó Claude. ⚠️ El `versionCode 5` se apoya en la
+confirmación del dueño del 22/10 (mayor subido: 4); Claude no puede ver Play
+Console. **No publicar en Google Play todavía** (indicación del dueño, 30/10):
+faltan las declaraciones de Play Console (entrada "AAB 5" y
+`docs/PLAY-STORE.md` §2.h). Detalle en "Evidencia y alcance".
 
 **Google Play (informado por el dueño):** AAB `2 (1.0.0)` en Alpha (28/09);
 AAB `3 (1.1.0)` en Alpha (3/10) y acceso a Producción pedido a Google
@@ -1564,8 +1565,85 @@ reusa su diseño, no se mergea.
 
 ## Evidencia y alcance de esta actualización
 
+- **AAB `5 (1.3.0)`: generado y firmado (2026-10-30; SIN subir a Play, SIN
+  push, SIN merge).** Autorizado por el dueño el 30/10, con la condición de que
+  el mayor `versionCode` subido siga siendo 4.
+  **Pruebas del dueño — INFORMADAS por él (30/10), no observadas por Claude:**
+  dijo que ya realizó las pruebas y no pidió más recorridos ni emulador. Claude
+  no vio esas pruebas: siguen SIN VERIFICAR por Claude la activación inicial,
+  la desactivación y reactivación en el teléfono y, sobre todo, **el tráfico y
+  los eventos que llegan a Meta**. **Páginas legales:** el dueño informó que
+  actualizó `yump.ar/terminos` y `yump.ar/privacidad`, incluida la aclaración
+  sobre las limitaciones al desactivar Meta (Claude no las editó ni las
+  revisó).
+  **Versión:** `0b7a9f5` sube `versionCode` 4 → 5 y `versionName` 1.2.0 →
+  1.3.0 (`android/app/build.gradle`, `lib/release-android.test.ts`, historial
+  de `CLAUDE.md`). ⚠️ **Incertidumbre:** el "mayor subido = 4" es la
+  confirmación del dueño del 22/10; Claude no tiene acceso a Play Console. Si
+  hubo otra subida después, Play rechazará el 5 y hay que generar uno mayor.
+  **Procedimiento** (el habitual, §19–20 del plan de la Etapa 3 y la entrada
+  del AAB 4): `node scripts/build-capacitor.mjs --release
+  --api-base=https://app.yump.ar` (variables PÚBLICAS de Producción desde el
+  `.env.local` del checkout principal, copiado a la worktree sólo para el build;
+  el script toma sólo su lista blanca); `npx cap sync android`;
+  `./gradlew :app:bundleRelease` con el JBR 21 de `~/.jdks/jbr-21.0.11` y
+  `ANDROID_HOME` sólo en el comando. 🔒 `.env.local` y
+  `android/keystore.properties` se copiaron byte por byte desde el checkout
+  principal (ignorados por Git, contenido no abierto ni mostrado) y se
+  **eliminaron** al terminar. `cap sync` reescribió las rutas de
+  `capacitor.settings.gradle`/`capacitor.build.gradle` por la junction de
+  `node_modules`; se restauraron (mismos paquetes y versiones).
+  **Artefacto:** BUILD SUCCESSFUL (7 min 11 s) con `verificarBaseDeApi` ("el
+  paquete web apunta a https://app.yump.ar"), `verificarFirmaDeCarga` y
+  `verificarPaqueteConSalas` en verde. Copia estable
+  `D:\DESARROLLO\stream central\releases\Yump-1.3.0-vc5.aab`, **7.996.438
+  bytes**, SHA-256
+  **`ae96f9855aff76386ef33c8d7820e5cd79f3ee2b85a9179149c3454781a32c80`**
+  (idéntica a `android/app/build/outputs/bundle/release/app-release.aab`).
+  **Controles del artefacto:**
+  - **Firma:** `jarsigner -verify` → `jar verified.`; certificado de SUBIDA
+    `2D:18:A7:C1:F4:FC:AB:D4:09:79:B3:CB:EA:66:1F:E5:41:D4:92:89:7D:47:B2:C6:7E:CF:AB:9F:93:03:95:AE`
+    (el mismo del AAB 4; no es la clave de depuración).
+  - **Versión** (manifest protobuf del AAB): `versionCode 5`, `versionName
+    1.3.0`, `ar.yump.app`; sin `debuggable` ni `usesCleartextTraffic`.
+  - **Destino:** `https://app.yump.ar` en 6 archivos del paquete web y en los
+    filtros de App Links; 0 `vercel.app`; Supabase sólo
+    `aibqqebwlladjjkeqllo.supabase.co` (Producción). `capacitor.config.json`
+    sin `server.url`.
+  - **Contenido integrado:** reseñas (`comunidad/resenas`, "Me sirvió"),
+    "Compartir invitación", géneros (en el chunk de la ficha: Música → géneros
+    → Serie → Puntajes), el aviso del registro y la opción "Medición de
+    campañas con Meta" con su explicación; en el dex, `YumpApp`,
+    `MedicionMeta`, `MedicionMetaPlugin` y `FacebookSdk`; en el manifest,
+    `YumpApp`, `com.facebook.sdk.ApplicationId` y AD_ID, **sin**
+    `FacebookInitProvider` ni `ACCESS_ADSERVICES_*`.
+  - **Sin configuración de pruebas:** 0 `localhost:<puerto>`, 0 `54321`, 0
+    `revision-local`/`COMUNIDAD_REVISION_LOCAL`/arnés, 0 `service_role`,
+    `COMUNIDAD_HMAC`, `TMDB_READ_TOKEN`, `CRON_SECRET` o tokens de Upstash; 0
+    archivos `.env`, 0 source maps, 0 keystores. Las únicas menciones de
+    `localhost`/`127.0.0.1` son la lista interna de hosts del cliente de
+    Supabase (código de la librería, no configuración).
+  No se repitieron las baterías generales (ya corridas sobre esta rama).
+  **Data Safety corregida** (`docs/PLAY-STORE.md` §2.h): las dos filas de Meta
+  se declaran **"Opcional"** según la definición de Google (opt-out disponible
+  para todos y la app funciona sin el dato); la recomendación anterior de
+  "obligatorio" por arrancar activado quedó retirada.
+  **Antes de enviarlo, en Play Console (dueño):**
+  1. Confirmar que el mayor `versionCode` subido sigue siendo 4.
+  2. Contenido de la app → **ID de publicidad**: "Sí", usos *Analytics* y
+     *Advertising or marketing*.
+  3. **Seguridad de los datos**: agregar *Device or other IDs* y *App
+     interactions*, recogidos y **compartidos** (Meta), finalidades
+     *Analytics* y *Advertising or marketing*, **opcionales**, cifrados en
+     tránsito; la eliminación de cuenta no borra lo enviado a Meta.
+  4. Verificar que la URL de la política de privacidad de la ficha sea
+     `https://yump.ar/privacidad/`.
+  5. "Contiene anuncios": sin cambios por Meta (§2.e).
+  6. Notas de la versión de la 1.3.0.
+
 - **AAB 5: integración de los cuatro cambios y medición de Meta desactivable
-  (2026-10-30; rama local `release/aab5-integracion`, worktree `wt-aab5`,
+  (ANTECEDENTE del AAB generado arriba: la versión, las páginas legales y la
+  prueba del dueño quedaron resueltas ahí; 2026-10-30; rama local `release/aab5-integracion`, worktree `wt-aab5`,
   desde `main` `e8929e5`; SIN push, SIN merge, SIN versión, SIN AAB).**
   **Base y pendientes (Git):** reseñas de usuarios y "Compartir invitación"
   ya estaban en `main` (`feat/compartir-invitacion`, `fix/icono-compartir-match`
