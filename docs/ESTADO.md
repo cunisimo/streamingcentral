@@ -103,7 +103,8 @@ más el aviso legal del registro. Detalle y pendientes en la entrada "AAB 5" de
 "Evidencia y alcance". **Falta antes de generar el AAB:** prueba en teléfono o
 emulador (no hay ninguno disponible), `versionCode`/`versionName` (los decide
 el dueño), las páginas `yump.ar/terminos` y `yump.ar/privacidad` (las edita el
-dueño) y las declaraciones de Play Console.
+dueño) y las declaraciones de Play Console. **No publicar en Google Play
+todavía** (indicación del dueño, 30/10).
 
 **Google Play (informado por el dueño):** AAB `2 (1.0.0)` en Alpha (28/09);
 AAB `3 (1.1.0)` en Alpha (3/10) y acceso a Producción pedido a Google
@@ -1585,7 +1586,9 @@ reusa su diseño, no se mergea.
     Sobre Yump). Sólo en el modo "Crear cuenta". **El texto no representa una
     aceptación anterior al registro ni de quienes usan la app sin cuenta**, y
     no es el consentimiento de la medición: la medición es activada por defecto
-    y se controla en Sobre Yump.
+    y se controla en Sobre Yump. **No se presenta como consentimiento previo ni
+    como cumplimiento legal certificado** (indicación del dueño, 30/10): es un
+    aviso informativo; la revisión legal de las páginas es del dueño.
   - **Sobre Yump** (`components/legal/MedicionMetaOpcion.tsx`,
     `lib/medicion-meta.ts`): "Medición de campañas con Meta", con la
     explicación acordada y un interruptor. Va dentro de `SobreYump`, que se

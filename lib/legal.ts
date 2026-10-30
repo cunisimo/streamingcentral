@@ -31,7 +31,8 @@ export const PAGINAS_LEGALES: readonly PaginaLegal[] = Object.freeze([
  * `yump.ar` y edita el dueño. No es un consentimiento para la medición de Meta,
  * que está activada por defecto y se desactiva en Sobre Yump
  * (`lib/medicion-meta.ts`): el texto no vale para nada anterior al registro ni
- * para quien usa la app sin cuenta.
+ * para quien usa la app sin cuenta. Tampoco es un consentimiento previo ni una
+ * certificación de cumplimiento legal: es un aviso informativo.
  */
 export const AVISO_REGISTRO = Object.freeze({
   ANTES: "Al continuar, aceptás nuestros ",

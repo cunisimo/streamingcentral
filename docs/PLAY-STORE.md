@@ -777,7 +777,9 @@ rechaza una versión sin ese permiso.
 **Páginas de `yump.ar`** (las edita el dueño; la app sólo las enlaza): la
 política de privacidad tiene que nombrar a Meta, qué se envía (instalación,
 aperturas, ID de publicidad), para qué y cómo desactivarlo desde Sobre Yump.
-El aviso del registro enlaza Términos y Privacidad.
+El aviso del registro enlaza Términos y Privacidad; es informativo: no es un
+consentimiento previo ni acredita cumplimiento legal. **No publicar en Play
+todavía** (dueño, 30/10).
 
 ## 3. Eliminación de cuenta
 
