@@ -61,8 +61,12 @@ export interface SenalConRango {
 }
 
 // valor = peso − rango / K. K = cuántos puestos de recencia equivalen a un punto
-// de peso. Parámetro calibrado con el harness (scripts/reco-harness).
-export const K_RECENCIA = 6;
+// de peso: con 10, un Ta buena nuevo le gana a un Petacular 11 puestos más
+// viejo. K y λ salen de la calibración del harness (scripts/reco-harness,
+// sección 7): con 10/1 los seis orígenes de P6 cubren crimen, animación y otros
+// temas, y un voto nuevo de crimen desplaza a otro de crimen. Es UN perfil: la
+// evidencia es débil y se revisa con datos reales.
+export const K_RECENCIA = 10;
 export const LAMBDA_MMR = 1;
 // Cuántas señales compiten por los 6 lugares.
 export const HISTORIAL_ORIGENES = 12;
@@ -162,6 +166,12 @@ export function seleccionarTarjetas<T extends Tarjeta>(
     ? Infinity
     : Math.min(Math.ceil(T * Math.max(conTema / n, 0.1)), Math.ceil(T * 0.5));
   const cupos = { origen: capOrigen, animacion: capTema(origenesAnimados), infantil: capTema(origenesInfantiles) };
+  // Primeras 6 (lo que se ve sin scrollear en el celular), con n ≥ 3: la MISMA
+  // proporción que el riel entero, redondeada hacia abajo y nunca menos de 1.
+  // Con un tope fijo de 2, un único gusto infantil entre 6 ponía 2 infantiles
+  // arriba (harness, perfil P8): un tercio de la pantalla para 1/6 de los gustos.
+  const top6 = (cap: number) => (Number.isFinite(cap) ? Math.max(1, Math.floor((6 * cap) / Math.max(T, 1))) : Infinity);
+  const top6Anim = top6(cupos.animacion), top6Inf = top6(cupos.infantil);
 
   const orden = [...elegibles].sort((a, b) =>
     b.puntaje - a.puntaje || (a.type < b.type ? -1 : a.type > b.type ? 1 : a.id - b.id));
@@ -171,16 +181,15 @@ export function seleccionarTarjetas<T extends Tarjeta>(
   let anim = 0, inf = 0;
   const cuantosTipo = (t: MediaType) => out.filter((x) => x.type === t).length;
 
-  const cumpleCupos = (c: T) => {
+  const cumpleCupos = (c: T, conTop6: boolean) => {
     const delOrigen = porOrigen.get(c.origen) ?? 0;
     if (delOrigen >= cupos.origen) return false;
     if (c.animacion && anim >= cupos.animacion) return false;
     if (c.infantil && inf >= cupos.infantil) return false;
-    // Lo que se ve sin scrollear en el celular: con n ≥ 3, como mucho 2 del
-    // mismo origen y 2 de animación entre las primeras 6.
-    if (out.length < 6 && n >= 3) {
+    if (conTop6 && out.length < 6 && n >= 3) {
       if (delOrigen >= 2) return false;
-      if (c.animacion && anim >= 2) return false;
+      if (c.animacion && anim >= top6Anim) return false;
+      if (c.infantil && inf >= top6Inf) return false;
     }
     return true;
   };
@@ -205,8 +214,23 @@ export function seleccionarTarjetas<T extends Tarjeta>(
     if (c.infantil) inf++;
   };
 
-  for (let c = siguiente(cumpleCupos); out.length < T && c; c = out.length < T ? siguiente(cumpleCupos) : null) tomar(c);
+  // Pasada 1. La regla de las primeras 6 es de POSICIÓN: si no hay quién la
+  // cumpla, se toma el mejor que cumple los cupos de cantidad y la pasada sigue.
+  // Cortar la pasada ahí mandaba casi todo a la pasada 2, sin cupos (harness,
+  // perfil P9: 16 de 20 completadas).
+  const paso1 = () => siguiente((c) => cumpleCupos(c, true)) ?? siguiente((c) => cumpleCupos(c, false));
+  for (let c = paso1(); out.length < T && c; c = out.length < T ? paso1() : null) tomar(c);
   const conCupos = out.length;
-  for (let c = siguiente(() => true); out.length < T && c; c = out.length < T ? siguiente(() => true) : null) tomar(c);
+  // Pasada 2: completa hasta T sin cupos, pero tomando primero del origen MENOS
+  // representado (y, dentro de él, por puntaje). Por puntaje puro, los
+  // sobrantes de mayor puntaje eran todos del mismo origen y la pasada 2
+  // concentraba MÁS que el algoritmo anterior (harness, perfil P9: 13 de un
+  // origen contra 11).
+  const paso2 = () => {
+    let min = Infinity;
+    for (const c of orden) if (!usados.has(c)) min = Math.min(min, porOrigen.get(c.origen) ?? 0);
+    return siguiente((c) => (porOrigen.get(c.origen) ?? 0) === min) ?? siguiente(() => true);
+  };
+  for (let c = paso2(); out.length < T && c; c = out.length < T ? paso2() : null) tomar(c);
   return { items: out, conCupos, completados: out.length - conCupos, cupos };
 }

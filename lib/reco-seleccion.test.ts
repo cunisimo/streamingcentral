@@ -103,9 +103,9 @@ test("ningún elegible repetido y orden estable", () => {
 
 const S = (id: number, peso: 1 | 2 | 3, rango: number): SenalConRango => ({ tipo: "movie", id, peso, rango });
 
-test("recencia K=6: Ta buena nuevo le gana a Petacular 7 puestos más viejo, no a uno 5 más viejo", () => {
-  assert.equal(candidatasOrigen([S(1, 3, 7), S(2, 2, 0)])[0].id, 2);
-  assert.equal(candidatasOrigen([S(1, 3, 5), S(2, 2, 0)])[0].id, 1);
+test("recencia K=10: Ta buena nuevo le gana a Petacular 11 puestos más viejo, no a uno 9 más viejo", () => {
+  assert.equal(candidatasOrigen([S(1, 3, 11), S(2, 2, 0)])[0].id, 2);
+  assert.equal(candidatasOrigen([S(1, 3, 9), S(2, 2, 0)])[0].id, 1);
 });
 
 test("duplicada (votada y en Mi lista) cuenta una vez, con el peso mayor", () => {
@@ -126,4 +126,25 @@ test("MMR: un voto nuevo desplaza al origen más redundante en estos casos (obse
     const fuera = antes.filter((id) => !despues.includes(id));
     assert.deepEqual(fuera, [3], `con el voto ${nuevo.id}`);
   }
+});
+
+// --- Regresiones que encontró el harness (scripts/reco-harness) ---
+
+test("P9: si nadie cumple la regla de las primeras 6, la pasada 1 sigue con los cupos de cantidad", () => {
+  // 3 orígenes, todos animados, casi sin oferta no animada.
+  const r = seleccionarTarjetas(
+    [...cands("A", 15, { anim: true }), ...cands("B", 15, { anim: true }), ...cands("C", 10, { anim: true }), ...cands("D", 1)],
+    { origenesAnimados: 3, origenesInfantiles: 0 },
+  );
+  assert.equal(r.items.length, 20);
+  assert.ok(r.conCupos >= r.cupos.animacion, `la pasada 1 llega al cupo de animación (${r.conCupos})`);
+});
+
+test("P8: 1 origen infantil entre 6 → como mucho 1 infantil en las primeras 6", () => {
+  const r = seleccionarTarjetas(
+    [...cands("K", 10, { anim: true, inf: true, base: 3 }), ...["B", "C", "D", "E", "F"].flatMap((o) => cands(o, 6))],
+    { origenesAnimados: 1, origenesInfantiles: 1 },
+  );
+  assert.ok(cuantos(r.items.slice(0, 6), (c) => c.infantil) <= 1);
+  assert.ok(cuantos(r.items, (c) => c.infantil) <= r.cupos.infantil);
 });

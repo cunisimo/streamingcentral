@@ -1,6 +1,11 @@
 # "Elegidas para vos" — plan cerrado de diversidad (2026-10-31, rev. 2)
 
-**Estado: PLAN. Nada implementado ni desplegado.** La rev. 2 corrige las
+**Estado (31/10, noche): IMPLEMENTADO Y VALIDADO EN LOCAL** en la rama
+`feat/reco-diversidad`, sin push ni deploy. Resultados y desvíos respecto de
+este plan: `docs/medidas/2026-10-31-reco-diversidad-resultados.md`. Lo que
+sigue es el plan tal como se aprobó.
+
+**Plan original:** La rev. 2 corrige las
 cuatro contradicciones que el dueño y Codex encontraron en `0d107c4`: la
 prioridad entre cupos y cantidad, la fórmula de recencia, el alcance del filtro
 infantil y el alcance de la medición. Cada afirmación lleva su tipo de
@@ -40,8 +45,10 @@ Puntos ya cerrados que esta revisión no reabre:
 - **Cruce** (`cruzadosDe` → `discover`): `with_genres` se arma con `|`, o sea
   **O**, no **Y** (`lib/tmdb.ts`). El cruce de Los Simpson pide "animación **o**
   comedia".
-- **Filtros temáticos**: sólo el guard de anime. ⚠️ `CLAUDE.md` dice que el
-  recomendador excluye animación: es falso. Se corrige junto con este trabajo.
+- **Filtros temáticos**: sólo el guard de anime. (Corrección del 31/10: la rev.
+  1 y la rev. 2 decían que `CLAUDE.md` afirmaba algo falso. No era así: su
+  "Recomendador" es el modo indeciso, que sí usa `scope: "browse"`. Faltaba
+  una fila para "Elegidas para vos", y se agregó.)
 - **Descartes**: exclusión exacta en el servidor desde `50ebc93`, sin
   procedencia.
 

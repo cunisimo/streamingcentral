@@ -521,6 +521,16 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   | Rieles de género del Home (`scope: "home"`) | excluye | excluye |
   | Recomendador y `/categoria/[slug]` (`scope: "browse"`) | excluye | **muestra** |
   | Próximamente, búsqueda, listas del usuario (sin `scope`) | muestra | muestra |
+  | "Elegidas para vos" (`lib/reco.ts`, sin `scope`) | cupo blando con ≥ 3 orígenes | **guard infantil**: Kids en series o Animación+Family en películas, salvo que algún origen lo sea; Family solo, sin regla |
+
+  "Recomendador" en la segunda fila es el **modo indeciso** (`recommendations()`
+  en `lib/enrich.ts`), no "Elegidas para vos". El riel personalizado tiene sus
+  propias reglas (plan `docs/superpowers/plans/2026-10-31-reco-diversidad.md`,
+  resultados en `docs/medidas/2026-10-31-reco-diversidad-resultados.md`):
+  guard de anime, guard infantil, cupos por origen y por tema en un selector de
+  dos pasadas, y orígenes elegidos por recencia + MMR con señales que lee el
+  servidor. Interruptores: `RECO_DIVERSIDAD=0` (todo lo anterior) y
+  `RECO_CRUCE_SIN_FAMILIA=0` (sin la exclusión de Family en el cruce).
 
   El filtro de familia en búsqueda explícita dejaba "Magia navideña" sin *Solo en
   casa 2*, *El mago de Oz* ni *¡Qué bello es vivir!* (familiares, no animadas),

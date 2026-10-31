@@ -1546,6 +1546,53 @@ reusa su diseño, no se mergea.
 
 ## Evidencia y alcance de esta actualización
 
+- **"Elegidas para vos": diversidad (2026-10-31; rama LOCAL
+  `feat/reco-diversidad`, SIN push, merge ni deploy, sin migraciones ni AAB).**
+
+  **Origen [dueño]:** un usuario veía en el riel películas que había marcado
+  que no quería ver, y por un "me gustó" en Los Simpson recibía un 80% de
+  dibujos, muchos infantiles.
+
+  **Causa [medida]:**
+  - El cruce de un origen animado trae películas Disney/Pixar (16 + 10751).
+  - No había ningún filtro infantil.
+  - Los turnos 3/2/1 dejaban que un solo gusto dominara las primeras tarjetas.
+
+  **Implementado, según el plan rev. 2 y las decisiones del dueño (D1
+  cantidad, D2(a) a validar, D3 pospuesta):**
+  - guard infantil;
+  - exclusión de Family en el cruce hacia películas sólo desde un origen
+    animado no infantil;
+  - selector en dos pasadas con cupos por origen y por tema;
+  - orígenes elegidos por recencia (K = 10) y MMR (λ = 1), con señales que el
+    servidor lee con el token. Así anda igual en Android 1.2.0 y en el AAB 5.
+    Lo leído también se excluye.
+  - Interruptores `RECO_DIVERSIDAD=0` y `RECO_CRUCE_SIN_FAMILIA=0`.
+  - Claves `reco:v3` y `reco:cruce:v2.<excluidos>`.
+
+  **Validado [harness, real, tests, local]**, informe en
+  `docs/medidas/2026-10-31-reco-diversidad-resultados.md`:
+  - Los Simpson con n,d,m pasa de 16 animadas / 14 infantiles a 4 / 0, y el
+    riel sigue en 20 tarjetas.
+  - 0 descartados y 0 infantiles sin origen infantil, en 120 corridas sobre
+    candidatos fijos.
+  - D2(a) perdió 0 películas familiares sin animación en la muestra, y sin
+    ella el caso de Los Simpson quedaba oculto.
+  - Riel en caché: 1 operación de caché y 0 llamadas a TMDB, igual que hoy. En
+    frío: +12 llamadas a TMDB.
+  - `tsc` limpio; `npm test` 2540 / 0.
+
+  **NO probado:**
+  - el camino con sesión real;
+  - las +2 consultas a Supabase por pedido (salen del código, no se midieron);
+  - el A/B a ciegas, que espera al dueño (`scripts/reco-harness/ab.md`).
+
+  **Sigue abierta y aparte**: la investigación del título exacto descartado
+  que reaparece.
+
+  **Siguiente paso:** revisión del dueño (y de Codex), A/B a ciegas y prueba
+  con sesión en local. Después, decidir el merge y el deploy.
+
 - **"Elegidas para vos" no se reponía al descartar (2026-10-29; rama
   `fix/descartes-rellenan-riel`, MERGEADA `50ebc93` y DESPLEGADA — deploy
   Production 7419445647 `success`; Preview de la rama `success`).** **Informado por
