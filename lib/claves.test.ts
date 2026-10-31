@@ -34,9 +34,9 @@ test("modo compatible: las doce familias producen los bytes pre-tanda-1", () => 
     "disc:v1:AR:2026-08-23:tv:combo-d+m+n:pop.abc123:p3",
   );
   assert.equal(claveCard("movie", 278, H), "card:d1:movie:278");
-  assert.equal(claveReco("h4sh", H), "reco:v2.d1:h4sh");
+  assert.equal(claveReco("h4sh", H), "reco:v3.d1:h4sh");
   assert.equal(claveRecoMismo("tv", 1399, H), "reco:mismo:tv:1399");
-  assert.equal(claveRecoCruce("movie", 557, "d,m,n", H), "reco:cruce:movie:557:d,m,n");
+  assert.equal(claveRecoCruce("movie", 557, "d,m,n", [], H), "reco:cruce:v2.-:movie:557:d,m,n");
   assert.equal(claveRecoPerfil("movie", 557, H), "reco:perfil:v2:movie:557");
   assert.equal(clavePeoplePopular(3, H), "people:popular:3");
   // La familia 11: `search:v2` SÍ es localizada, aunque `searchDeTipo` esté
@@ -67,9 +67,9 @@ test("tanda 2: las doce familias llevan la huella es-MX+f.r1", () => {
     "disc:es-MX+f.r1:v1:AR:2026-08-23:tv:combo-d+m+n:pop.abc123:p3",
   );
   assert.equal(claveCard("movie", 278, H), "card:es-MX+f.r1:d1:movie:278");
-  assert.equal(claveReco("h4sh", H), "reco:es-MX+f.r1:v2.d1:h4sh");
+  assert.equal(claveReco("h4sh", H), "reco:es-MX+f.r1:v3.d1:h4sh");
   assert.equal(claveRecoMismo("tv", 1399, H), "reco:mismo:es-MX+f.r1:tv:1399");
-  assert.equal(claveRecoCruce("movie", 557, "d,m,n", H), "reco:cruce:es-MX+f.r1:movie:557:d,m,n");
+  assert.equal(claveRecoCruce("movie", 557, "d,m,n", [], H), "reco:cruce:es-MX+f.r1:v2.-:movie:557:d,m,n");
   assert.equal(claveRecoPerfil("movie", 557, H), "reco:perfil:es-MX+f.r1:v2:movie:557");
   assert.equal(clavePeoplePopular(3, H), "people:popular:es-MX+f.r1:3");
   assert.equal(claveSearch("matrix", "d,m,n", H), "search:es-MX+f.r1:v2.d1:matrix:d,m,n");

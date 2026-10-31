@@ -159,9 +159,12 @@ export function claveCard(tipo: MediaType, id: number, huella: string): ClaveLoc
   return marcar(`card:${pre(huella)}${dv}:${tipo}:${id}`);
 }
 
-/** El riel "Elegidas para vos", ya armado. */
+/**
+ * El riel "Elegidas para vos", ya armado. v3: diversidad (guard infantil,
+ * selector en dos pasadas y orígenes por MMR) — cambia el CONTENIDO.
+ */
 export function claveReco(huellaSenales: string, huella: string): ClaveLocalizada {
-  return marcar(`reco:${pre(huella)}v2.${dv}:${huellaSenales}`);
+  return marcar(`reco:${pre(huella)}v3.${dv}:${huellaSenales}`);
 }
 
 /** Recomendados de TMDB para un título. */
@@ -169,11 +172,17 @@ export function claveRecoMismo(tipo: MediaType, id: number, huella: string): Cla
   return marcar(`reco:mismo:${pre(huella)}${tipo}:${id}`);
 }
 
-/** Cruce de tipo por keywords. */
+/**
+ * Cruce de tipo por keywords. v2: el pedido excluye géneros según el origen
+ * (`sin` = los ids excluidos, `-` si ninguno). Va en la clave porque cambia la
+ * respuesta de TMDB: sin eso, apagar o prender la variante seguiría sirviendo
+ * la consulta vieja durante el TTL.
+ */
 export function claveRecoCruce(
-  tipo: MediaType, id: number, providers: string, huella: string,
+  tipo: MediaType, id: number, providers: string, sin: number[], huella: string,
 ): ClaveLocalizada {
-  return marcar(`reco:cruce:${pre(huella)}${tipo}:${id}:${providers}`);
+  const s = sin.length ? [...sin].sort((a, b) => a - b).join(".") : "-";
+  return marcar(`reco:cruce:${pre(huella)}v2.${s}:${tipo}:${id}:${providers}`);
 }
 
 /** Perfil temático. Guarda `titulo`, que es localizado aunque solo se use para puntuar. */

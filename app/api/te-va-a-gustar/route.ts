@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { recomendaciones, MAX_ORIGENES, type Senal } from "@/lib/reco";
+import { recomendaciones, MAX_ORIGENES, type Senal, type SenalEntrada } from "@/lib/reco";
 import { usuarioDeToken } from "@/lib/supabase";
 import { descartesDeToken } from "@/lib/reco-descartes-servidor";
+import { senalesDeToken } from "@/lib/reco-senales-servidor";
 import type { MediaType, PlatformCode } from "@/lib/types";
 import { conCors, opcionesCors } from "@/lib/cors";
 
@@ -45,9 +46,14 @@ async function manejar(req: NextRequest) {
   // Los descartes se leen EN PARALELO con la validación del token: con un token
   // inválido la RLS no devuelve filas y el resultado se tira igual, así que no
   // hay nada que esperar en serie. Ver lib/reco-descartes-servidor.ts.
-  const [usuario, descartes] = await Promise.all([
+  //
+  // Las señales también (lib/reco-senales-servidor.ts): traen la fecha que el
+  // cliente no manda, y así la recencia vale igual para la web, Android 1.2.0 y
+  // el AAB 5, sin tocar el bundle.
+  const [usuario, descartes, delServidor] = await Promise.all([
     usuarioDeToken(token),
     token ? descartesDeToken(token) : Promise.resolve(null),
+    token ? senalesDeToken(token) : Promise.resolve(null),
   ]);
   if (!usuario) {
     return NextResponse.json({ items: [], motivo: "sin-sesion" }, { status: 401 });
@@ -63,7 +69,7 @@ async function manejar(req: NextRequest) {
   // Saneado explícito: esto viene del cliente y entra directo a claves de cache
   // y a URLs de TMDB. Se descarta lo que no tenga la forma esperada en vez de
   // confiar en que el cliente la respete.
-  const senales: Senal[] = (cuerpo.senales ?? [])
+  const delCliente: Senal[] = (cuerpo.senales ?? [])
     .filter((s) => esTipo(s.tipo) && Number.isInteger(s.id) && (s.peso === 1 || s.peso === 2 || s.peso === 3))
     .map((s) => ({ tipo: s.tipo as MediaType, id: s.id as number, peso: s.peso as 1 | 2 | 3 }))
     // Se corta acá también, no solo en `recomendaciones`: sin esto alguien puede
@@ -78,7 +84,15 @@ async function manejar(req: NextRequest) {
     // calificado. Entran en la clave de cache del riel (`huella` en lib/reco.ts),
     // así que un descarte nuevo rearma el riel en la carga siguiente y el hueco
     // se rellena con el siguiente candidato.
-    .concat(descartes ?? []);
+    .concat(descartes ?? [])
+    // Lo que el servidor leyó para armar señales TAMBIÉN se excluye (resguardo
+    // del dueño, 31/10): si el cliente mandara una lista incompleta, un título
+    // votado no puede volver recomendado.
+    .concat(delServidor?.claves ?? []);
+
+  // Con la lectura del servidor, sus señales mandan (traen rango). Si falló, las
+  // del cliente, sin rango: los orígenes se eligen como antes, por peso.
+  const senales: SenalEntrada[] = delServidor ? delServidor.senales : delCliente;
 
   const providers = (cuerpo.providers ?? []).filter((p): p is string => typeof p === "string") as PlatformCode[];
 
