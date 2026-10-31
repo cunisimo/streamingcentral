@@ -4,12 +4,15 @@
 // (ver la decisión sobre "Ya la vi" en CLAUDE.md). Esto es un riel más, aislado,
 // que se pide aparte y que si falla no aparece y no arrastra a nadie.
 //
-// EL SERVIDOR NO SABE QUIÉN SOS. Las señales y las exclusiones las manda el
-// cliente, que es el único que puede leerlas: `votes` y `user_items` tienen RLS
-// `auth.uid() = user_id`, así que una lectura del servidor con la anon key
-// devuelve cero filas —y encima sin error, en silencio—. Que el servidor sea
-// anónimo no es una limitación que haya que sortear: es lo que mantiene el
-// historial de cada uno fuera de los logs y del cache compartido.
+// QUIÉN LEE QUÉ (desde el 31/10). `votes` y `user_items` tienen RLS
+// `auth.uid() = user_id`: con la anon key el servidor lee cero filas, en
+// silencio. Por eso la RUTA lee señales y descartes con el TOKEN del usuario
+// (lib/reco-senales-servidor.ts, lib/reco-descartes-servidor.ts), en el mismo
+// pedido; el cliente sigue mandando sus señales y exclusiones, que se usan como
+// respaldo si la lectura del servidor falla (y las exclusiones, siempre). Lo
+// que NO cambió: el id del usuario no entra en ninguna clave ni en los logs, y
+// el caché del riel se comparte entre quienes tengan exactamente las mismas
+// señales, exclusiones y plataformas.
 //
 // LOS CUATRO CAMINOS. El riel es UNO SOLO y mixto (películas y series en la
 // misma fila, sin toggle), pero TMDB recomienda dentro del mismo tipo: una
@@ -59,7 +62,7 @@ import {
   type OrigenArmado, type Recomendacion,
 } from "./reco-armado";
 import {
-  candidatasOrigen, elegirOrigenesMMR, exclusionesCruce, type SenalConRango,
+  candidatasOrigen, elegirOrigenesMMR, exclusionesCruce, huellaSenales, type SenalConRango,
 } from "./reco-seleccion";
 export type { Senal, PesoSenal } from "./reco-mezcla";
 export { VENTANA, OBJETIVO, OBJETIVO_POR_TIPO, PISO } from "./reco-armado";
@@ -304,15 +307,14 @@ export async function recomendaciones(opts: {
   const sinFamilia = nuevo && cruceSinFamilia();
 
   // LA CLAVE SE ARMA SIN LEER NINGÚN PERFIL. Con rango, los orígenes se eligen
-  // por MMR y eso necesita los géneros de cada candidata; pero las 12
-  // candidatas y su orden salen sólo de peso y rango (`candidatasOrigen`), y MMR
-  // es determinístico sobre ellas. Entonces la huella usa esas 12 en orden: un
-  // HIT del riel no paga ni una lectura de perfil ni el MMR.
+  // por MMR, que usa los géneros de cada candidata (dependen sólo del título) y
+  // su valor (peso y RANGO, con K). La huella lleva las 12 candidatas con
+  // tipo, id, peso y rango, más K y λ (`huellaSenales`): un HIT del riel no paga
+  // ni una lectura de perfil ni el MMR, y dos historiales que MMR resuelve
+  // distinto no comparten la clave (auditoría de Codex sobre 43ed967).
   //
   // Sin rango se usa la huella de siempre (todas las señales, ordenadas).
-  const senalesClave = conRango
-    ? candidatasOrigen(opts.senales as SenalConRango[]).map((s) => `${s.tipo}:${s.id}:${s.peso}`).join(",")
-    : [...opts.senales].map((s) => `${s.tipo}:${s.id}:${s.peso}`).sort().join(",");
+  const senalesClave = huellaSenales(opts.senales, conRango);
   const variante = !nuevo ? "ant" : `n${conRango ? "r" : ""}${sinFamilia ? "f" : ""}`;
   const clv = claveReco(huella(
     senalesClave,

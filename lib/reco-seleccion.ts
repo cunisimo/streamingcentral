@@ -234,3 +234,26 @@ export function seleccionarTarjetas<T extends Tarjeta>(
   for (let c = paso2(); out.length < T && c; c = out.length < T ? paso2() : null) tomar(c);
   return { items: out, conCupos, completados: out.length - conCupos, cupos };
 }
+
+// --- Huella de señales para la clave del riel ----------------------------------
+//
+// La parte de la clave de `reco:` que sale de las señales. Se calcula SIN leer
+// ningún perfil: un HIT del riel no puede pagar lecturas ni el MMR.
+//
+// CON RANGO tiene que llevar TODO lo que usa la elección de orígenes además de
+// los géneros de cada título (que dependen sólo del título): tipo, id, peso y
+// RANGO de cada candidata, más K y λ. Con tipo/id/peso solamente, dos
+// historiales con la misma lista ordenada de candidatas pero rangos distintos
+// compartían la clave y MMR elegía distinto (auditoría de Codex sobre 43ed967:
+// Parásitos contra Buenos muchachos) — el segundo recibía el riel del primero
+// durante TTL.reco. Regresión en lib/reco-huella.test.ts.
+export function huellaSenales(
+  senales: { tipo: MediaType; id: number; peso: 1 | 2 | 3; rango?: number }[], conRango: boolean,
+  k = K_RECENCIA, lambda = LAMBDA_MMR,
+): string {
+  if (conRango) {
+    const cands = candidatasOrigen(senales as SenalConRango[], k);
+    return `k${k}l${lambda}|` + cands.map((s) => `${s.tipo}:${s.id}:${s.peso}:${s.rango}`).join(",");
+  }
+  return [...senales].map((s) => `${s.tipo}:${s.id}:${s.peso}`).sort().join(",");
+}

@@ -1587,6 +1587,13 @@ reusa su diseño, no se mergea.
   - las +2 consultas a Supabase por pedido (salen del código, no se midieron);
   - el A/B a ciegas, que espera al dueño (`scripts/reco-harness/ab.md`).
 
+  **Corrección posterior** (auditoría de Codex sobre `43ed967`): la clave del
+  riel omitía el rango de recencia que usa MMR. Ahora incluye tipo, id, peso y
+  rango de las 12 candidatas, más K y λ. Hay regresión en
+  `lib/reco-huella.test.ts`. Con el pipeline real, una entrada idéntica sigue
+  siendo HIT (0 llamadas a TMDB, 1 operación de caché) y el caso de Codex es
+  MISS. `npm test`: 2545 / 0.
+
   **Sigue abierta y aparte**: la investigación del título exacto descartado
   que reaparece.
 

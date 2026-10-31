@@ -50,9 +50,10 @@ excluye (resguardo 1), y se conservan las exclusiones que manda el cliente.
 ### Desvíos respecto del plan rev. 2, encontrados al implementar
 
 1. **La clave del riel se arma sobre las 12 candidatas, no sobre los 6
-   orígenes elegidos.** Las candidatas y su orden salen sólo de peso y rango, y
-   el MMR es determinístico sobre ellas. Así un HIT del riel no lee ningún
-   perfil ni corre el MMR. Era el riesgo del resguardo 2, y está medido en §7.
+   orígenes elegidos.** Lleva tipo, id, peso **y rango** de cada candidata, más
+   K y λ. Así un HIT del riel no lee ningún perfil ni corre el MMR: es el riesgo
+   del resguardo 2, medido en §7 y en §12. ⚠️ Hasta `43ed967` la clave omitía
+   el rango. Era un error que encontró Codex y está corregido en §12.
 2. **`reco:perfil` no subió de versión.** Las marcas infantil y animación se
    derivan de `generosPropios`, que la `v2` ya guarda.
 3. **Las primeras 6 respetan la proporción del riel entero**, redondeada hacia
@@ -249,7 +250,7 @@ efecto está en §2.
 - `npx tsc --noEmit`: 0 errores.
 - `npm test`: 2540 tests, 0 fallos. Incluye 14 tests nuevos del selector y del
   MMR, 3 de las señales del servidor, los guardianes de cableado y del
-  inventario de `catch`, y las claves.
+  inventario de `catch`, y las claves. Después de la corrección de §12: 2545.
 - Harness completo (§2 a §9) y costos reales (§7).
 - **[local]** Servidor de desarrollo en el puerto 3130:
   - `/api/te-va-a-gustar` sin token responde 401;
@@ -268,6 +269,51 @@ efecto está en §2.
   aparte**. Esta mejora no lo resuelve ni lo explica.
 - `CLAUDE.md` y `ESTADO.md` se actualizaron en la rama. Se integran con el
   merge, que no está autorizado.
+
+## 12. Corrección posterior: la huella omitía el rango (auditoría de Codex sobre `43ed967`)
+
+**El error.** La clave del riel serializaba las candidatas como tipo/id/peso,
+pero MMR usa también el **valor numérico del rango**. La reproducción de Codex
+usa P6 más 4 señales de Mi lista sobre los 4 primeros títulos:
+
+- con rangos 12–15, MMR elige Parásitos;
+- con rangos 4–7, elige Buenos muchachos;
+- las dos entradas tenían la misma clave.
+
+La segunda recibía el riel de la primera hasta vencer `TTL.reco` (6 h).
+
+**La corrección.** `huellaSenales` (en `lib/reco-seleccion.ts`, y es lo que
+usa `lib/reco.ts`) incluye tipo, id, peso y rango de cada una de las 12
+candidatas, más K y λ. Sigue sin leer perfiles. Los géneros que usa MMR
+dependen sólo del título, que ya está en la clave.
+
+**Regresión** (`lib/reco-huella.test.ts`, sin red, sobre el fixture):
+
+- el caso de Codex existe (mismas candidatas tipo/id/peso, MMR distinto);
+- **la huella distingue las dos entradas**: este test fallaba con la huella de
+  `43ed967` (verificado antes de corregir) y pasa ahora;
+- cambiar K o λ cambia la huella;
+- la misma entrada, aunque llegue en otro orden, da la misma huella;
+- `lib/reco.ts` arma la clave con esa función.
+
+**Con el pipeline real** [real] (`scripts/reco-harness/hit.mjs`, tabla en
+`hit.md`):
+
+| paso | llamadas TMDB | operaciones de caché | orígenes del riel |
+|---|---|---|---|
+| entrada 1 en frío | 127 | 183 | …, Parásitos, … |
+| entrada 1 idéntica | **0** | **1** (HIT) | igual |
+| entrada 1 en otro orden | **0** | **1** (HIT) | igual |
+| entrada 2 (otros rangos) | 22 | 39 (**MISS**) | …, Uno de los nuestros (Buenos muchachos), … |
+
+**Controles:**
+
+- `npx tsc --noEmit` limpio.
+- `npm test`: 2545 tests, 0 fallos, 16 omitidos (los de siempre).
+- El harness de §2–§9 no cambia: la clave no interviene en la selección.
+
+Se corrigieron también los comentarios de `lib/reco.ts` y de la ruta que
+todavía decían que el servidor no lee señales ni tiene sesión.
 
 ## 11. Cómo probarlo localmente
 

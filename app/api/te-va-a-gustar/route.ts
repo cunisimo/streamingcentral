@@ -18,9 +18,12 @@ export const maxDuration = 60;
 // higiene: son datos personales y no tienen por qué quedar en logs de acceso ni
 // en el historial del navegador.
 //
-// EL SERVIDOR NO SABE QUIÉN PIDE. No hay sesión acá: el cliente manda sus
-// señales y sus exclusiones, porque es el único que puede leerlas (RLS
-// `auth.uid() = user_id`). Ver el comentario largo en lib/reco.ts.
+// SESIÓN Y LECTURAS. La ruta exige el token y, con él, lee del lado del
+// servidor las señales (con fecha) y los descartes del usuario; la RLS
+// `auth.uid() = user_id` lo permite sólo con ese token. El cliente sigue
+// mandando señales y exclusiones: las señales son el respaldo si la lectura
+// falla, y las exclusiones se suman siempre a lo que lee el servidor. Ver el
+// encabezado de lib/reco.ts.
 interface Cuerpo {
   senales?: { tipo?: string; id?: number; peso?: number }[];
   excluir?: string[];
@@ -39,8 +42,9 @@ async function manejar(req: NextRequest) {
   // Hasta acá "solo para conectados" lo cumplía la interfaz, que es una
   // convención y no un límite: la URL se puede pedir a mano.
   //
-  // El token viaja en el header y NO se loguea. Del usuario solo se usa que
-  // exista; su id no se guarda ni entra en la clave de cache.
+  // El token viaja en el header y NO se loguea. Sirve para validar la sesión y
+  // para leer señales y descartes con la RLS del usuario; su id no se guarda ni
+  // entra en la clave de cache.
   const auth = req.headers.get("authorization");
   const token = auth?.toLowerCase().startsWith("bearer ") ? auth.slice(7) : null;
   // Los descartes se leen EN PARALELO con la validación del token: con un token
