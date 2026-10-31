@@ -1,320 +1,390 @@
-# "Elegidas para vos" — plan cerrado de diversidad (2026-10-31)
+# "Elegidas para vos" — plan cerrado de diversidad (2026-10-31, rev. 2)
 
-**Estado: PLAN. Nada implementado ni desplegado.** Responde a la revisión del
-dueño con Codex (31/10) sobre la propuesta del 30/10. Cada afirmación lleva su
-tipo de evidencia: **[código]** leído en `main` (`ca02c4f`), **[medido]** con
-TMDB real y el pipeline del repo, **[dueño]** informado, **[propuesta]**
-todavía sin comprobar.
+**Estado: PLAN. Nada implementado ni desplegado.** La rev. 2 corrige las
+cuatro contradicciones que el dueño y Codex encontraron en `0d107c4`: la
+prioridad entre cupos y cantidad, la fórmula de recencia, el alcance del filtro
+infantil y el alcance de la medición. Cada afirmación lleva su tipo de
+evidencia:
+
+- **[código]**: leído en `main` (`ca02c4f`);
+- **[pool]**: medición del pool de candidatos con TMDB real;
+- **[sintética]**: prueba del prototipo, sin red;
+- **[dueño]**: informado por el dueño;
+- **[propuesta]**: todavía sin comprobar.
 
 Objetivo del dueño: poder decir que me gusta algo sin que eso monopolice el
 riel. Restricciones: sin servicios pagos nuevos y sin relleno genérico.
 
+Puntos ya cerrados que esta revisión no reabre:
+
+- rechazo temático retirado;
+- descartes históricos sin procedencia;
+- procedencia futura opcional;
+- versionado de cachés.
+
 ---
 
-## 0. Lo comprobado hasta hoy
+## 0. Lo comprobado
 
 ### 0.1 Cómo funciona hoy [código]
 
-- **Historial disponible** (lo que lee el cliente, entero): todos los votos y
-  todo `user_items`. **Señales** (`components/reco-entrada.ts`): de los 40
-  votos más recientes, Petacular (peso 3) y Ta buena (peso 2); de los 200
-  marcados más recientes, Mi lista (peso 1). Malaso, Ya la vi y descartes sólo
-  excluyen.
-- **Orígenes** (`elegirOrigenes`, `lib/reco-mezcla.ts`): deduplica y ordena
-  por peso, con orden estable por fecha. O sea: los 6 Petacular más recientes;
-  si faltan, los Ta buena más recientes, y después Mi lista. Un Petacular de
-  hace 8 meses (dentro de los últimos 40 votos) le gana a un Ta buena de hoy.
-- **Candidatos por origen**: `/recommendations` de TMDB (20, "mismo") + un
-  `discover` del otro tipo con los géneros y keywords del origen (20, "cruce").
-  Medido: 40 por origen.
-- **Orden**: `ordenarTurnosPonderados` (Petacular 3 turnos por vuelta, Ta
-  buena 2, Mi lista 1), ventana de 80, `enrichRaw` (plataformas), reorden y
-  `mezclarTipos` (10 películas / 10 series alternadas). Piso de 10.
-- **Filtros temáticos**: SÓLO el guard de anime (animación + idioma `ja`). No
-  hay filtro de familia ni de animación. ⚠️ La tabla de `CLAUDE.md` dice que el
-  recomendador "excluye animación": es falso y se corrige con este trabajo.
-- **Descartes**: desde `50ebc93` el servidor los lee con el token y los
-  excluye exactos. `user_items` guarda `tmdb_id`, `tipo`, `kind` y fecha: **no
-  guarda de qué origen salió la tarjeta descartada**.
+- **Historial disponible**: el cliente lee todos los votos y todo `user_items`.
+- **Señales** (`components/reco-entrada.ts`): de los 40 votos más recientes,
+  Petacular (peso 3) y Ta buena (peso 2); de los 200 marcados más recientes,
+  Mi lista (peso 1). El cliente las manda como `{tipo, id, peso}`, **sin
+  fecha**. Se conserva el orden por recencia dentro de cada nivel, pero no
+  entre niveles.
+- **Orígenes** (`elegirOrigenes`): por peso y después por orden de llegada.
+  Salen los 6 Petacular más recientes; si faltan, los Ta buena, y después Mi
+  lista.
+- **Cruce** (`cruzadosDe` → `discover`): `with_genres` se arma con `|`, o sea
+  **O**, no **Y** (`lib/tmdb.ts`). El cruce de Los Simpson pide "animación **o**
+  comedia".
+- **Filtros temáticos**: sólo el guard de anime. ⚠️ `CLAUDE.md` dice que el
+  recomendador excluye animación: es falso. Se corrige junto con este trabajo.
+- **Descartes**: exclusión exacta en el servidor desde `50ebc93`, sin
+  procedencia.
 
-### 0.2 Mediciones [medido]
+### 0.2 Qué demuestra cada medición, y qué no
 
-Riel real (`recomendaciones` de `lib/reco.ts`), n,d,m:
+**Riel final actual [código + TMDB real]**: `recomendaciones()` con las
+señales de prueba, n,d,m. Con Los Simpson como única señal salen 16 de 20 en
+animación, 20 de 20 del mismo origen y 11 películas animadas familiares. Con
+Los Simpson Petacular más 5 Ta buena salen 6 de 20 en animación, 3 de ellas
+entre las primeras 4.
 
-| Perfil | Animación | Del mismo origen | Primeras 4 |
-|---|---|---|---|
-| Solo Simpsons (Ta buena) | 16/20 | 20/20 | 4 dibujos |
-| Simpsons Ta buena + 5 Mi lista | 6/20 | 7/20 | 2 dibujos |
-| Simpsons Petacular + 5 Ta buena | 6/20 | 6/20 | 3 dibujos |
+**Pool [pool]** (`docs/medidas/2026-10-31-reco-pool-por-perfil.txt`): son los
+candidatos de `/recommendations` más el cruce, con su disponibilidad en
+plataforma. **No** pasa por el guard de anime, ni por las exclusiones del
+usuario, ni por la ventana de 80, ni por cupos ni por la mezcla. Lo que
+**sí** respalda:
 
-Pool completo antes de la ventana (`docs/medidas/2026-10-31-reco-pool-por-perfil.txt`,
-`scripts/medir-reco-pool.mjs`):
+- el exceso infantil de Los Simpson viene del cruce (18 de 25 disponibles con
+  n,d,m);
+- cortarlo **en el pedido** deja 23 disponibles; filtrar **después** deja 7.
 
-| Perfil | Plat. | En plataforma | Infantil (cruce actual) | Queda si se filtra después | Queda si el cruce excluye familia al pedir |
-|---|---|---|---|---|---|
-| Simpsons | n,d,m | 25 | 18 | **7** (riel oculto) | **23** (2 infantiles) |
-| Simpsons | n | 21 | 3 | 18 | 21 |
-| Simpsons + Padre de familia | n,d,m | 50 | 20 | 30 | 40 |
-| Bluey (infantil) | n,d,m | 29 | 24 | — | — (no aplica: el origen es infantil) |
-| Breaking Bad | n,d,m | 32 | 0 | 32 | 32 |
-| 3 de crimen | n,d,m | 74 | 0 | 74 | 74 |
-| 3 de crimen | n | 67 | 0 | 67 | 67 |
+Lo que **no** demuestra: cuántas tarjetas tendrá el riel final ni si algún
+perfil queda oculto. Sus cifras son **cotas superiores**. ⚠️ La rev. 1 decía
+que ningún perfil medido quedaba oculto: **queda retirado**. Está pendiente de
+la validación final (§7).
 
-Conclusión medida: **el exceso infantil sale del cruce**, y hay que cortarlo
-**en el pedido**, no filtrando después; si no, a quien tiene un solo gusto
-animado se le oculta el riel.
+**Pruebas sintéticas [sintética]** (§6): demuestran las reglas del selector y
+de la elección de orígenes sobre datos inventados. No dicen nada sobre la
+calidad de las recomendaciones.
 
-### 0.3 Qué distinguen los datos de TMDB [medido]
+### 0.3 Qué distinguen los datos gratuitos de TMDB [pool]
 
-| Título | Géneros TMDB | Lectura |
-|---|---|---|
-| Los Simpson (serie) | 16, 35 | adulta según géneros; keywords `adult animation` **y** `kids` |
-| Padre de familia, Rick y Morty, BoJack | 16 + 35 (+18/10765) | sin 10751 |
-| Bluey, Peppa, Looney Tunes Show, Coop y Cami | incluyen **10762 (Kids)** | infantil |
-| El rey de la colina, *A Different World*, Cuphead, Bob Esponja | incluyen **10751** sin 10762 | 10751 en series es ruidoso |
-| Frozen, Toy Story 4, Zootrópolis y 8 más | 16 + **10751** | película animada familiar |
-| Los Simpson: la película, Shrek | 16 + 10751 | caen como familiares (error conocido) |
-| Sausage Party, Spider-Verse | 16 sin 10751 | animación adulta / no infantil |
-
-- **10762 (Kids) existe sólo en series** y en la muestra es limpio.
-- **10751 (Family) es ruidoso**: en series marca sitcoms; en películas, toda
-  animación de estudio grande, también la que ven adultos.
-- La **calificación por edad** (TV-14, ATP…) existe pero cuesta 1 llamada
-  extra por candidato (`content_ratings`/`release_dates`): +80 por armado.
-  **Se descarta.**
-- Las **keywords** de los orígenes ya se piden (`perfilDe`) pero son
-  contradictorias (Los Simpson tiene `adult animation` y `kids`). No sirven
-  como regla.
+- **Kids (10762)**: existe sólo en series y en la muestra es limpio (Bluey,
+  Peppa, Looney Tunes Show, Coop y Cami).
+- **Family (10751)**: es ruidoso. Lo tienen sitcoms como *A Different World* y
+  El rey de la colina, y películas como Shrek o Los Simpson: la película.
+- Las 11 películas infantiles que trajo Los Simpson tienen todas 16 + 10751.
+- La serie Los Simpson tiene 16 + 35, sin 10751.
+- La calificación por edad cuesta 1 llamada extra por candidato. Queda
+  descartada.
 
 ---
 
-## 1. Definiciones que usa todo el plan [propuesta]
+## 1. Tres categorías que no se mezclan [propuesta]
 
-- **Infantil (candidato)**: serie con 10762, o película con 16 **y** 10751.
-  No usa 10751 solo en series (ruido medido). Errores aceptados: Los Simpson:
-  la película y Shrek cuentan como infantiles.
-- **Origen infantil**: el mismo criterio aplicado al origen.
-- **Animación**: género 16.
-- **Temas de una tarjeta**: los slugs de `genreIdsToSlugs(genre_ids)` más las
-  marcas `animacion` e `infantil`. **Una tarjeta con varios géneros cuenta en
-  cada tema que tiene** (criterio conservador: si no, una tarjeta "animación +
-  comedia" se escaparía del cupo de animación).
-- **Origen de una tarjeta**: su `porque` (mejor respaldo). Cuenta para **un
-  solo** origen aunque tenga varios apoyos: los apoyos ordenan, no multiplican.
-- **T** = cantidad objetivo = `min(20, elegibles)`. **Elegible** = en
-  plataforma, no excluido, no descartado, y que pasa el guard infantil.
-- **n** = orígenes productivos = orígenes con al menos 1 elegible.
-- **Redondeo**: los cupos usan `ceil`. Un cupo nunca es menor que 1.
-
-## 2. Selección de orígenes (punto 2 de la revisión) [propuesta]
-
-**Problema [código]:** se eligen por peso y fecha. Seis gustos parecidos
-ocupan los seis lugares, y diversificar después no los recupera. Un voto nuevo
-de peso alto desplaza siempre al más viejo de su nivel, aunque sea de otro
-tema.
-
-**Propuesta: selección con relevancia marginal (MMR, Carbonell & Goldstein
-1998), sobre un historial más ancho.**
-
-1. **Historial considerado**: las 12 señales positivas de mayor
-   `valor = peso + recencia`, donde la recencia baja linealmente de 1 (la más
-   nueva) a 0 (la número 12). Con eso un Petacular viejo y un Ta buena nuevo
-   compiten, en vez de ganar siempre el Petacular.
-2. **Elección greedy de 6**: primero la de mayor valor; cada siguiente
-   maximiza `valor − λ · similitud_máxima` contra las ya elegidas.
-   `similitud` = Jaccard de géneros, + 1 si comparten la marca animación o
-   infantil. λ arranca en 1 y se calibra (§7).
-3. **Efecto de un voto nuevo**: entra a competir, pero si se parece a un
-   origen ya elegido, desplaza a **ese** (el parecido) y no a un gusto de otro
-   tema. Su peso en el riel queda acotado por el cupo por origen (§3).
-
-**Costo:** para conocer los géneros de 12 señales hay que leer 12 perfiles en
-vez de 6: **+6 lecturas de Upstash por armado** (`reco:perfil`, compartido
-entre usuarios, TTL 24 h) y, si el perfil no está en caché, **+2 llamadas a
-TMDB por título** (detalle + keywords), una vez cada 24 h por título. El armado
-sólo ocurre cuando cambian las señales, los descartes o vence el TTL de 6 h.
-Con 6 señales o menos no hay costo extra. Alternativa sin lecturas: guardar los
-géneros al votar (migración + AAB nuevo para Android). Se deja para después.
-
-## 3. Cupos (puntos 1 y 3) [propuesta, todos los números son hipótesis]
-
-Se aplican **sobre las tarjetas finales**: después de plataformas y en el mismo
-recorrido que la mezcla de películas y series. Concretamente, el
-`mezclarTipos` actual se reemplaza por una **selección greedy única**: recorre
-los elegibles en orden de puntaje y toma el siguiente del tipo que toca (como
-hoy) **si no rompe ningún cupo**; si lo rompe, sigue con el siguiente.
-
-**Cupo por origen**: `ceil(T / min(n, 4))`.
-
-| n | Cupo por origen (T = 20) | Qué pasa |
+| Categoría | Definición (sólo datos gratuitos) | Tratamiento |
 |---|---|---|
-| 1 | 20 | todo el riel sale de ese gusto (no hay otro: sin relleno) |
-| 2 | 10 | mitad y mitad; si uno no llega, el otro completa (relajación) |
-| 3 | 7 | |
-| 4 o más | 5 (25%) | |
+| **Infantil** | serie con 10762, o película con 16 **y** 10751 | **regla dura** si ningún origen es infantil (§4); **cupo blando** si alguno lo es |
+| **Familiar** | 10751 que no cumple lo de arriba (sitcom familiar, película familiar sin animación) | **sin regla ni cupo**: compite como cualquier título |
+| **Animación** | 16 | **cupo blando**, sólo con n ≥ 3 |
 
-**Cupo de animación**: se aplica sólo con n ≥ 3.
-`ceil(T · max(orígenes animados / n, 0.1))`, con techo `ceil(T · 0.5)`.
-Ejemplo: 1 de 6 orígenes animado → `ceil(20 · 1/6)` = **4**.
+Errores aceptados de la definición infantil: Shrek y Los Simpson: la película
+cuentan como infantiles.
 
-**Cupo infantil**: la misma fórmula con orígenes infantiles. Un único gusto
-familiar entre 6 → como mucho 4 infantiles. Con n ≤ 2 rige sólo el guard (§4).
+## 2. Selección de orígenes [propuesta, parámetros a calibrar]
 
-**Por qué sólo animación e infantil**: es el problema medido. Un fan del
-crimen con tres orígenes de crimen tiene que recibir crimen. Poner cupos a
-todos los géneros sería otra hipótesis sin medición.
+### 2.1 Qué estaba mal en la rev. 1
 
-**Primeras 6 tarjetas**: como mucho 2 del mismo origen y como mucho 2 de
-animación (si n ≥ 3). Es lo que se ve en el celular sin scrollear.
+Con `valor = peso + recencia`, con la recencia entre 0 y 1, un Petacular queda
+siempre entre 3 y 4 y un Ta buena entre 2 y 3. La recencia sólo empataba en los
+extremos y nunca invertía el orden. **Retirada.**
 
-**Incompatibilidad o faltante**: si con los cupos no se llega a `min(T, 10)`,
-se relajan **en este orden**, uno por vez, recalculando:
-1. el cupo de las primeras 6;
-2. el cupo de animación (al techo de 50%);
-3. el cupo por origen (+1 por vuelta).
+### 2.2 Fórmula revisada
 
-**Nunca se relajan**: el guard infantil, las exclusiones y los descartes. Si
-aun así quedan menos de 10, el riel se oculta (motivo `filtrado`, como hoy) y
-se loguea cuál cupo no se pudo cumplir. Según §0.2, ninguno de los perfiles
-medidos llega a ese caso (el menor es Simpsons con Netflix sola: 21).
+`valor = peso − rango / K`, donde:
 
-**Piso**: se mantiene en 10. **Decisión explícita**: con 1 o 2 gustos el riel
-se muestra si hay ≥ 10 elegibles, y es inevitablemente "más de lo mismo".
-Cambiar el título por "Porque te gustó X" para ese caso exige un AAB nuevo (el
-título está en el cliente); queda como opción tuya, no incluida.
+- `rango` es la posición por recencia entre **todas** las señales positivas
+  (0 = la más nueva);
+- `K` = cuántos puestos de recencia equivalen a un punto de peso. Con `K = 6`,
+  un Ta buena nuevo empata con un Petacular 6 puestos más viejo y le gana a uno
+  7 puestos más viejo. Comprobado en la prueba sintética.
+- Desempates, en este orden: más reciente, y después `tipo:id`.
 
-## 4. Animación adulta y contenido infantil (punto 4) [propuesta]
+**`K` es un parámetro, no un resultado.** Se calibra en §7 con los valores 4,
+6 y 10.
 
-1. **En el pedido del cruce**: si el origen **no** es infantil, el `discover`
-   del cruce se pide con `withoutGenres: [10751, 10762]` (el parámetro existe
-   en `lib/tmdb.ts`). Medido: Simpsons pasa de 18 infantiles a 2 en su pool, y
-   el disponible queda en 23.
-2. **Guard sobre lo que viene por `/recommendations`**: un candidato infantil
-   (§1) sólo entra si algún origen es infantil. Es el mismo patrón que el
-   guard de anime.
-3. **Cupo infantil** (§3): un único gusto familiar no domina el riel.
+Sobre las 12 señales de mayor `valor` se aplica **MMR**: cada elección
+maximiza `valor − λ · similitud máxima con las ya elegidas`, donde la similitud
+es el Jaccard de géneros + 1 si las dos son animación. `λ` también se calibra.
 
-**Lo que esto NO distingue, con los datos gratuitos**: no se sabe la edad
-apropiada. Una película animada "familiar" que ven adultos (Shrek, Los Simpson:
-la película) se trata como infantil. Un adulto al que le gusta Toy Story la
-habilita, porque Toy Story es infantil según la definición. Saber más exigiría
-la calificación por edad (+80 llamadas por armado), descartada.
+### 2.3 Qué desplaza un voto nuevo — observado, no garantizado [sintética]
 
-## 5. Descartes (punto 5) [propuesta revisada]
+Partida: 3 orígenes de crimen, Los Simpson, comedia y sci-fi, todos Ta buena.
 
-- **Se retira el rechazo temático** de la propuesta anterior. Tres descartes
-  no demuestran que alguien rechace un género.
-- **Los descartes históricos no se atribuyen a ningún origen**: hoy no hay
-  procedencia guardada [código].
-- **Propuesta opcional (fase 4), sólo si la querés**: guardar la procedencia
-  hacia adelante.
-  - **Qué**: dos columnas nulas en `user_items`, `origen_tipo` y `origen_id`,
-    escritas sólo en `kind = 'dismissed'`.
-  - **Para qué**: si en los últimos 30 días hay ≥ 2 descartes de tarjetas que
-    salieron del mismo origen, el cupo de ese origen baja 1 por cada 2
-    descartes, nunca por debajo de 1. Es una señal sobre **ese origen**, no
-    sobre un género. Votar el origen de nuevo la neutraliza.
-  - **Costo**: una migración; unos 12 bytes por descarte; 0 llamadas a TMDB y
-    a Upstash; ninguna lectura nueva (viaja en la query de descartes que ya
-    existe). El cliente ya tiene `porque` en la tarjeta. **Android 1.2.0 no
-    escribe la procedencia hasta un AAB nuevo**: esos descartes siguen
-    excluyendo exacto y no ajustan cupos.
-  - **Hipótesis**: el umbral 2 y el paso de 1 se validan en §7.
+- **Voto nuevo de crimen (Petacular)**: sale **crimen3**. Quedan los otros dos
+  de crimen, Los Simpson, comedia y sci-fi.
+- **Voto nuevo de romance (Ta buena)**: también sale **crimen3**, el más
+  redundante, y no sci-fi, que es el más viejo.
 
-## 6. Título descartado que reaparece (punto 6) — PENDIENTE
+Es lo que el diseño busca, pero **es el resultado de dos casos sintéticos, no
+una garantía**. Con otros géneros o pesos, MMR puede sacar otro origen. La
+validación final (§7) mide el desplazamiento real con perfiles de 12 señales.
 
-No está explicado. No encontré en el código un camino que vuelva a mostrar en
-"Elegidas para vos" un título exacto descartado (el cliente lo filtra y, desde
-`50ebc93`, el servidor lo excluye). Hipótesis a comprobar, sin dar ninguna por
-buena:
+### 2.4 De dónde salen las fechas, y compatibilidad con Android
 
-- la misma obra cargada dos veces en TMDB (serie y película, o dos ids);
-- el título visto en otro riel del Home (el descarte sólo aplica a este riel);
-- el descarte no se guardó (fallo del INSERT);
-- el título se vio antes del deploy de `50ebc93`, en un riel ya cacheado.
+**Problema**: el cliente manda las señales sin fecha. Cambiar el cliente no
+alcanza: la 1.2.0 en Producción y el **AAB 5, ya enviado a revisión**, tienen
+el bundle local actual y van a seguir mandando lo de hoy.
 
-**Dato mínimo que necesito**: el **mail de la cuenta**, el **título** (o el
-enlace de su ficha), **en qué riel** lo vio, **web o Android**, y **cuándo** lo
-descartó y cuándo reapareció (aproximado). Con eso: buscar la fila del
-descarte (tipo, id, fecha) con permiso tuyo para leer Producción, compararla
-con la tarjeta mostrada, y revisar en los logs de Vercel si apareció
-`[reco] no se pudieron leer los descartes`.
+**Propuesta: el servidor lee las señales él mismo**, con el token del usuario,
+igual que ya hace con los descartes desde `50ebc93`. Son dos consultas en
+paralelo:
 
-## 7. Validación sin medición circular (punto 7) [propuesta]
+- `votes`: los 40 más recientes, con `rating` y `created_at`;
+- `user_items`: los 200 más recientes con `kind = 'list'`, con `created_at`.
 
-1. **Conjunto de candidatos fijo**: un script captura una sola vez, por
-   perfil, el pool completo con géneros crudos, respaldo y disponibilidad por
-   plataforma, a JSON. El orden actual y el nuevo corren **sobre el mismo
-   JSON**: la diferencia es sólo del algoritmo. El cambio de fuente (cruce sin
-   familia) se mide aparte, con dos capturas (pool actual vs pool nuevo).
-2. **Perfiles**, cada uno con n,d,m y con Netflix sola:
-   - 1 gusto: Los Simpson; 1 gusto: Breaking Bad.
-   - 2 gustos de animación adulta (Los Simpson + Padre de familia).
-   - 6 variados con Los Simpson Petacular.
-   - 6 del mismo tema (crimen).
-   - 12 señales (6 de crimen + 6 variadas) y después un voto nuevo de crimen:
-     prueba de desplazamiento.
-   - Familiar (Bluey + Toy Story + Moana) y familiar + 5 adultos.
-   - Fan del anime (Attack on Titan + 2).
-   - Con 5 descartes inyectados que están en el pool.
-3. **Métricas, por perfil**:
-   - cantidad final (contra `min(20, elegibles)`, no contra 10);
-   - máximo de tarjetas de un mismo origen;
-   - animación e infantil sobre el total y en las primeras 6;
-   - orígenes y temas distintos en las primeras 6;
-   - descartados presentes (tiene que ser 0);
-   - desplazamiento: tarjetas que cambian al sumar un voto.
-4. **Pertinencia, con dos medidas que el algoritmo no optimiza**:
-   - **Dejar uno afuera**: se oculta una señal positiva y se mira si ese
-     título aparece en el riel armado con las demás. Se compara la tasa de
-     acierto vieja contra la nueva.
-   - **Revisión a ciegas tuya**: por perfil, dos rieles sin rótulo (A/B al
-     azar). Elegís el mejor o "iguales". Es la única medida directa de
-     pertinencia con los datos que tenemos.
-5. **Criterios de aceptación**:
-   - 0 descartados;
-   - 0 infantiles sin origen infantil;
-   - cupos cumplidos o relajación logueada;
-   - la cantidad final no cae más de 2 contra el actual cuando hay elegibles;
-   - acierto de "dejar uno afuera" no peor que el actual;
-   - revisión a ciegas: el nuevo gana o empata en la mayoría de los perfiles.
+Con eso calcula `rango` sin depender del cliente:
 
-## 8. Claves de caché
+- **Compatibilidad**: funciona igual con la 1.2.0, con el AAB 5 y con la web.
+  No hace falta AAB nuevo.
+- **Si la lectura falla**: usa las señales que manda el cliente y vuelve a la
+  regla de hoy (por peso, sin recencia entre niveles). Se loguea.
+- **Exclusiones**: se siguen tomando del cliente (`excluir`) como hoy, más los
+  descartes que lee el servidor.
+- **Caché**: la huella del riel final pasa a calcularse sobre **los 6 orígenes
+  elegidos con su peso**, las exclusiones y las plataformas, no sobre todas las
+  señales. Un voto nuevo que no cambia la elección ya no rearma el riel; uno que
+  la cambia sí, igual que hoy.
+- **Costo**: +2 consultas a Supabase por pedido del riel, en paralelo con la
+  validación del token. 0 llamadas a TMDB. Las lecturas de Upstash para 12
+  perfiles están en §8.
 
-| Clave | Cambia su contenido | Acción |
-|---|---|---|
-| `reco:cruce:` (cruce por origen y plataformas) | sí: `withoutGenres` | subir a `reco:cruce:v2:` |
-| `reco:perfil:…v2` | sí, si suma las marcas infantil/animación | subir a `v3` |
-| `reco:mismo:` | no (respuesta cruda de TMDB) | no se toca |
-| `reco:…v2.<dv>:<huella>` (riel final) | sí | subir a `v3` |
-| `pv3:`, `card:` | no | no se tocan |
+## 3. Cantidad, disponibilidad y diversidad: qué gana cuando chocan [propuesta]
 
-**Costo de una sola vez tras el deploy** (compartido entre usuarios, por
-título y por combinación de plataformas, durante 24 h): por origen, 1
-`discover` del cruce (+1 de respaldo de idioma si hace falta) y 2 llamadas de
-perfil. **Costo recurrente**: +6 lecturas de Upstash por armado sólo para
-quien tiene más de 6 señales (§2); el enriquecido sigue acotado a la ventana de
-80 (mismas `providersOf`). La selección con cupos es CPU. **Estos números son
-cuentas sobre el código, no una medición**: se miden con el contador de
-llamadas del script de §7 antes de mergear.
+### 3.1 La regla de prioridad
 
-## 9. Etapas propuestas
+1. **Reglas duras**, que nunca se relajan:
+   - plataformas;
+   - exclusiones del usuario;
+   - descartes;
+   - guard de anime;
+   - guard infantil, cuando ningún origen es infantil.
+2. **Cantidad**: `T = min(20, elegibles)`. El riel **se muestra si elegibles ≥
+   10**. El piso se mide sobre los elegibles, **no sobre lo que dejan los
+   cupos**.
+3. **Diversidad**: los cupos deciden **qué entra primero y en qué posición**,
+   pero **nunca dejan el riel por debajo de T**.
 
-1. Guard infantil + cruce sin familia + claves `cruce:v2` y `reco:v3` (§4,
-   §8). Resuelve el caso Simpsons. Sin migración.
-2. Selección greedy con cupos sobre las tarjetas finales (§3).
-3. Selección de orígenes por MMR (§2).
-4. Opcional: procedencia de descartes (§5), con migración y AAB.
+### 3.2 El procedimiento, en dos pasadas
 
-En paralelo y aparte: investigación del §6, en cuanto llegue el dato.
-Antes de la etapa 1: el harness de §7, para medir cada etapa contra el actual.
+- **Pasada 1, con cupos**: se recorre por puntaje alternando película y serie,
+  y se toma lo que cumple todos los cupos. Los cupos son estos:
 
-## 10. Límites que quedan
+  | Cupo | Valor | Cuándo |
+  |---|---|---|
+  | Por origen | `ceil(T / min(n, 4))` | siempre |
+  | Animación | `min(ceil(T · max(a/n, 0.1)), ceil(T · 0.5))` | con n ≥ 3 |
+  | Infantil (blando) | la misma fórmula con los orígenes infantiles | con n ≥ 3 |
+  | Primeras 6 | ≤ 2 del mismo origen y ≤ 2 de animación | con n ≥ 3 |
 
-- El género de TMDB es una aproximación del gusto: dos thrillers pueden no
-  tener nada que ver.
+- **Pasada 2, sin cupos**: si la pasada 1 no llegó a T, completa **hasta T**,
+  no hasta 10, con lo que sobró, por puntaje, alternando tipos. Lo que entra
+  acá **va después** de lo de la pasada 1: las primeras posiciones quedan para
+  la oferta diversa.
+
+### 3.3 Qué cambia respecto de la rev. 1
+
+- Ya no hay una cadena de relajaciones que se corta en 10. Todos los cupos
+  blandos, incluido el infantil, se relajan juntos en la pasada 2.
+- El caso de Codex (3 orígenes animados y 12 elegibles, todos animados) muestra
+  **12 tarjetas**: la diversidad no existe en la oferta, y no se inventa.
+- La regla "primeras 6" sólo rige con n ≥ 3. Con 1 o 2 orígenes no se puede
+  cumplir: lo encontró la prueba sintética.
+
+**Consecuencia que hay que aceptar** (decisión D1, §9): cuando toda la oferta
+válida es de un solo tema, el riel es de ese tema.
+
+## 4. Alcance del filtro infantil [propuesta]
+
+### 4.1 La contradicción de la rev. 1
+
+El pedido del cruce excluía 10751 para cualquier origen no infantil. Como
+`with_genres` es **O** (§0.1), eso también sacaba sitcoms y películas
+familiares sin animación, que son "familiar" y no "infantil" según §1.
+
+### 4.2 Reglas alineadas
+
+1. **Guard infantil (regla dura)**: si ningún origen es infantil, se descarta
+   todo candidato infantil según §1, venga de `/recommendations` o del cruce. Se
+   aplica sobre los géneros crudos, que ya están en el candidato: 0 llamadas.
+2. **Cruce hacia series** (origen película): se pide con `without_genres=10762`.
+   Coincide **exactamente** con la definición infantil en series.
+3. **Cruce hacia películas** (origen serie): TMDB no permite excluir "16 **y**
+   10751" en una sola consulta. Hay dos opciones; es la decisión **D2**:
+   - **(a) Excluir 10751 en el pedido, sólo si el origen es animado y no
+     infantil.**
+     - A favor: según el pool, a Los Simpson le quedan 23 disponibles en vez
+       de 7.
+     - En contra: ese cruce también pierde películas **familiares sin
+       animación**, que no son infantiles. El alcance se acota a un origen
+       animado. Lo familiar sigue pudiendo llegar por `/recommendations` y por
+       los otros orígenes.
+     - Cuánto se pierde de verdad: no está medido. Se mide en §7.
+   - **(b) No excluir en el pedido, y pedir una segunda página del cruce**
+     cuando el guard deja ese cruce con menos de 10 disponibles.
+     - A favor: respeta la definición exacta.
+     - En contra: +1 `discover` por origen animado (en caché 24 h, compartido),
+       y no está medido si la segunda página trae suficientes no infantiles.
+
+### 4.3 Un gusto familiar no domina
+
+Con al menos un origen infantil el guard se apaga y rige el cupo infantil
+blando de §3. Un solo gusto infantil entre 6 da hasta `ceil(20 · 1/6)` = 4
+infantiles **si hay otra oferta**. Si no la hay, gana la cantidad (§3.1).
+
+## 5. Descartes — sin cambios respecto de la rev. 1
+
+- Exclusión exacta.
+- Sin rechazo temático.
+- Los descartes históricos no se atribuyen a ningún origen.
+- Procedencia futura opcional: 2 columnas en `user_items`. Las versiones de
+  Android ya instaladas no la escriben.
+
+La investigación del título exacto que reaparece **sigue pendiente**. El dato
+mínimo es:
+
+- el mail de la cuenta;
+- el título o el enlace a su ficha;
+- en qué riel lo vio;
+- si fue en la web o en Android;
+- cuándo lo descartó y cuándo reapareció, aproximado.
+
+Además hace falta tu permiso explícito para leer Producción.
+
+## 6. Pruebas sintéticas del prototipo [sintética]
+
+`scripts/prototipo-reco/seleccion.mjs`: prototipo **no conectado a la app**.
+Pruebas en `seleccion.test.mjs`; se corren con
+`node --test scripts/prototipo-reco/seleccion.test.mjs`. Sin red. **12 de 12
+pasan.**
+
+| Caso | Resultado |
+|---|---|
+| 3 orígenes animados, 12 elegibles todos animados | visible, **12** tarjetas (la pasada 2 completa) |
+| 9 elegibles | oculto |
+| 1 origen, 23 elegibles | 20, todas de ese origen, sin pasada 2 |
+| 2 orígenes, uno con 3 candidatos | 20: 3 de uno y 17 del otro |
+| 6 orígenes, 1 animado con oferta grande y puntaje alto | 20; animación = 4 (cupo); ≤ 2 animadas entre las primeras 6 |
+| 14 diversos + 10 animados | **20**, no 10; los que entran sin cupo quedan al final |
+| 1 origen infantil entre 6, con oferta adulta suficiente | infantiles ≤ cupo |
+| Primeras 6 con un origen dominante | ≤ 2 de ese origen |
+| Recencia K = 6: Ta buena nuevo contra Petacular 7 puestos más viejo | gana el Ta buena |
+| Recencia K = 6: contra Petacular 5 puestos más viejo | gana el Petacular |
+| MMR, voto nuevo de crimen | desplaza a crimen3 (observado) |
+| MMR, voto nuevo de romance | desplaza a crimen3 (observado) |
+
+Bug que la prueba encontró en el prototipo y ya está corregido: la regla de
+las primeras 6 aplicada con 1 origen forzaba la pasada 2.
+
+## 7. Validación final — pendiente, sin cambios de método
+
+- **Candidatos fijos en JSON**: el pipeline completo (guard de anime,
+  exclusiones, ventana de 80, enriquecido, cupos y mezcla) corre viejo contra
+  nuevo sobre los mismos datos.
+- **Perfiles** con n,d,m y con Netflix sola:
+  - 1 gusto;
+  - 2 de animación adulta;
+  - 6 variados con Los Simpson;
+  - 6 del mismo tema;
+  - 12 señales más un voto nuevo;
+  - familiar, y familiar + adultos;
+  - fan del anime;
+  - descartes inyectados.
+- **Métricas**:
+  - cantidad contra `min(20, elegibles)`;
+  - máximo por origen;
+  - animación e infantil, en total y en las primeras 6;
+  - orígenes y temas distintos en las primeras 6;
+  - descartados presentes;
+  - desplazamiento al sumar un voto;
+  - con la opción (a) de D2: películas familiares sin animación que se pierden.
+- **Pertinencia**: dejar uno afuera, y la revisión a ciegas del dueño (A/B sin
+  rótulo).
+- **Calibración**: `K` en {4, 6, 10} y `λ` en {0,5; 1; 2}.
+- **Criterios de aceptación** (alineados con §3.1):
+  - 0 descartados;
+  - 0 infantiles sin origen infantil;
+  - **el riel se muestra si y sólo si hay ≥ 10 elegibles**;
+  - cantidad = `min(20, elegibles)`;
+  - los cupos se cumplen salvo cuando la oferta no alcanza, y entonces la
+    pasada 2 queda registrada;
+  - "dejar uno afuera" no peor que hoy;
+  - en la revisión a ciegas el nuevo gana o empata en la mayoría.
+
+## 8. Claves de caché y costos
+
+| Clave | Acción |
+|---|---|
+| `reco:cruce:` | subir a `v2` (cambia el pedido) |
+| `reco:perfil:…v2` | subir a `v3` (marcas infantil y animación) |
+| `reco:mismo:` | no se toca |
+| riel final | subir de versión; la huella pasa a calcularse sobre los orígenes elegidos (§2.4) |
+| `pv3:`, `card:` | no se tocan |
+
+**Costos**, que son cuentas sobre el código y se miden con el contador del
+harness antes de mergear:
+
+- **Supabase**: +2 consultas por pedido del riel (§2.4).
+- **Upstash**: +6 lecturas de `reco:perfil` por armado, sólo con más de 6
+  señales.
+- **TMDB**:
+  - por cada perfil que no está en caché, 2 llamadas, una vez cada 24 h por
+    título;
+  - después del deploy, 1 `discover` de cruce por origen y plataformas;
+  - con la opción (b) de D2, +1 `discover` por origen animado.
+- **Enriquecido**: sin cambios, sigue con ventana de 80.
+
+## 9. Decisiones que necesitan tu elección
+
+- **D1 — Cantidad o diversidad, cuando la oferta válida es de un solo tema.**
+  - **Recomendada: cantidad.** El riel se muestra con lo que hay, porque es
+    contenido válido para tu gusto.
+  - Alternativa: ocultar el riel si los cupos no se cumplen con al menos 10.
+    Vuelve a ocultarlo con contenido válido, que es lo que objetaste.
+- **D2 — El cruce hacia películas desde un origen animado.**
+  - **Recomendada: (a)**, excluir Family en el pedido, aceptando que se pierden
+    películas familiares sin animación en ese cruce. Se mide cuántas en §7 y,
+    si son muchas, se pasa a (b).
+  - Alternativa: **(b)**, segunda página, sin pérdida y con +1 llamada.
+- **D3 — Etapa 4, la procedencia de los descartes.** Sí o no. No bloquea nada
+  de lo demás.
+
+Los valores de `K`, `λ` y los porcentajes de los cupos **no son decisiones
+tuyas todavía**: son parámetros que se calibran en §7, y se te muestran con los
+resultados.
+
+## 10. Etapas
+
+1. Harness de §7: candidatos fijos y métricas, con el algoritmo actual como
+   base.
+2. Guard infantil + cruce según D2 + `cruce:v2`, `perfil:v3` y la versión del
+   riel final.
+3. Selector en dos pasadas (§3).
+4. Lectura de señales en el servidor + recencia + MMR (§2).
+5. Opcional: procedencia de descartes (D3).
+
+Cada etapa se mide contra la anterior con el harness antes de pasar a la
+siguiente.
+
+## 11. Límites que quedan
+
+- El género de TMDB es una aproximación del gusto.
 - Con 1 o 2 gustos el riel es, por construcción, más de lo mismo.
-- 10751 es ruidoso. La regla infantil equivoca títulos como Shrek o Los
-  Simpson: la película.
-- No hay aprendizaje entre usuarios: no hay volumen medido que lo justifique.
-- Todos los porcentajes son hipótesis hasta la validación de §7.
+- La definición infantil equivoca títulos como Shrek.
+- Los resultados de MMR son observados en casos sintéticos, no garantizados.
+- No hay aprendizaje entre usuarios.
