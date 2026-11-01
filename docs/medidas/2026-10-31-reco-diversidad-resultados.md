@@ -1,8 +1,9 @@
 # "Elegidas para vos" — implementación y validación local de la diversidad (2026-10-31)
 
-**Estado:** implementado y validado **en local**, en la rama
-`feat/reco-diversidad` (sobre `diseno/reco-diversidad`). **Sin push, sin
-merge, sin deploy, sin migraciones y sin AAB nuevo**, como pidió el dueño.
+**Estado (actualizado el 31/10, noche):** **INTEGRADO en `main` (merge
+`392128e`) y DESPLEGADO** con el deploy Production **7466430755** `success`,
+con autorización del dueño. Sin migraciones ni AAB. Evidencia del despliegue y
+pendientes en §13. Lo que sigue documenta la validación local previa al merge.
 
 Plan: `docs/superpowers/plans/2026-10-31-reco-diversidad.md` (rev. 2).
 Decisiones del dueño del 31/10:
@@ -335,3 +336,54 @@ todavía decían que el servidor no lee señales ni tiene sesión.
 
 ⚠️ El servidor local usa la **base de Producción** (es la misma `.env.local`):
 votar o descartar ahí escribe en tu cuenta real.
+
+## 13. Integración y despliegue (31/10, noche)
+
+**Integración:**
+
+- Merge `--no-ff` `392128e` sobre `origin/main` = `e8929e5`, sin conflictos:
+  `main` no se movió desde la creación de la rama.
+- Push sin force; antes se comprobó que `origin/main` seguía igual.
+- Sólo esta entrega y su documentación. No se integró la rama de release del
+  AAB 5 ni se tocaron otros worktrees.
+
+**Controles sobre el resultado integrado:**
+
+- `npm test`: 2561 tests, 2551 pasan, 0 fallos, 10 omitidos.
+- `npm run build`: OK.
+- `tsc`: limpio, con los tipos de `.next/` regenerados.
+- Sin mediciones nuevas contra TMDB.
+
+**Despliegue:** deployment de GitHub **7466430755**, entorno "Production",
+`success` a las 00:29:18 UTC del 01/11. Es el único deployment del commit.
+
+**Comprobado en Producción, sin sesión:**
+
+- el sitio y `/api/health` responden 200, con Redis OK y 0 errores 429;
+- `/api/te-va-a-gustar` responde 401 `sin-sesion`, sin token y con un token
+  inválido;
+- el preflight CORS responde 204.
+
+**No comprobado:**
+
+- **Que `app.yump.ar` sirve este build, por contenido.** El cambio es sólo de
+  servidor, y sin sesión la ruta responde igual que antes. La evidencia es el
+  deploy de Production del commit.
+- **El recorrido autenticado:** el riel con tu cuenta, en la web y en Android
+  1.2.0.
+
+**Configuración:** las dos variables nuevas activan por defecto (sólo `"0"`
+apaga). El panel de Vercel no se pudo leer y no se cambió ninguna variable.
+**Confirmá en el panel** que `RECO_DIVERSIDAD` y `RECO_CRUCE_SIN_FAMILIA` no
+están definidas en `0`.
+
+**Para probar con tu cuenta en Producción:**
+
+1. Abrí el Home con sesión y mirá "Elegidas para vos": las primeras tarjetas y
+   si aparecen títulos infantiles sin un gusto infantil.
+2. Descartá 2 o 3 y recargá: no tienen que volver, y el riel se tiene que
+   reponer.
+3. Votá un título nuevo y recargá: el riel se tiene que rearmar.
+
+**Sigue aparte y sin resolver:** el título exacto descartado que reaparece.
+

@@ -1,6 +1,6 @@
 # Estado de Yump
 
-> **Estado canónico. Actualizado el 29 de octubre de 2026.**
+> **Estado canónico. Actualizado el 31 de octubre de 2026 (noche, AR).**
 > Leer este bloque antes de los antecedentes históricos. Arquitectura y reglas:
 > [`CLAUDE.md`](../CLAUDE.md). Problemas históricos: [`ISSUES.md`](ISSUES.md).
 > No duplicar este estado en otros manuales: enlazarlo.
@@ -16,9 +16,13 @@ debajo de "Antecedentes anteriores al 09/09/2026" es histórico. Categorías de 
 pública de deployments de GitHub, estado `success`), **dueño** (informado por
 el dueño), **Producción** (comprobado contra `app.yump.ar`).
 
-**Producción web (29/10/2026).** `main` = `3a58eb6` (merge de reseñas de la
-comunidad, APAGADAS, con «Elegidas para vos» incluido), desplegado: deploy
-Production 7424014089 `success`. Reseñas: migraciones 022 y 011–021 aplicadas
+**Producción web (31/10/2026).** `main` = **`392128e`**: merge de
+`feat/reco-diversidad`, la diversidad de «Elegidas para vos». Deploy
+Production **7466430755** `success`. Es un cambio sólo de servidor: el camino
+con sesión está pendiente de la prueba del dueño (ver la entrada del 31/10).
+**Antes (29/10):** `main` = `3a58eb6` (merge de reseñas de la comunidad,
+APAGADAS, con «Elegidas para vos» incluido), desplegado: deploy Production
+7424014089 `success`. Reseñas: migraciones 022 y 011–021 aplicadas
 en Producción el 29/10, todo apagado; ver la entrada de reseñas.
 **Antecedente:** último cambio de CÓDIGO en `main` hasta el 20/10: `09cc2ee` (Top
 exclusivamente manual), desplegado el 20/10 con `main` = `915ef2e` (deploy
@@ -1546,8 +1550,61 @@ reusa su diseño, no se mergea.
 
 ## Evidencia y alcance de esta actualización
 
-- **"Elegidas para vos": diversidad (2026-10-31; rama LOCAL
-  `feat/reco-diversidad`, SIN push, merge ni deploy, sin migraciones ni AAB).**
+- **"Elegidas para vos": diversidad (2026-10-31; INTEGRADA en `main` con el
+  merge `392128e` y DESPLEGADA: deploy Production 7466430755 `success`; sin
+  migraciones ni AAB).** Autorización del dueño del 31/10, después de su prueba
+  local ("pareciera funcionar bien") y de la revisión de Codex del arreglo
+  `6e90589`.
+
+  **Integración [Git]:**
+  - `origin/main` estaba en `e8929e5`, sin cambios desde que se creó la rama:
+    no hubo conflictos.
+  - Merge `--no-ff` `392128e` en el worktree `wt-integracion-3c1`, con los 6
+    commits de la rama (`0d107c4` → `6e90589`): plan, implementación, harness,
+    arreglo de la huella y documentación.
+  - Push `e8929e5..392128e` sin force, después de comprobar que `origin/main`
+    no se había movido.
+  - Ningún otro worktree ni rama se tocó (tampoco la del release del AAB 5).
+
+  **Controles sobre el resultado integrado:**
+  - `npm test`: 2561 tests, 2551 pasan, 0 fallos, 10 omitidos.
+  - `npm run build`: OK; la ruta `/api/te-va-a-gustar` compila como dinámica.
+  - `npx tsc --noEmit`: limpio, una vez regenerados por el build los tipos de
+    `.next/`. Antes tenía restos de la ruta `netflix-top10`, borrada el 20/10.
+    No es código.
+
+  **Despliegue [deploy]:** GitHub registra UN deployment para `392128e`:
+  7466430755, entorno "Production", `success` a las 00:29:18 UTC del 01/11
+  (21:29 AR del 31/10). Ninguno de `wt-integracion-3c1`.
+
+  **Producción, sin sesión [Producción]:**
+  - `/`, `/top`, `/proximamente`, `/buscar` y `/api/health` responden 200.
+  - Health: Redis OK, 0 errores 429.
+  - `POST /api/te-va-a-gustar` responde 401 `sin-sesion`, sin token y con un
+    token inválido.
+  - `OPTIONS` (CORS, para Android) responde 204.
+  - ⚠️ **Que `app.yump.ar` sirve exactamente este build NO se pudo comprobar
+    por contenido.** El merge no toca nada del cliente (verificado con
+    `git diff`), y sin sesión la ruta responde igual que antes. La URL del
+    deployment está protegida por Vercel. La evidencia es el deployment de
+    Production `success` del commit, que es el que el dominio sirve por
+    convención.
+
+  **Configuración:**
+  - Por código, la mejora y D2(a) están ACTIVAS salvo que `RECO_DIVERSIDAD` o
+    `RECO_CRUCE_SIN_FAMILIA` valgan exactamente `"0"`. Son variables nuevas de
+    esta entrega y no hay registro de que existan en Vercel.
+  - **No se pudo leer el panel**: la CLI de Vercel no está instalada ni tiene
+    sesión, y no se instaló. **No se modificó ninguna variable.**
+  - Pendiente del dueño: confirmar en el panel que ninguna de las dos está
+    definida en `0`.
+
+  **Pendiente con el dueño:**
+  - el recorrido autenticado en Producción (web y Android 1.2.0);
+  - el A/B a ciegas;
+  - la medición de las +2 consultas a Supabase.
+
+  Antecedente de esta misma entrega, previo al merge:
 
   **Origen [dueño]:** un usuario veía en el riel películas que había marcado
   que no quería ver, y por un "me gustó" en Los Simpson recibía un 80% de
@@ -1597,7 +1654,9 @@ reusa su diseño, no se mergea.
   **Sigue abierta y aparte**: la investigación del título exacto descartado
   que reaparece.
 
-  **Siguiente paso:** revisión del dueño (y de Codex), A/B a ciegas y prueba
+  **Siguiente paso (actualizado al integrar):** prueba del dueño en
+  Producción con su cuenta (descartar, votar, recargar el riel) y A/B a
+  ciegas. Antecedente: revisión del dueño (y de Codex), A/B a ciegas y prueba
   con sesión en local. Después, decidir el merge y el deploy.
 
 - **"Elegidas para vos" no se reponía al descartar (2026-10-29; rama
