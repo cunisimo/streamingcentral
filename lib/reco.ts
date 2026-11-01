@@ -4,12 +4,15 @@
 // (ver la decisión sobre "Ya la vi" en CLAUDE.md). Esto es un riel más, aislado,
 // que se pide aparte y que si falla no aparece y no arrastra a nadie.
 //
-// EL SERVIDOR NO SABE QUIÉN SOS. Las señales y las exclusiones las manda el
-// cliente, que es el único que puede leerlas: `votes` y `user_items` tienen RLS
-// `auth.uid() = user_id`, así que una lectura del servidor con la anon key
-// devuelve cero filas —y encima sin error, en silencio—. Que el servidor sea
-// anónimo no es una limitación que haya que sortear: es lo que mantiene el
-// historial de cada uno fuera de los logs y del cache compartido.
+// QUIÉN LEE QUÉ (desde el 31/10). `votes` y `user_items` tienen RLS
+// `auth.uid() = user_id`: con la anon key el servidor lee cero filas, en
+// silencio. Por eso la RUTA lee señales y descartes con el TOKEN del usuario
+// (lib/reco-senales-servidor.ts, lib/reco-descartes-servidor.ts), en el mismo
+// pedido; el cliente sigue mandando sus señales y exclusiones, que se usan como
+// respaldo si la lectura del servidor falla (y las exclusiones, siempre). Lo
+// que NO cambió: el id del usuario no entra en ninguna clave ni en los logs, y
+// el caché del riel se comparte entre quienes tengan exactamente las mismas
+// señales, exclusiones y plataformas.
 //
 // LOS CUATRO CAMINOS. El riel es UNO SOLO y mixto (películas y series en la
 // misma fila, sin toggle), pero TMDB recomienda dentro del mismo tipo: una
@@ -52,12 +55,18 @@ import { genreIdsToSlugs, resolveCategory } from "./categories";
 import { codesToTmdbIds } from "./providers-ar";
 import type { MediaType, PlatformCode, UITitle } from "./types";
 import type { RawTitle } from "./tmdb";
-import { elegirOrigenes, mezclarTipos, type Senal } from "./reco-mezcla";
+import { clave, elegirOrigenes, type Senal } from "./reco-mezcla";
 import {
-  coincidencia, componentes, esAnime, mejorRespaldo, ordenarTurnosPonderados, permiteAnime,
-  type Candidato, type Respaldo,
-} from "./reco-puntaje";
+  OPCIONES_ANTERIORES, OPCIONES_NUEVAS, juntarCandidatos, lineaAuditoria, seleccionFinal,
+  ventanaDeEnriquecido, PISO, type Enriquecido, type MotivoSinRiel, type OpcionesArmado,
+  type OrigenArmado, type Recomendacion,
+} from "./reco-armado";
+import {
+  candidatasOrigen, elegirOrigenesMMR, exclusionesCruce, huellaSenales, type SenalConRango,
+} from "./reco-seleccion";
 export type { Senal, PesoSenal } from "./reco-mezcla";
+export { VENTANA, OBJETIVO, OBJETIVO_POR_TIPO, PISO } from "./reco-armado";
+export type { Recomendacion, MotivoSinRiel } from "./reco-armado";
 
 // Cuántos títulos del usuario se usan como origen. El costo real no está acá
 // —6 orígenes son 18 llamadas, todas cacheadas POR TÍTULO y compartidas entre
@@ -90,42 +99,23 @@ export const MAX_ORIGENES = 6;
 // Se puede pisar por entorno SOLO para medir. Ojo: es un `const` de módulo, así
 // que la variable tiene que estar puesta ANTES de arrancar el proceso — setearla
 // después del import no hace nada y da tres mediciones idénticas (ya pasó).
-export const VENTANA = Number(process.env.RECO_VENTANA) || 80;
+// VENTANA, OBJETIVO, PISO, `Recomendacion` y `MotivoSinRiel` viven ahora en
+// ./reco-armado, junto con el armado puro que comparten la ruta y el harness.
+//
+// `Malaso` NO es fuente: un título que no te gustó no origina recomendaciones.
+// Y como TODO lo que el usuario calificó entra en las exclusiones, tampoco
+// puede reaparecer recomendado desde otro origen.
 
-export const OBJETIVO = 20;
-export const OBJETIVO_POR_TIPO = 10;
-// Debajo de esto el riel NO se muestra. No se rellena con popularidad genérica
-// para llegar al número: un riel corto es honesto, uno rellenado es mentira.
-export const PISO = 10;
-
-// `Senal` y `PesoSenal` se re-exportan de ./reco-mezcla, que es donde viven las
-// funciones puras del riel (y donde están sus tests). `Malaso` NO es fuente: un
-// título que no te gustó no origina recomendaciones. Y como TODO lo que el
-// usuario calificó entra en las exclusiones, tampoco puede reaparecer
-// recomendado desde otro origen.
-
-export interface Recomendacion extends UITitle {
-  // De qué título salió. Viaja hasta la tarjeta ("Porque te gustó X") y es lo
-  // que hace auditable el riel: sin esto, una recomendación mala y una buena se
-  // ven igual.
-  porque: { id: number; tipo: MediaType; titulo: string };
-  camino: "mismo" | "cruce";
-  // Cuántas señales distintas respaldan este candidato. Es el desempate.
-  apoyos: number;
-}
-
-// Por qué el riel no se muestra. Los cuatro casos se ven idénticos desde afuera
-// —el riel no está— y son cosas muy distintas.
-export type MotivoSinRiel =
-  | "sin-sesion"         // el riel es solo para usuarios con sesión
-  | "sin-senales"        // el usuario todavía no calificó ni listó nada
-  | "sin-plataformas"
-  | "sin-candidatos"     // TMDB no devolvió nada para ningún origen
-  | "filtrado"           // había candidatos y los filtros los dejaron bajo el piso
-  ;
-
-import { clave } from "./reco-mezcla";
 const otro = (t: MediaType): MediaType => (t === "movie" ? "tv" : "movie");
+
+// --- Interruptores (sin tocar código; en Vercel rigen desde el deploy siguiente) ---
+// RECO_DIVERSIDAD=0  vuelve al algoritmo anterior entero (orígenes por peso,
+//                    sin guard infantil, turnos ponderados + mezcla 10/10).
+// RECO_CRUCE_SIN_FAMILIA=0  apaga la variante D2(a) del cruce (§4.2 del plan):
+//                    el cruce hacia películas de un origen animado vuelve a
+//                    pedir sin excluir Family. El guard infantil sigue.
+const diversidadActiva = () => process.env.RECO_DIVERSIDAD !== "0";
+const cruceSinFamilia = () => process.env.RECO_CRUCE_SIN_FAMILIA !== "0";
 
 // --- Fuentes por título, cacheadas ------------------------------------------
 // La clave es POR TÍTULO y no por usuario: dos personas a las que les gustó lo
@@ -162,7 +152,7 @@ const detalleBase = (tipo: MediaType, id: number) =>
 const detalleRespaldo = (tipo: MediaType, id: number) =>
   pedirRespaldoIdioma(`detalle:${tipo}:${id}`, () => titleDetails(tipo, id, IDIOMA_FALLBACK));
 
-async function recomendadosDe(tipo: MediaType, id: number): Promise<RawTitle[]> {
+export async function recomendadosDe(tipo: MediaType, id: number): Promise<RawTitle[]> {
   let fallo = false;
   return cachedLocIf(claveRecoMismo(tipo, id, HUELLA_IDIOMA), TTL.catalog, async () => {
     // `/recommendations` viene dentro de titleDetails vía append_to_response, así
@@ -194,7 +184,7 @@ interface PerfilTematico {
   idioma: string;
 }
 
-async function perfilDe(tipo: MediaType, id: number): Promise<PerfilTematico> {
+export async function perfilDe(tipo: MediaType, id: number): Promise<PerfilTematico> {
   // v2: el perfil sumó `generosPropios` e `idioma`. La clave TIENE que subir de
   // versión: en producción hay entradas guardadas con la forma vieja, y al
   // recuperarlas esos dos campos vienen `undefined`. Sin esto, el primer armado
@@ -232,8 +222,11 @@ async function perfilDe(tipo: MediaType, id: number): Promise<PerfilTematico> {
   }, () => !falloPerfil);
 }
 
-async function cruzadosDe(
-  tipo: MediaType, id: number, providers: PlatformCode[],
+// `sin` = géneros que el pedido excluye (ver `exclusionesCruce` en
+// ./reco-seleccion). Se exporta, como `perfilDe` y `recomendadosDe`, sólo para
+// que el harness capture las MISMAS respuestas que usa la ruta.
+export async function cruzadosDe(
+  tipo: MediaType, id: number, providers: PlatformCode[], sin: number[] = [],
 ): Promise<{ items: RawTitle[]; hubo: boolean }> {
   const perfil = await perfilDe(tipo, id);
   if (!perfil.keywords.length) return { items: [], hubo: false };
@@ -241,7 +234,7 @@ async function cruzadosDe(
   if (!ids.length) return { items: [], hubo: false };
   let falloCruce = false;
   const items = await cachedLocIf(
-    claveRecoCruce(tipo, id, [...providers].sort().join(","), HUELLA_IDIOMA),
+    claveRecoCruce(tipo, id, [...providers].sort().join(","), sin, HUELLA_IDIOMA),
     TTL.catalog,
     async () => {
       const params = {
@@ -252,6 +245,7 @@ async function cruzadosDe(
         // fuera el cine regional, que es justo lo que esta app quiere mostrar
         // (issue #12).
         minVotes: 0,
+        withoutGenres: sin.length ? sin : undefined,
       };
       const d = await discover(otro(tipo), params);
       const rep = await repararLote(
@@ -289,53 +283,58 @@ function huella(...partes: string[]): string {
   return (h >>> 0).toString(36);
 }
 
+// Una señal puede traer `rango` (posición por recencia entre todas las
+// positivas). Lo trae cuando las señales las leyó el SERVIDOR con el token del
+// usuario (lib/reco-senales-servidor.ts); las que manda el cliente —también las
+// de Android 1.2.0 y del AAB 5— no lo traen, y entonces se eligen los orígenes
+// como antes, por peso.
+export type SenalEntrada = Senal & { rango?: number };
+
 export async function recomendaciones(opts: {
-  senales: Senal[];
+  senales: SenalEntrada[];
   // Todo lo que NO puede aparecer: lo que el usuario calificó (incluido Malaso),
-  // lo que tiene en Mi lista, lo que marcó como visto, y lo que ya se está
-  // mostrando en el Home. Viene junto y del cliente, que es el único que conoce
-  // las dos cosas.
+  // lo que tiene en Mi lista, lo que marcó como visto, sus descartes y lo que ya
+  // se está mostrando en el Home.
   excluir: string[];
   providers: PlatformCode[];
 }): Promise<{ items: Recomendacion[]; motivo?: MotivoSinRiel }> {
   if (!opts.providers.length) return { items: [], motivo: "sin-plataformas" };
   if (!opts.senales.length) return { items: [], motivo: "sin-senales" };
 
-  // El riel entero, cacheado. Sin esto cada carga del Home de un usuario con
-  // sesión pagaba hasta 80 `providersOf`, y volver atrás desde una ficha los
-  // pagaba otra vez.
-  // v2: el orden dejó de ser "intercalado por origen + posición de TMDB" y pasó
-  // a ser un puntaje de afinidad, y se agregó el guard de anime. Cambia el
-  // CONTENIDO del riel, así que sin subir la versión lo ya cacheado se sigue
-  // sirviendo hasta que expire el TTL y el cambio "no se ve" después de deployar.
+  const nuevo = diversidadActiva();
+  const op = nuevo ? OPCIONES_NUEVAS : OPCIONES_ANTERIORES;
+  const conRango = nuevo && opts.senales.every((s) => typeof s.rango === "number");
+  const sinFamilia = nuevo && cruceSinFamilia();
+
+  // LA CLAVE SE ARMA SIN LEER NINGÚN PERFIL. Con rango, los orígenes se eligen
+  // por MMR, que usa los géneros de cada candidata (dependen sólo del título) y
+  // su valor (peso y RANGO, con K). La huella lleva las 12 candidatas con
+  // tipo, id, peso y rango, más K y λ (`huellaSenales`): un HIT del riel no paga
+  // ni una lectura de perfil ni el MMR, y dos historiales que MMR resuelve
+  // distinto no comparten la clave (auditoría de Codex sobre 43ed967).
+  //
+  // Sin rango se usa la huella de siempre (todas las señales, ordenadas).
+  const senalesClave = huellaSenales(opts.senales, conRango);
+  const variante = !nuevo ? "ant" : `n${conRango ? "r" : ""}${sinFamilia ? "f" : ""}`;
   const clv = claveReco(huella(
-    [...opts.senales].map((s) => `${s.tipo}:${s.id}:${s.peso}`).sort().join(","),
+    senalesClave,
     [...opts.excluir].sort().join(","),
     [...opts.providers].sort().join(","),
+    variante,
   ), HUELLA_IDIOMA);
   // El riel entero: si alguna reparación de adentro falló, se sirve igual pero
   // NO se guarda. Con TTL.reco de 6 h, un riel sin reparar quedaría congelado
   // aunque cada `card:` de adentro sí se haya protegido por separado.
   //
-  // EL CONTEXTO LO ABRE ESTA FUNCIÓN, no la route. Antes se leía
-  // `metricasIdiomaActuales()` confiando en que alguien más hubiera abierto el
-  // scope: `/api/home` lo hacía y `/api/te-va-a-gustar` no, así que ahí volvía
-  // `null` y el riel se guardaba 6 h con los fallos adentro.
-  //
-  // Y la decisión se toma DESPUÉS de que `armar()` terminó, mirando las
-  // métricas del scope. Así los retornos tempranos —`sin-candidatos`,
-  // `filtrado`— quedan cubiertos sin tener que acordarse de llamar a nada antes
-  // de cada `return`.
-  //
-  // Y lo mismo con la disponibilidad: `armar()` llama a `enrichRaw`, o sea que
-  // este riel guarda títulos ya resueltos. Sin el contexto, una caída de la
-  // evidencia lo dejaba 6 h con títulos en gris — el mismo bug que el comentario
-  // de arriba describe para las métricas de idioma.
+  // EL CONTEXTO LO ABRE ESTA FUNCIÓN, no la route: `/api/te-va-a-gustar` no lo
+  // abría y el riel se guardaba 6 h con los fallos adentro. La decisión se toma
+  // DESPUÉS de que `armar()` terminó, así que los retornos tempranos quedan
+  // cubiertos. Lo mismo con la disponibilidad: `armar()` llama a `enrichRaw`.
   let fallo = false;
   return cachedLocIf(clv, TTL.reco, async () => {
     const { res, fallos } = await withFallosDeFuentes(async () => {
       const rep = await adaptadorRiel({
-        armar: () => armar(opts),
+        armar: () => armar({ ...opts, op, conRango, sinFamilia }),
         conMetricas: withMetricasIdioma,
       });
       fallo = rep.fallo;
@@ -346,116 +345,57 @@ export async function recomendaciones(opts: {
   }, () => !fallo);
 }
 
+async function elegirOrigenesDe(senales: SenalEntrada[], conRango: boolean): Promise<Senal[]> {
+  if (!conRango) {
+    // Jerarquía Petacular > Ta buena > Mi lista; dentro de cada nivel, el orden
+    // en que vino. Ver `elegirOrigenes` en ./reco-mezcla.
+    return elegirOrigenes(senales, MAX_ORIGENES);
+  }
+  // Con rango: hasta 12 candidatas por peso y recencia, y MMR para que seis
+  // gustos parecidos no ocupen los seis lugares (§2 del plan). Pide el perfil de
+  // cada candidata: hasta 12 lecturas de `reco:perfil` (compartido entre
+  // usuarios, 24 h) en vez de 6. Sólo corre en un MISS del riel.
+  const candidatas = candidatasOrigen(senales as SenalConRango[]);
+  const perfiles = await Promise.all(candidatas.map((s) => perfilDe(s.tipo, s.id)));
+  const generos = new Map(candidatas.map((s, i) => [clave(s.tipo, s.id), perfiles[i].generosPropios]));
+  return elegirOrigenesMMR(candidatas, (s) => ({ tipo: s.tipo, generos: generos.get(clave(s.tipo, s.id)) ?? [] }), MAX_ORIGENES)
+    .map((s) => ({ tipo: s.tipo, id: s.id, peso: s.peso }));
+}
+
 async function armar(opts: {
-  senales: Senal[];
+  senales: SenalEntrada[];
   excluir: string[];
   providers: PlatformCode[];
+  op: OpcionesArmado;
+  conRango: boolean;
+  sinFamilia: boolean;
 }): Promise<{ items: Recomendacion[]; motivo?: MotivoSinRiel }> {
+  const origenes = await elegirOrigenesDe(opts.senales, opts.conRango);
 
-  // Jerarquía Petacular > Ta buena > Mi lista, y dentro de cada nivel el orden
-  // en que vino (el cliente los manda por fecha descendente). No hay cupo por
-  // nivel: si alguien solo tiene Mi lista, esos ocupan los 6 lugares.
-  // Elegir orígenes: deduplica por `tipo:id` conservando la señal más fuerte y
-  // corta a MAX_ORIGENES. La lógica vive en ./reco-mezcla porque es pura y tiene
-  // tests; acá solo se usa.
-  const origenes = elegirOrigenes(opts.senales, MAX_ORIGENES);
-
-  const porOrigen = await Promise.all(origenes.map(async (o) => {
-    const [mismos, cruce, perfil] = await Promise.all([
+  const porOrigen: OrigenArmado[] = await Promise.all(origenes.map(async (o) => {
+    const perfil = await perfilDe(o.tipo, o.id);
+    // Con el algoritmo anterior el cruce se pide como siempre (sin exclusiones).
+    const sin = opts.op.guardInfantil
+      ? exclusionesCruce({ tipo: o.tipo, generos: perfil.generosPropios }, opts.sinFamilia)
+      : [];
+    const [mismos, cruce] = await Promise.all([
       recomendadosDe(o.tipo, o.id),
-      cruzadosDe(o.tipo, o.id, opts.providers),
-      perfilDe(o.tipo, o.id),
+      cruzadosDe(o.tipo, o.id, opts.providers, sin),
     ]);
     return { origen: o, perfil, mismos, cruzados: cruce.items };
   }));
 
-  // El candidato guarda su MEJOR respaldo, no el primero que llegó, y la
-  // posición que traía dentro de la respuesta de TMDB — que hasta ahora se
-  // tiraba y es justamente el dato que decidía el orden sin que nadie lo mirara.
-  interface Cand {
-    tipo: MediaType; raw: RawTitle; apoyos: number; respaldo: Respaldo;
-  }
-  const porClave = new Map<string, Cand>();
-  const sumar = (
-    tipo: MediaType, raw: RawTitle, camino: "mismo" | "cruce",
-    o: (typeof porOrigen)[number], pos: number,
-  ) => {
-    const k = clave(tipo, raw.id);
-    // Con qué se compara el candidato depende del camino: uno del MISMO tipo
-    // llega en el mismo espacio de géneros que el origen, y uno de CRUCE ya
-    // viene mapeado al tipo opuesto.
-    const esperados = camino === "mismo" ? o.perfil.generosPropios : o.perfil.generosOpuesto;
-    const respaldo: Respaldo = {
-      origenId: o.origen.id, origenTipo: o.origen.tipo, origenTitulo: o.perfil.titulo,
-      fuerza: o.origen.peso, camino, pos,
-      tema: coincidencia(raw.genre_ids ?? [], esperados),
-    };
-    const ya = porClave.get(k);
-    if (ya) { ya.apoyos++; ya.respaldo = mejorRespaldo(ya.respaldo, respaldo); return; }
-    porClave.set(k, { tipo, raw, apoyos: 1, respaldo });
-  };
-  for (const o of porOrigen) {
-    o.mismos.forEach((r, i) => sumar(o.origen.tipo, r, "mismo", o, i + 1));
-    o.cruzados.forEach((r, i) => sumar(otro(o.origen.tipo), r, "cruce", o, i + 1));
-  }
-  if (!porClave.size) return { items: [], motivo: "sin-candidatos" };
+  const { vivos } = juntarCandidatos(porOrigen, opts.excluir, opts.senales, opts.op);
+  if (!vivos.length) return { items: [], motivo: "sin-candidatos" };
 
-  // Las señales SIEMPRE se excluyen acá, además de venir en `excluir`. No es
-  // redundante: el cliente manda las exclusiones y podría no incluirlas, y
-  // entonces el riel recomendaría un título que el usuario ya calificó, con un
-  // "porque te gustó" que apunta a otro. Pasó en la primera prueba del endpoint
-  // (Joker recomendado a partir de Parásitos, siendo Joker una de las señales).
-  // Un invariante del riel no puede depender de que el cliente se acuerde.
-  const excluidos = new Set([...opts.excluir, ...opts.senales.map((s) => clave(s.tipo, s.id))]);
-  let vivos = [...porClave.values()].filter((c) => !excluidos.has(clave(c.tipo, c.raw.id)));
+  const auditar = process.env.RECO_LOG === "1";
+  const ventana = ventanaDeEnriquecido(vivos);
+  if (auditar) ventana.forEach((c) => console.log(lineaAuditoria("pre-enriquecido", c)));
 
-  // GUARD DE ANIME. Va acá, antes de la ventana, así que no cuesta nada y no le
-  // quita lugar a nadie en el enriquecido. Ver `permiteAnime`: se habilita solo
-  // si alguno de los seis orígenes positivos es anime.
-  const conAnime = permiteAnime(porOrigen.map((o) => ({
-    generos: o.perfil.generosPropios, idioma: o.perfil.idioma,
-  })));
-  if (!conAnime) {
-    vivos = vivos.filter((c) => !esAnime({
-      generos: c.raw.genre_ids ?? [], idioma: c.raw.original_language ?? "",
-    }));
-  }
-
-  const comoCandidato = (c: Cand): Candidato => ({
-    tipo: c.tipo, id: c.raw.id, apoyos: c.apoyos, respaldo: c.respaldo,
-    generos: c.raw.genre_ids ?? [], idioma: c.raw.original_language ?? "",
-  });
-
-  // Auditoría. Son títulos del catálogo, no datos de la persona: no hay nada
-  // que identifique a nadie.
-  //
-  // DOS ETIQUETAS, y la distinción importa. `pre-enriquecido` son los que
-  // entran a la ventana; `final` son los que quedaron en las tarjetas. En el
-  // medio está `enrichRaw`, que filtra por plataformas y se lleva puestos
-  // muchos —los del camino "mismo" vienen de `/recommendations`, que no filtra
-  // nada—. Leer solo el primero y creer que eso es lo que se mostró es el error
-  // fácil, y era el que habilitaba el log anterior.
-  const auditar = (etiqueta: string, xs: { tipo: MediaType; raw: RawTitle; apoyos: number; respaldo: Respaldo }[]) => {
-    if (process.env.RECO_LOG !== "1") return;
-    for (const c of xs) {
-      const k = componentes(comoCandidato(c));
-      console.log(
-        `[reco:${etiqueta}] ${clave(c.tipo, c.raw.id).padEnd(12)} ` +
-        `${(c.raw.title || c.raw.name || "").slice(0, 26).padEnd(26)} ` +
-        `origen=${c.respaldo.origenTitulo.slice(0, 16).padEnd(16)} camino=${c.respaldo.camino.padEnd(6)} ` +
-        `fuerza=${c.respaldo.fuerza} apoyos=${c.apoyos} tema=${k.tema.toFixed(2)} ` +
-        `posTMDB=${String(c.respaldo.pos).padStart(2)} total=${k.total.toFixed(3)}`,
-      );
-    }
-  };
-
-  const ordenados = ordenarTurnosPonderados(vivos, comoCandidato).slice(0, VENTANA);
-  auditar("pre-enriquecido", ordenados);
-
-  // `_cand` viaja solo hasta el reordenado y se saca antes de devolver.
-  const enriquecidos: (Recomendacion & { _cand: Cand })[] = [];
+  // `_cand` viaja sólo hasta la selección y se saca antes de devolver.
+  const enriquecidos: Enriquecido[] = [];
   await Promise.all((["movie", "tv"] as MediaType[]).map(async (tipo) => {
-    const delTipo = ordenados.filter((c) => c.tipo === tipo);
+    const delTipo = ventana.filter((c) => c.tipo === tipo);
     if (!delTipo.length) return;
     const ok = await enrichRaw(delTipo.map((c) => c.raw), tipo, opts.providers);
     const meta = new Map(delTipo.map((c) => [clave(c.tipo, c.raw.id), c]));
@@ -473,16 +413,14 @@ async function armar(opts: {
       }
     }
   }));
+  // El orden de llegada de los dos tipos no es estable: se fija antes de elegir.
+  enriquecidos.sort((a, b) => (a.type < b.type ? -1 : a.type > b.type ? 1 : a.id - b.id));
 
-  // El enriquecido por tipo rompe el orden, así que se rehace sobre lo que
-  // sobrevivió y recién ahí se mezclan los dos tipos.
-  const reordenados = ordenarTurnosPonderados(enriquecidos, (t) => comoCandidato(t._cand))
-    .map(({ _cand, ...t }) => t as Recomendacion);
-  const items = mezclarTipos(reordenados, OBJETIVO, OBJETIVO_POR_TIPO);
-  // `final` = lo que se muestra. Se re-busca el candidato de cada uno porque
-  // `_cand` ya se sacó del objeto que se devuelve.
-  const porId = new Map(enriquecidos.map((e) => [clave(e.type, e.id), e._cand]));
-  auditar("final", items.map((t) => porId.get(clave(t.type, t.id))!).filter(Boolean));
-  if (items.length < PISO) return { items: [], motivo: "filtrado" };
-  return { items };
+  const r = seleccionFinal(enriquecidos, porOrigen, opts.op);
+  if (auditar) {
+    console.log(`[reco:seleccion] elegibles=${r.info.elegibles} conCupos=${r.info.conCupos} ` +
+      `completados=${r.info.completados} cupos=${JSON.stringify(r.info.cupos)} final=${r.items.length}`);
+  }
+  if (r.items.length < PISO) return { items: [], motivo: "filtrado" };
+  return r.motivo ? { items: r.items, motivo: r.motivo } : { items: r.items };
 }

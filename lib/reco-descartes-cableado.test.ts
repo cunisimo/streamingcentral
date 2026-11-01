@@ -16,7 +16,7 @@ function cableado(ruta: string): boolean {
   // Se leen con el token del pedido…
   const leidos = /descartesDeToken\(token\)/.test(ruta);
   // …y se suman a `excluir`, que es lo que se le pasa a `recomendaciones`.
-  const sumados = /const excluir = [\s\S]*?\.concat\(descartes \?\? \[\]\);/.test(ruta);
+  const sumados = /const excluir = [\s\S]*?\.concat\(descartes \?\? \[\]\)/.test(ruta);
   const pasados = /recomendaciones\(\{ senales, excluir, providers \}\)/.test(ruta);
   return leidos && sumados && pasados;
 }
@@ -32,4 +32,9 @@ test("control: sin la suma o sin la lectura, el guard falla", () => {
 
 test("las exclusiones entran en la clave del riel, así un descarte nuevo lo rearma", () => {
   assert.match(RECO, /claveReco\(huella\([\s\S]*?\[\.\.\.opts\.excluir\]\.sort\(\)\.join\(","\)/);
+});
+
+test("lo que el servidor lee como señal también se excluye (resguardo del 31/10)", () => {
+  assert.match(RUTA, /senalesDeToken\(token\)/);
+  assert.match(RUTA, /\.concat\(delServidor\?\.claves \?\? \[\]\)/);
 });

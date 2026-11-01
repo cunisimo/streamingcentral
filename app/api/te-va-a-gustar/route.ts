@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { recomendaciones, MAX_ORIGENES, type Senal } from "@/lib/reco";
+import { recomendaciones, MAX_ORIGENES, type Senal, type SenalEntrada } from "@/lib/reco";
 import { usuarioDeToken } from "@/lib/supabase";
 import { descartesDeToken } from "@/lib/reco-descartes-servidor";
+import { senalesDeToken } from "@/lib/reco-senales-servidor";
 import type { MediaType, PlatformCode } from "@/lib/types";
 import { conCors, opcionesCors } from "@/lib/cors";
 
@@ -17,9 +18,12 @@ export const maxDuration = 60;
 // higiene: son datos personales y no tienen por qué quedar en logs de acceso ni
 // en el historial del navegador.
 //
-// EL SERVIDOR NO SABE QUIÉN PIDE. No hay sesión acá: el cliente manda sus
-// señales y sus exclusiones, porque es el único que puede leerlas (RLS
-// `auth.uid() = user_id`). Ver el comentario largo en lib/reco.ts.
+// SESIÓN Y LECTURAS. La ruta exige el token y, con él, lee del lado del
+// servidor las señales (con fecha) y los descartes del usuario; la RLS
+// `auth.uid() = user_id` lo permite sólo con ese token. El cliente sigue
+// mandando señales y exclusiones: las señales son el respaldo si la lectura
+// falla, y las exclusiones se suman siempre a lo que lee el servidor. Ver el
+// encabezado de lib/reco.ts.
 interface Cuerpo {
   senales?: { tipo?: string; id?: number; peso?: number }[];
   excluir?: string[];
@@ -38,16 +42,22 @@ async function manejar(req: NextRequest) {
   // Hasta acá "solo para conectados" lo cumplía la interfaz, que es una
   // convención y no un límite: la URL se puede pedir a mano.
   //
-  // El token viaja en el header y NO se loguea. Del usuario solo se usa que
-  // exista; su id no se guarda ni entra en la clave de cache.
+  // El token viaja en el header y NO se loguea. Sirve para validar la sesión y
+  // para leer señales y descartes con la RLS del usuario; su id no se guarda ni
+  // entra en la clave de cache.
   const auth = req.headers.get("authorization");
   const token = auth?.toLowerCase().startsWith("bearer ") ? auth.slice(7) : null;
   // Los descartes se leen EN PARALELO con la validación del token: con un token
   // inválido la RLS no devuelve filas y el resultado se tira igual, así que no
   // hay nada que esperar en serie. Ver lib/reco-descartes-servidor.ts.
-  const [usuario, descartes] = await Promise.all([
+  //
+  // Las señales también (lib/reco-senales-servidor.ts): traen la fecha que el
+  // cliente no manda, y así la recencia vale igual para la web, Android 1.2.0 y
+  // el AAB 5, sin tocar el bundle.
+  const [usuario, descartes, delServidor] = await Promise.all([
     usuarioDeToken(token),
     token ? descartesDeToken(token) : Promise.resolve(null),
+    token ? senalesDeToken(token) : Promise.resolve(null),
   ]);
   if (!usuario) {
     return NextResponse.json({ items: [], motivo: "sin-sesion" }, { status: 401 });
@@ -63,7 +73,7 @@ async function manejar(req: NextRequest) {
   // Saneado explícito: esto viene del cliente y entra directo a claves de cache
   // y a URLs de TMDB. Se descarta lo que no tenga la forma esperada en vez de
   // confiar en que el cliente la respete.
-  const senales: Senal[] = (cuerpo.senales ?? [])
+  const delCliente: Senal[] = (cuerpo.senales ?? [])
     .filter((s) => esTipo(s.tipo) && Number.isInteger(s.id) && (s.peso === 1 || s.peso === 2 || s.peso === 3))
     .map((s) => ({ tipo: s.tipo as MediaType, id: s.id as number, peso: s.peso as 1 | 2 | 3 }))
     // Se corta acá también, no solo en `recomendaciones`: sin esto alguien puede
@@ -78,7 +88,15 @@ async function manejar(req: NextRequest) {
     // calificado. Entran en la clave de cache del riel (`huella` en lib/reco.ts),
     // así que un descarte nuevo rearma el riel en la carga siguiente y el hueco
     // se rellena con el siguiente candidato.
-    .concat(descartes ?? []);
+    .concat(descartes ?? [])
+    // Lo que el servidor leyó para armar señales TAMBIÉN se excluye (resguardo
+    // del dueño, 31/10): si el cliente mandara una lista incompleta, un título
+    // votado no puede volver recomendado.
+    .concat(delServidor?.claves ?? []);
+
+  // Con la lectura del servidor, sus señales mandan (traen rango). Si falló, las
+  // del cliente, sin rango: los orígenes se eligen como antes, por peso.
+  const senales: SenalEntrada[] = delServidor ? delServidor.senales : delCliente;
 
   const providers = (cuerpo.providers ?? []).filter((p): p is string => typeof p === "string") as PlatformCode[];
 
