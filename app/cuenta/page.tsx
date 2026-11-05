@@ -7,6 +7,7 @@ import { useAuth } from "@/components/AuthContext";
 import UserHub from "@/components/UserHub";
 import PasswordInput from "@/components/PasswordInput";
 import SobreYump from "@/components/legal/SobreYump";
+import { AVISO_REGISTRO } from "@/lib/legal";
 
 type Modo = "login" | "registro" | "recuperar";
 
@@ -142,6 +143,19 @@ function Acceso({
 
       {err && <p style={{ color: "var(--editorial)", marginTop: 12, fontSize: 14 }}>{err}</p>}
       {ok && <p style={{ color: "var(--accent)", marginTop: 12, fontSize: 14 }}>{ok}</p>}
+
+      {/* El aviso legal del registro (lib/legal.ts). Los enlaces son externos
+          con target="_blank", el mismo mecanismo de Sobre Yump: en la web abren
+          otra pestaña y en Android salen al navegador del sistema. */}
+      {esRegistro && (
+        <p className="aviso-registro">
+          {AVISO_REGISTRO.ANTES}
+          <a href={AVISO_REGISTRO.TERMINOS.href} target="_blank" rel="noopener noreferrer">{AVISO_REGISTRO.TERMINOS.texto}</a>
+          {AVISO_REGISTRO.ENTRE}
+          <a href={AVISO_REGISTRO.PRIVACIDAD.href} target="_blank" rel="noopener noreferrer">{AVISO_REGISTRO.PRIVACIDAD.texto}</a>
+          {AVISO_REGISTRO.DESPUES}
+        </p>
+      )}
 
       <div style={{ marginTop: 20 }}>
         <button className="btn" onClick={submit} disabled={busy}>

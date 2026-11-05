@@ -28,14 +28,16 @@ android {
         applicationId "ar.yump.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        // versionCode 4 / versionName 1.2.0 (decision del dueno, 5/10): el
-        // ultimo subido a Play es 3 (1.1.0). Play exige versionCode estrictamente
+        // versionCode 5 / versionName 1.3.0 (decision del dueno, 30/10): el
+        // ultimo subido a Play es 4 (1.2.0), confirmado por el dueno el 22/10.
+        // MINOR: resenas de usuarios, compartir invitaciones, generos y la
+        // opcion de Meta. Play exige versionCode estrictamente
         // mayor en cualquier canal, y la app ya instalada se actualiza sola porque
         // Play App Signing vuelve a firmar con la misma clave. La convencion
         // (versionCode creciente; versionName MAJOR.MINOR.PATCH) esta en
         // CLAUDE.md, "Versionado de la app Android".
-        versionCode 4
-        versionName "1.2.0"
+        versionCode 5
+        versionName "1.3.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -187,6 +189,13 @@ dependencies {
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')
+    // SDK de Meta, SOLO el modulo de eventos (facebook-core): mide instalacion y
+    // aperturas para atribuir las campanas de Facebook/Instagram. Sin login, sin
+    // share, sin eventos propios: nada de lo que la persona hace adentro de Yump
+    // sale hacia Meta. Version fija y no `latest.release`: 18.3.0 (junio 2026)
+    // y no la 19.0.0, que salio el 16/10 y todavia no tiene recorrido. La
+    // configuracion esta en AndroidManifest.xml y la fija lib/meta-sdk.test.ts.
+    implementation "com.facebook.android:facebook-core:18.3.0"
 }
 
 apply from: 'capacitor.build.gradle'

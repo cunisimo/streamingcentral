@@ -92,6 +92,25 @@ final. Interruptores, muestreo y purga apagados; sin cron nuevo.
 Respaldo previo de catálogo fuera del repo. Evidencia:
 `docs/medidas/2026-10-29-lanzamiento-web-resenas-salidas.txt`.
 
+**Reseñas en Producción (comprobado en lectura el 30/10/2026):** `modulo_activo`
+y `publicacion_activa` están en `true` (encendido hecho por el dueño, que el
+29/10 autorizó dejarlas habilitadas; Claude no pudo ejecutarlo porque el
+permiso de la sesión lo bloqueó). `top_yumpers_activo` y `muestreo_activo`
+siguen en `false`.
+
+**AAB `5 (1.3.0)` — GENERADO Y FIRMADO, SIN SUBIR (30/10/2026).** Desde la rama
+local `release/aab5-integracion` (`0b7a9f5`, worktree `wt-aab5`; sin push ni
+merge): reseñas de usuarios, compartir invitaciones, géneros debajo de Música y
+el SDK de Meta con su opción de desactivación. Copia estable
+`D:\DESARROLLO\stream central\releases\Yump-1.3.0-vc5.aab`, SHA-256
+`ae96f9855aff76386ef33c8d7820e5cd79f3ee2b85a9179149c3454781a32c80`. El dueño
+informó que hizo las pruebas y que actualizó las páginas legales; el tráfico
+hacia Meta no lo verificó Claude. ⚠️ El `versionCode 5` se apoya en la
+confirmación del dueño del 22/10 (mayor subido: 4); Claude no puede ver Play
+Console. **No publicar en Google Play todavía** (indicación del dueño, 30/10):
+faltan las declaraciones de Play Console (entrada "AAB 5" y
+`docs/PLAY-STORE.md` §2.h). Detalle en "Evidencia y alcance".
+
 **Google Play (informado por el dueño):** AAB `2 (1.0.0)` en Alpha (28/09);
 AAB `3 (1.1.0)` en Alpha (3/10) y acceso a Producción pedido a Google
 (3/10). AAB `4 (1.2.0)` generado el 05/10 desde `072e227` (SHA-256
@@ -1658,6 +1677,205 @@ reusa su diseño, no se mergea.
   Producción con su cuenta (descartar, votar, recargar el riel) y A/B a
   ciegas. Antecedente: revisión del dueño (y de Codex), A/B a ciegas y prueba
   con sesión en local. Después, decidir el merge y el deploy.
+- **AAB `5 (1.3.0)`: generado y firmado (2026-10-30; SIN subir a Play, SIN
+  push, SIN merge).** Autorizado por el dueño el 30/10, con la condición de que
+  el mayor `versionCode` subido siga siendo 4.
+  **Pruebas del dueño — INFORMADAS por él (30/10), no observadas por Claude:**
+  dijo que ya realizó las pruebas y no pidió más recorridos ni emulador. Claude
+  no vio esas pruebas: siguen SIN VERIFICAR por Claude la activación inicial,
+  la desactivación y reactivación en el teléfono y, sobre todo, **el tráfico y
+  los eventos que llegan a Meta**. **Páginas legales:** el dueño informó que
+  actualizó `yump.ar/terminos` y `yump.ar/privacidad`, incluida la aclaración
+  sobre las limitaciones al desactivar Meta (Claude no las editó ni las
+  revisó).
+  **Versión:** `0b7a9f5` sube `versionCode` 4 → 5 y `versionName` 1.2.0 →
+  1.3.0 (`android/app/build.gradle`, `lib/release-android.test.ts`, historial
+  de `CLAUDE.md`). ⚠️ **Incertidumbre:** el "mayor subido = 4" es la
+  confirmación del dueño del 22/10; Claude no tiene acceso a Play Console. Si
+  hubo otra subida después, Play rechazará el 5 y hay que generar uno mayor.
+  **Procedimiento** (el habitual, §19–20 del plan de la Etapa 3 y la entrada
+  del AAB 4): `node scripts/build-capacitor.mjs --release
+  --api-base=https://app.yump.ar` (variables PÚBLICAS de Producción desde el
+  `.env.local` del checkout principal, copiado a la worktree sólo para el build;
+  el script toma sólo su lista blanca); `npx cap sync android`;
+  `./gradlew :app:bundleRelease` con el JBR 21 de `~/.jdks/jbr-21.0.11` y
+  `ANDROID_HOME` sólo en el comando. 🔒 `.env.local` y
+  `android/keystore.properties` se copiaron byte por byte desde el checkout
+  principal (ignorados por Git, contenido no abierto ni mostrado) y se
+  **eliminaron** al terminar. `cap sync` reescribió las rutas de
+  `capacitor.settings.gradle`/`capacitor.build.gradle` por la junction de
+  `node_modules`; se restauraron (mismos paquetes y versiones).
+  **Artefacto:** BUILD SUCCESSFUL (7 min 11 s) con `verificarBaseDeApi` ("el
+  paquete web apunta a https://app.yump.ar"), `verificarFirmaDeCarga` y
+  `verificarPaqueteConSalas` en verde. Copia estable
+  `D:\DESARROLLO\stream central\releases\Yump-1.3.0-vc5.aab`, **7.996.438
+  bytes**, SHA-256
+  **`ae96f9855aff76386ef33c8d7820e5cd79f3ee2b85a9179149c3454781a32c80`**
+  (idéntica a `android/app/build/outputs/bundle/release/app-release.aab`).
+  **Controles del artefacto:**
+  - **Firma:** `jarsigner -verify` → `jar verified.`; certificado de SUBIDA
+    `2D:18:A7:C1:F4:FC:AB:D4:09:79:B3:CB:EA:66:1F:E5:41:D4:92:89:7D:47:B2:C6:7E:CF:AB:9F:93:03:95:AE`
+    (el mismo del AAB 4; no es la clave de depuración).
+  - **Versión** (manifest protobuf del AAB): `versionCode 5`, `versionName
+    1.3.0`, `ar.yump.app`; sin `debuggable` ni `usesCleartextTraffic`.
+  - **Destino:** `https://app.yump.ar` en 6 archivos del paquete web y en los
+    filtros de App Links; 0 `vercel.app`; Supabase sólo
+    `aibqqebwlladjjkeqllo.supabase.co` (Producción). `capacitor.config.json`
+    sin `server.url`.
+  - **Contenido integrado:** reseñas (`comunidad/resenas`, "Me sirvió"),
+    "Compartir invitación", géneros (en el chunk de la ficha: Música → géneros
+    → Serie → Puntajes), el aviso del registro y la opción "Medición de
+    campañas con Meta" con su explicación; en el dex, `YumpApp`,
+    `MedicionMeta`, `MedicionMetaPlugin` y `FacebookSdk`; en el manifest,
+    `YumpApp`, `com.facebook.sdk.ApplicationId` y AD_ID, **sin**
+    `FacebookInitProvider` ni `ACCESS_ADSERVICES_*`.
+  - **Sin configuración de pruebas:** 0 `localhost:<puerto>`, 0 `54321`, 0
+    `revision-local`/`COMUNIDAD_REVISION_LOCAL`/arnés, 0 `service_role`,
+    `COMUNIDAD_HMAC`, `TMDB_READ_TOKEN`, `CRON_SECRET` o tokens de Upstash; 0
+    archivos `.env`, 0 source maps, 0 keystores. Las únicas menciones de
+    `localhost`/`127.0.0.1` son la lista interna de hosts del cliente de
+    Supabase (código de la librería, no configuración).
+  No se repitieron las baterías generales (ya corridas sobre esta rama).
+  **Data Safety corregida** (`docs/PLAY-STORE.md` §2.h): las dos filas de Meta
+  se declaran **"Opcional"** según la definición de Google (opt-out disponible
+  para todos y la app funciona sin el dato); la recomendación anterior de
+  "obligatorio" por arrancar activado quedó retirada.
+  **Antes de enviarlo, en Play Console (dueño):**
+  1. Confirmar que el mayor `versionCode` subido sigue siendo 4.
+  2. Contenido de la app → **ID de publicidad**: "Sí", usos *Analytics* y
+     *Advertising or marketing*.
+  3. **Seguridad de los datos**: agregar *Device or other IDs* y *App
+     interactions*, recogidos y **compartidos** (Meta), finalidades
+     *Analytics* y *Advertising or marketing*, **opcionales**, cifrados en
+     tránsito; la eliminación de cuenta no borra lo enviado a Meta.
+  4. Verificar que la URL de la política de privacidad de la ficha sea
+     `https://yump.ar/privacidad/`.
+  5. "Contiene anuncios": sin cambios por Meta (§2.e).
+  6. Notas de la versión de la 1.3.0.
+
+- **AAB 5: integración de los cuatro cambios y medición de Meta desactivable
+  (ANTECEDENTE del AAB generado arriba: la versión, las páginas legales y la
+  prueba del dueño quedaron resueltas ahí; 2026-10-30; rama local `release/aab5-integracion`, worktree `wt-aab5`,
+  desde `main` `e8929e5`; SIN push, SIN merge, SIN versión, SIN AAB).**
+  **Base y pendientes (Git):** reseñas de usuarios y "Compartir invitación"
+  ya estaban en `main` (`feat/compartir-invitacion`, `fix/icono-compartir-match`
+  e `integracion/yumpea-compartir` no tienen commits fuera de `main`). Faltaban
+  `fix/ficha-generos-arriba` (`6fbf1af`, fusión directa) y `feat/meta-sdk`
+  (`f91add1`, `ec7aeef`, sobre `915ef2e`): merge `1e469bf`, único conflicto
+  en este archivo (se conservan las dos entradas).
+  **Decisión del dueño (30/10/2026): medición ACTIVADA POR DEFECTO con
+  posibilidad de desactivarla.** Sin ventanas ni pedidos de permiso al abrir la
+  app, tampoco en la primera apertura. El registro informa y Sobre Yump ofrece
+  la opción. El dueño edita las páginas legales de `yump.ar`; Claude no las
+  tocó.
+  - **Registro** (`app/cuenta/page.tsx`, texto en `lib/legal.ts` →
+    `AVISO_REGISTRO`): "Al continuar, aceptás nuestros Términos y Condiciones
+    y la Política de Privacidad sobre el uso de datos para medición y mejora de
+    la app.", con los enlaces a `https://yump.ar/terminos/` y
+    `https://yump.ar/privacidad/` (`target="_blank"`, el mismo mecanismo de
+    Sobre Yump). Sólo en el modo "Crear cuenta". **El texto no representa una
+    aceptación anterior al registro ni de quienes usan la app sin cuenta**, y
+    no es el consentimiento de la medición: la medición es activada por defecto
+    y se controla en Sobre Yump. **No se presenta como consentimiento previo ni
+    como cumplimiento legal certificado** (indicación del dueño, 30/10): es un
+    aviso informativo; la revisión legal de las páginas es del dueño.
+  - **Sobre Yump** (`components/legal/MedicionMetaOpcion.tsx`,
+    `lib/medicion-meta.ts`): "Medición de campañas con Meta", con la
+    explicación acordada y un interruptor. Va dentro de `SobreYump`, que se
+    monta también en `/cuenta` sin sesión: se usa sin cuenta. **Sólo en la app
+    Android**: en la web y la PWA no hay SDK de Meta y la opción no se muestra.
+    Controla sólo Meta, no Vercel Analytics ni nada más.
+  - **Desactivación real (Android):** el manifest QUITA el
+    `FacebookInitProvider` del SDK (que lo inicializaba antes que cualquier
+    código nuestro y consultaba a Meta aunque los eventos estuvieran apagados)
+    y la app tiene `YumpApp` (Application), que inicializa el SDK **sólo si la
+    medición está activa**. La elección vive en SharedPreferences
+    (`yump.medicion` / `meta_activa`, default `true` sólo si no hay elección
+    guardada); la lógica está en `MedicionMeta.java` y el puente es el plugin
+    LOCAL `MedicionMetaPlugin` (no es un paquete nuevo). Apagar durante el uso
+    pone en `false` los eventos automáticos y la recolección del ID de
+    publicidad (`setAutoLogAppEventsEnabled`, `setAdvertiserIDCollectionEnabled`,
+    que el SDK también persiste), sin reiniciar. En la apertura siguiente, con
+    la medición desactivada, el SDK no se inicializa. Reactivar lo inicializa en
+    el acto.
+  - **Por dispositivo, no por cuenta:** cerrar sesión, cambiar de cuenta o
+    eliminar la cuenta no la tocan (son operaciones de la WebView y de
+    Supabase; las SharedPreferences nativas no las ve ninguna). Una
+    actualización conserva las SharedPreferences: no reactiva una elección
+    desactivada. Desinstalar la borra; con la copia de seguridad de Android
+    (`allowBackup="true"`) puede volver al reinstalar.
+  - **Mínima:** sin eventos propios, sin datos de cuenta ni contenido de
+    reseñas hacia Meta. `lib/meta-sdk.test.ts` fija que sólo `MedicionMeta.java`
+    nombra al SDK y con qué seis métodos.
+
+  **Comprobado del SDK real (bytecode de `facebook-core` 18.3.0 con `javap`,
+  no en ejecución):** `sdkInitialize` llama siempre a
+  `FetchedAppSettingsManager.loadAppSettingsAsync`, aunque los eventos
+  automáticos estén apagados (por eso se quitó el provider); el seguimiento de
+  aperturas arranca sólo con `getAutoLogAppEventsEnabled`;
+  `logActivateAppEvent` comprueba la misma bandera; el ID de publicidad sólo
+  se lee con `getAdvertiserIDCollectionEnabled`; las dos banderas se guardan en
+  `com.facebook.sdk.USER_SETTINGS`.
+  **Límites del SDK (informados):** (1) lo que el SDK ya había registrado en
+  la sesión antes de apagar (la apertura de esa sesión) puede salir en su
+  próximo envío: no hay API pública para descartar esa cola; nada nuevo se
+  registra. (2) Con el SDK ya inicializado en esa sesión, sus consultas
+  internas de configuración pueden seguir hasta cerrar la app; desde la
+  apertura siguiente no se inicializa. (3) `FacebookSdk.sdkInitialize(Context)`
+  está marcado como obsoleto en 18.3.0 (sigue siendo la forma documentada de
+  inicializar a mano); revisarlo al actualizar el SDK.
+
+  **Verificado:**
+  - `tsc` 0; `npm test` 2552: 2533 pasan, 0 fallan, 18 omitidas (la única
+    falla intermedia era el inventario de `catch`, que ahora clasifica el de
+    `lib/medicion-meta.ts`); tests focalizados `meta-sdk`, `medicion-meta`,
+    `splash-nativo`, `plugins-nativos`, `descartes-tmdb-inventario` en verde.
+  - `:app:assembleDebug` con el JBR de Android Studio: compila. Manifest
+    fusionado: `android:name="ar.yump.app.YumpApp"`, **ningún**
+    `FacebookInitProvider`, AD_ID presente, ningún `ACCESS_ADSERVICES_*`,
+    `BIND_GET_INSTALL_REFERRER_SERVICE` presente. Quedan los dos receivers de
+    tokens del SDK (`exported="false"`, sólo reaccionan a difusiones del propio
+    SDK). La release no minimiza (`minifyEnabled false`).
+  - Web local (`next dev`, 390 px): el aviso del registro con el texto exacto,
+    12,5 px, y los dos enlaces con `target="_blank"`; la opción de Meta **no**
+    aparece en la web. Captura fuera del repo:
+    `D:\DESARROLLO\stream central\capturas-aab5\registro-aviso-web.jpg`.
+  - Compartir por WhatsApp: **por código**, `lib/compartir-accion.ts` usa
+    `@capacitor/share` y no depende de Meta; con la medición desactivada el SDK
+    ni se inicializa.
+
+  **NO verificado (no hay teléfono conectado ni imagen de emulador instalada;
+  `adb devices` vacío):** la activación inicial, la desactivación durante el
+  uso, el reinicio desactivado, la reactivación, el control sin cuenta y el
+  compartir en la app; el tráfico hacia Meta y los eventos en el Administrador
+  de eventos. Tampoco se vio la opción dibujada dentro de la app.
+  **Prueba propuesta en teléfono** (APK de depuración de esta rama):
+  1. Instalación limpia → abrir: ninguna ventana; en el Administrador de
+     eventos de Meta (app 1114281058003052, "Probar eventos") aparecen la
+     instalación y la apertura.
+  2. Sin cuenta, Cuenta → Sobre Yump → desactivar → volver al Home, salir y
+     entrar: no llega ninguna apertura nueva.
+  3. Forzar cierre y abrir: sigue "Desactivada"; ninguna apertura.
+  4. Iniciar sesión, cerrarla y entrar con otra cuenta: sigue "Desactivada".
+  5. Reactivar → salir y entrar: vuelven las aperturas.
+  6. Con la medición desactivada, "Compartir invitación" de una sala →
+     WhatsApp abre la hoja con el enlace.
+  Con `adb logcat` y el proxy del emulador se puede ver además que con la
+  medición desactivada no sale ninguna petición a `graph.facebook.com`.
+
+  **Declaraciones de Google Play que cambian** (detalle en
+  `docs/PLAY-STORE.md` §2.h): ID de publicidad "Sí" (atribución/analítica);
+  Data Safety con *Device or other IDs* e *App interactions* recogidos y
+  **compartidos con Meta**, con su finalidad; "Contiene anuncios" no cambia por
+  el SDK (no muestra anuncios; la decisión de §2.e es por YouTube).
+  **Impedimentos concretos para el AAB integrado:** (1) prueba en dispositivo
+  pendiente; (2) `versionCode`/`versionName` sin fijar — el mayor subido a
+  Play es 4 (dueño, 22/10); candidato `5 (1.3.0)` por traer funcionalidad
+  visible, decisión del dueño; (3) `yump.ar/terminos` y `yump.ar/privacidad`
+  tienen que nombrar a Meta y la desactivación antes de publicar; (4) las
+  declaraciones de Play Console; (5) el AAB se firma con el keystore del dueño
+  y el bundle web necesita las variables públicas de Producción, que esta
+  sesión no usa (`.env.local` fuera de alcance).
 
 - **"Elegidas para vos" no se reponía al descartar (2026-10-29; rama
   `fix/descartes-rellenan-riel`, MERGEADA `50ebc93` y DESPLEGADA — deploy
@@ -2394,6 +2612,32 @@ reusa su diseño, no se mergea.
   token de la CLI está vencido): que el proyecto ya no declare el cron lo
   tiene que confirmar el dueño; la prueba en la web de Producción y en el
   teléfono.
+- **SDK de Meta en Android: integración mínima en rama (2026-10-22; sin merge,
+  sin AAB, sin publicar). ANTECEDENTE: el 30/10 se integró en
+  `release/aab5-integracion` y el SDK dejó de arrancar solo; ver la entrada
+  "AAB 5".** Decisión del dueño (21/10): medir las campañas de
+  Meta, porque la campaña de Google App (15/10, pausada por el dueño el 22/10)
+  trajo 238 adquisiciones y solo 31 primeros accesos en 28 días, con 28
+  dispositivos activos al mes (Play Console, captura del dueño).
+  **Hecho en `feat/meta-sdk`:**
+  - `facebook-core` 18.3.0 y la app de Meta 1114281058003052, con su token de
+    cliente en `strings.xml`.
+  - `AutoLogAppMetadataEnabled=false`.
+  - AD_ID declarado; los cuatro `ACCESS_ADSERVICES_*` quitados.
+  - `lib/meta-sdk.test.ts`.
+
+  **Comprobado:**
+  - `assembleDebug` compila con el JBR 21.
+  - El manifest fusionado trae AD_ID y `BIND_GET_INSTALL_REFERRER_SERVICE`, y ningún `ACCESS_ADSERVICES_*`.
+  - `npm test`: 0 fallos.
+
+  **No probado:** nada se probó en un teléfono, y que lleguen eventos a Meta no está verificado.
+
+  **Pendiente antes del AAB:**
+  - Esta rama NO toca versionCode ni versionName. Sale junto con la versión 5, que trae reseñas y otras correcciones (decisión del dueño, 22/10). El número lo fija esa integración: hoy el mayor subido a Play es 4, confirmado por el dueño el 22/10.
+  - El texto de Meta en `yump.ar/privacidad`.
+  - En Play Console: ID de publicidad "Sí" y Data Safety con *ID de dispositivo u otros* e *Interacciones con la app*, compartidos con Meta.
+
 - **Top exclusivamente manual: auditoría de cachés y compatibilidad con
   Android 1.2.0 (2026-10-20, antes del merge; sin cambios de código).**
   **Cachés — comprobado por código:** la única puerta del ranking automático a

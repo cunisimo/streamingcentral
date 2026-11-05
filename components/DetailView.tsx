@@ -194,6 +194,9 @@ export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }
         <CastRail cast={t.cast} />
         {t.directors.length > 0 && <p className="dcast"><b>Dirección:</b> {t.directors.join(", ")}</p>}
         {t.composers.length > 0 && <p className="dcast"><b>Música:</b> {t.composers.slice(0, 2).join(", ")}</p>}
+        {t.genres.length > 0 && (
+          <div className="gtags">{t.genres.map((g) => <span key={g} className="gt">{genreLabel(g)}</span>)}</div>
+        )}
         {t.type === "tv" && (t.seasons != null || t.episodes != null) && (
           <p className="dcast">
             <b>Serie:</b>{" "}
@@ -220,10 +223,6 @@ export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }
             leen sólo con sesión desde el cliente; sin sesión, la invitación.
             Con el módulo apagado, sólo la de Yump, como antes. */}
         <ResenasAcordeon key={`${t.type}:${t.id}`} resenas={resenas} titulo={{ tipo: t.type, tmdbId: t.id }} />
-
-        {t.genres.length > 0 && (
-          <div className="gtags">{t.genres.map((g) => <span key={g} className="gt">{genreLabel(g)}</span>)}</div>
-        )}
 
         {t.related.length > 0 && (
           <>
