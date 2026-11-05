@@ -786,8 +786,9 @@ rechaza una versión sin ese permiso.
 política de privacidad tiene que nombrar a Meta, qué se envía (instalación,
 aperturas, ID de publicidad), para qué y cómo desactivarlo desde Sobre Yump.
 El aviso del registro enlaza Términos y Privacidad; es informativo: no es un
-consentimiento previo ni acredita cumplimiento legal. **No publicar en Play
-todavía** (dueño, 30/10).
+consentimiento previo ni acredita cumplimiento legal. El dueño informó el 05/11
+que `5 (1.3.0)` está publicada; Claude no vio Play Console ni estas
+declaraciones.
 
 ## 3. Eliminación de cuenta
 

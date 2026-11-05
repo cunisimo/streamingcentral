@@ -1,6 +1,6 @@
 # Estado de Yump
 
-> **Estado canónico. Actualizado el 31 de octubre de 2026 (noche, AR).**
+> **Estado canónico. Actualizado el 5 de noviembre de 2026.**
 > Leer este bloque antes de los antecedentes históricos. Arquitectura y reglas:
 > [`CLAUDE.md`](../CLAUDE.md). Problemas históricos: [`ISSUES.md`](ISSUES.md).
 > No duplicar este estado en otros manuales: enlazarlo.
@@ -19,7 +19,8 @@ el dueño), **Producción** (comprobado contra `app.yump.ar`).
 **Producción web (31/10/2026).** `main` = **`392128e`**: merge de
 `feat/reco-diversidad`, la diversidad de «Elegidas para vos». Deploy
 Production **7466430755** `success`. Es un cambio sólo de servidor: el camino
-con sesión está pendiente de la prueba del dueño (ver la entrada del 31/10).
+con sesión lo aprobó el dueño en Producción (informado por él el 05/11; Claude
+no lo observó; ver las entradas del 31/10 y del 05/11).
 **Antes (29/10):** `main` = `3a58eb6` (merge de reseñas de la comunidad,
 APAGADAS, con «Elegidas para vos» incluido), desplegado: deploy Production
 7424014089 `success`. Reseñas: migraciones 022 y 011–021 aplicadas
@@ -98,18 +99,19 @@ y `publicacion_activa` están en `true` (encendido hecho por el dueño, que el
 permiso de la sesión lo bloqueó). `top_yumpers_activo` y `muestreo_activo`
 siguen en `false`.
 
-**AAB `5 (1.3.0)` — GENERADO Y FIRMADO, SIN SUBIR (30/10/2026).** Desde la rama
-local `release/aab5-integracion` (`0b7a9f5`, worktree `wt-aab5`; sin push ni
-merge): reseñas de usuarios, compartir invitaciones, géneros debajo de Música y
-el SDK de Meta con su opción de desactivación. Copia estable
-`D:\DESARROLLO\stream central\releases\Yump-1.3.0-vc5.aab`, SHA-256
-`ae96f9855aff76386ef33c8d7820e5cd79f3ee2b85a9179149c3454781a32c80`. El dueño
-informó que hizo las pruebas y que actualizó las páginas legales; el tráfico
-hacia Meta no lo verificó Claude. ⚠️ El `versionCode 5` se apoya en la
-confirmación del dueño del 22/10 (mayor subido: 4); Claude no puede ver Play
-Console. **No publicar en Google Play todavía** (indicación del dueño, 30/10):
-faltan las declaraciones de Play Console (entrada "AAB 5" y
-`docs/PLAY-STORE.md` §2.h). Detalle en "Evidencia y alcance".
+**AAB `5 (1.3.0)` — PUBLICADO EN GOOGLE PLAY (informado por el dueño).** El dueño
+informó el envío a revisión (30/10) y el 05/11/2026 que ya está publicado;
+Claude no ve Play Console y no tiene la fecha exacta de publicación. Trae
+reseñas de usuarios, compartir invitaciones, géneros debajo de Música y el SDK
+de Meta con su opción de desactivación. Salió de `0b7a9f5`; el artefacto se
+conserva en `D:\DESARROLLO\stream central\releases\Yump-1.3.0-vc5.aab`, SHA-256
+`ae96f9855aff76386ef33c8d7820e5cd79f3ee2b85a9179149c3454781a32c80`. El tráfico
+hacia Meta sigue sin verificar por Claude.
+**Integración pendiente de merge (05/11/2026):** `main` sigue en `dffd1d7`, con
+`versionCode 4`, sin Meta, sin los géneros movidos y sin el aviso del registro:
+**no armar Android desde `main` hasta integrar.** Respaldo en GitHub:
+`release/aab5-integracion` (`0715471`). Integración validada, para el PR hacia
+`main`: `integracion/aab5-en-main`. Ver la entrada del 05/11.
 
 **Google Play (informado por el dueño):** AAB `2 (1.0.0)` en Alpha (28/09);
 AAB `3 (1.1.0)` en Alpha (3/10) y acceso a Producción pedido a Google
@@ -118,8 +120,8 @@ AAB `3 (1.1.0)` en Alpha (3/10) y acceso a Producción pedido a Google
 Console que la versión `4 (1.2.0)` está en Producción desde el 07/10/2026**
 (Claude vio la confirmación del dueño, no la consola). De ahí se sigue que el
 acceso a Producción se concedió; la fecha y el texto de la respuesta de Google
-no están registrados. El repo está en `versionCode 4` / `1.2.0`: el próximo
-AAB tiene que ser `5` o mayor.
+no están registrados. El dueño informó el 05/11 que `5 (1.3.0)` está publicada
+(Claude no vio la consola). El próximo AAB tiene que ser `6` o mayor.
 
 **Pendiente, con lo que falta para cerrarlo:**
 1. ~~**AAB 4**~~ — **resuelto (20/10/2026, informado por el dueño con
@@ -1569,6 +1571,36 @@ reusa su diseño, no se mergea.
 
 ## Evidencia y alcance de esta actualización
 
+- **Integración del AAB 5 con `main` (2026-11-05; respaldada y validada, SIN
+  merge, SIN deploy a Producción, SIN migraciones, SIN AAB nuevo).** Autorización
+  del dueño del 05/11: respaldar la rama y preparar el PR; el merge y el deploy
+  quedan para su revisión.
+  **Remoto, comprobado con `git fetch`:** `main` = `dffd1d7`; la rama
+  `release/aab5-integracion` no existía en GitHub y se subió sin forzar
+  (`0715471`). Integración en la rama `integracion/aab5-en-main`, worktree
+  `wt-aab5-main`, merge `cac33c7`.
+  **Conflicto:** sólo `docs/ESTADO.md` (fecha del encabezado y entradas nuevas de
+  "Evidencia y alcance"). Se conservan las dos entregas enteras; comprobado que
+  ninguna línea de `dffd1d7` se perdió.
+  **Incluye:** Meta y su desactivación, `versionCode 5` / `versionName 1.3.0`,
+  géneros debajo de Música, aviso del registro y la diversidad de "Elegidas para
+  vos" con su arreglo de caché `6e90589`.
+  **Controles sobre `cac33c7`:** `tsc` 0; `npm test` 2575: 2557 pasan, 0 fallan,
+  18 omitidas; `npm run build` OK; controles Android y del SDK (`release-android`,
+  `meta-sdk`, `medicion-meta`, `plugins-nativos`, `avisos-nativos`,
+  `sala/android`) y `reco-huella`: 88/88; scripts de comunidad y salas: 55/55.
+  No se compiló Android de nuevo: el pedido excluye otro AAB, y estos controles
+  leen la configuración sin compilarla.
+  **Informado por el dueño el 05/11, no observado por Claude:** AAB `5 (1.3.0)`
+  publicado en Play; aprobó en Producción "Elegidas para vos" (desplegada el 31/10,
+  deploy 7466430755). No consta el A/B a ciegas. El tráfico hacia Meta sigue sin
+  verificar por Claude.
+  **Efecto del merge:** al desplegar `main`, llegan a la web el aviso del registro
+  y los géneros debajo de Música. La opción de Meta sigue sólo en Android. El
+  push de estas ramas puede generar Previews de Vercel; Producción no cambia.
+  **Siguiente paso:** revisión del dueño del PR; sólo él decide el merge y el
+  deploy.
+
 - **"Elegidas para vos": diversidad (2026-10-31; INTEGRADA en `main` con el
   merge `392128e` y DESPLEGADA: deploy Production 7466430755 `success`; sin
   migraciones ni AAB).** Autorización del dueño del 31/10, después de su prueba
@@ -1677,8 +1709,9 @@ reusa su diseño, no se mergea.
   Producción con su cuenta (descartar, votar, recargar el riel) y A/B a
   ciegas. Antecedente: revisión del dueño (y de Codex), A/B a ciegas y prueba
   con sesión en local. Después, decidir el merge y el deploy.
-- **AAB `5 (1.3.0)`: generado y firmado (2026-10-30; SIN subir a Play, SIN
-  push, SIN merge).** Autorizado por el dueño el 30/10, con la condición de que
+- **AAB `5 (1.3.0)`: generado y firmado (2026-10-30; en esa fecha SIN subir a
+  Play, SIN push, SIN merge; PUBLICADO después, según informó el dueño: ver la
+  entrada del 05/11).** Autorizado por el dueño el 30/10, con la condición de que
   el mayor `versionCode` subido siga siendo 4.
   **Pruebas del dueño — INFORMADAS por él (30/10), no observadas por Claude:**
   dijo que ya realizó las pruebas y no pidió más recorridos ni emulador. Claude
