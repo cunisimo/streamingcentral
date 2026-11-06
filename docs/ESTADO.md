@@ -1,6 +1,6 @@
 # Estado de Yump
 
-> **Estado canónico. Actualizado el 5 de noviembre de 2026.**
+> **Estado canónico. Actualizado el 6 de noviembre de 2026.**
 > Leer este bloque antes de los antecedentes históricos. Arquitectura y reglas:
 > [`CLAUDE.md`](../CLAUDE.md). Problemas históricos: [`ISSUES.md`](ISSUES.md).
 > No duplicar este estado en otros manuales: enlazarlo.
@@ -16,7 +16,11 @@ debajo de "Antecedentes anteriores al 09/09/2026" es histórico. Categorías de 
 pública de deployments de GitHub, estado `success`), **dueño** (informado por
 el dueño), **Producción** (comprobado contra `app.yump.ar`).
 
-**Producción web (31/10/2026).** `main` = **`392128e`**: merge de
+**Producción web (06/11/2026).** `main` = **`17e13a1`**: PR #1, código del AAB 5
+integrado por fast-forward y autorizado por el dueño. Deploy Production
+**7610153320** `success`. Comprobado en `app.yump.ar`: aviso del registro y
+géneros debajo de Música. Ver la entrada del 06/11.
+**Antes (31/10/2026):** `main` = **`392128e`**: merge de
 `feat/reco-diversidad`, la diversidad de «Elegidas para vos». Deploy
 Production **7466430755** `success`. Es un cambio sólo de servidor: el camino
 con sesión lo aprobó el dueño en Producción (informado por él el 05/11; Claude
@@ -100,18 +104,16 @@ permiso de la sesión lo bloqueó). `top_yumpers_activo` y `muestreo_activo`
 siguen en `false`.
 
 **AAB `5 (1.3.0)` — PUBLICADO EN GOOGLE PLAY (informado por el dueño).** El dueño
-informó el envío a revisión (30/10) y el 05/11/2026 que ya está publicado;
-Claude no ve Play Console y no tiene la fecha exacta de publicación. Trae
+informó el envío a revisión (30/10) y que está publicado desde el 03/11/2026;
+Claude no ve Play Console. Trae
 reseñas de usuarios, compartir invitaciones, géneros debajo de Música y el SDK
 de Meta con su opción de desactivación. Salió de `0b7a9f5`; el artefacto se
 conserva en `D:\DESARROLLO\stream central\releases\Yump-1.3.0-vc5.aab`, SHA-256
 `ae96f9855aff76386ef33c8d7820e5cd79f3ee2b85a9179149c3454781a32c80`. El tráfico
 hacia Meta sigue sin verificar por Claude.
-**Integración pendiente de merge (05/11/2026):** `main` sigue en `dffd1d7`, con
-`versionCode 4`, sin Meta, sin los géneros movidos y sin el aviso del registro:
-**no armar Android desde `main` hasta integrar.** Respaldo en GitHub:
-`release/aab5-integracion` (`0715471`). Integración validada, para el PR hacia
-`main`: `integracion/aab5-en-main`. Ver la entrada del 05/11.
+**Integración hecha (06/11/2026):** `main` = `17e13a1`, con `versionCode 5` y
+`1.3.0`. Esta integración no requiere otro AAB (dueño). Un AAB futuro sale de
+`main` y con un `versionCode` mayor. Ver la entrada del 06/11.
 
 **Google Play (informado por el dueño):** AAB `2 (1.0.0)` en Alpha (28/09);
 AAB `3 (1.1.0)` en Alpha (3/10) y acceso a Producción pedido a Google
@@ -1570,6 +1572,28 @@ no están registrados. El dueño informó el 05/11 que `5 (1.3.0)` está publica
 reusa su diseño, no se mergea.
 
 ## Evidencia y alcance de esta actualización
+
+- **Merge del PR #1 (código del AAB 5) y deploy web (2026-11-06; autorizado por el
+  dueño).** Sin migraciones y sin AAB nuevo. Antes del merge, API pública de GitHub:
+  PR #1 abierto, cabeza `17e13a1`, `mergeable_state: clean`, estado `Vercel`
+  `success` y check `Vercel Preview Comments` `success`.
+  **Git:** `main` pasó de `dffd1d7` a `17e13a1` por fast-forward, sin commit de
+  merge, para desplegar el mismo commit validado en Preview. GitHub marca el PR
+  como `merged` (20:29:33 UTC).
+  **Deploy:** Production **7610153320**, `success` (GitHub, 20:30:21 UTC).
+  **Producción, comprobado por Claude en `app.yump.ar`, sin sesión:**
+  - `/titulo/movie/157336`: el orden es «Música: Hans Zimmer», los géneros y
+    después «Puntajes».
+  - `/cuenta`, tocando «Registrate» sin enviar nada: aparece «Crear cuenta» con el
+    aviso «Al continuar, aceptás nuestros Términos y Condiciones y la Política de
+    Privacidad sobre el uso de datos para medición y mejora de la app.», con
+    enlaces a `yump.ar/terminos/` y `yump.ar/privacidad/`. Con «Ingresar» el aviso
+    no se ve.
+  **Informado por el dueño:** AAB 5 publicado desde el 03/11; no requiere otro AAB.
+  **No comprobado en esta entrega:** no se volvieron a correr `tsc`, tests ni build
+  en local (se usó el verde de Vercel y la validación del 05/11); recorrido con
+  sesión; Android; tráfico hacia Meta; contenido de `yump.ar/privacidad`.
+  **Plan de música:** el Checkpoint 1 de «Su música» sigue sin aprobar y no se tocó.
 
 - **Integración del AAB 5 con `main` (2026-11-05; respaldada y validada, SIN
   merge, SIN deploy a Producción, SIN migraciones, SIN AAB nuevo).** Autorización
