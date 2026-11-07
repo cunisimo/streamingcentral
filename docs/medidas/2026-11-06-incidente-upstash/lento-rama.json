@@ -1,0 +1,129 @@
+[
+ {
+  "et": "rama",
+  "n": "ficha sin AR, sin lentos",
+  "mediana": 1082,
+  "tiempos": [
+   1057,
+   1082,
+   1115
+  ],
+  "status": 200,
+  "rel": 6,
+  "degr": null,
+  "disp": null,
+  "sinDisp": null,
+  "golpes": 0
+ },
+ {
+  "et": "rama",
+  "n": "ficha sin AR, 1 proveedor +3 s",
+  "mediana": 3983,
+  "tiempos": [
+   3940,
+   3983,
+   4001
+  ],
+  "status": 200,
+  "rel": 6,
+  "degr": null,
+  "disp": null,
+  "sinDisp": null,
+  "golpes": 1
+ },
+ {
+  "et": "rama",
+  "n": "ficha con AR, sin lentos",
+  "mediana": 519,
+  "tiempos": [
+   487,
+   519,
+   565
+  ],
+  "status": 200,
+  "rel": 12,
+  "degr": null,
+  "disp": null,
+  "sinDisp": null,
+  "golpes": 0
+ },
+ {
+  "et": "rama",
+  "n": "ficha con AR, 1 proveedor +3 s",
+  "mediana": 3454,
+  "tiempos": [
+   3375,
+   3454,
+   3565
+  ],
+  "status": 200,
+  "rel": 12,
+  "degr": null,
+  "disp": null,
+  "sinDisp": null,
+  "golpes": 1
+ },
+ {
+  "et": "rama",
+  "n": "persona sin AR, sin lentos",
+  "mediana": 488,
+  "tiempos": [
+   419,
+   488,
+   809
+  ],
+  "status": 200,
+  "degr": null,
+  "disp": 12,
+  "sinDisp": 0,
+  "golpes": 0
+ },
+ {
+  "et": "rama",
+  "n": "persona sin AR, 1 proveedor +3 s",
+  "mediana": 3549,
+  "tiempos": [
+   3547,
+   3549,
+   3676
+  ],
+  "status": 200,
+  "degr": null,
+  "disp": 12,
+  "sinDisp": 0,
+  "golpes": 1
+ },
+ {
+  "et": "rama",
+  "n": "ficha sin AR, 1 proveedor colgado +20 s",
+  "mediana": 8988,
+  "tiempos": [
+   8831,
+   8988,
+   9117
+  ],
+  "status": 200,
+  "rel": 6,
+  "degr": {
+   "relacionados": 1
+  },
+  "disp": null,
+  "sinDisp": null,
+  "golpes": 1
+ },
+ {
+  "et": "rama",
+  "n": "persona sin AR, 1 proveedor colgado +20 s",
+  "mediana": 8517,
+  "tiempos": [
+   8480,
+   8517,
+   8606
+  ],
+  "status": 200,
+  "degr": null,
+  "disp": 11,
+  "sinDisp": 1,
+  "golpes": 1
+ }
+]

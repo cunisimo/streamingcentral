@@ -1,0 +1,179 @@
+diff --git a/lib/descartes-tmdb-inventario.test.ts b/lib/descartes-tmdb-inventario.test.ts
+index 4539482..d55ea5b 100644
+--- a/lib/descartes-tmdb-inventario.test.ts
++++ b/lib/descartes-tmdb-inventario.test.ts
+@@ -467,6 +467,7 @@ const INVENTARIO: Fila[] = [
+   { archivo: "lib/busqueda-enriquecido.ts", ancla: "deps.enriquecer(c).then((t) => ({ t, degradado: false })).catch", clase: "tmdb-registra", efecto: "contexto", ejecucion: "busqueda" },
+   // Filmografía de una persona: la obra cuyo providersOf falló queda en `sinDisponibilidad` ("no sé", no "no está"); sus datos básicos siguen. La vista no se cachea.
+   { archivo: "lib/filmografia.ts", ancla: "} catch (e) {", clase: "tmdb-registra", efecto: "contexto", ejecucion: "filmografia" },
++  { archivo: "lib/lote-proveedores.ts", ancla: "Promise.allSettled(pendientes)", clase: "no-tmdb", motivo: "sólo espera a la tanda: no atrapa nada, cada error le llega a quien lo pidió" },
+   { archivo: "lib/settle-all.ts", ancla: "Promise.allSettled(tareas)", clase: "tmdb-registra", efecto: "contexto", ejecucion: "settleAll" },
+   // pools: el contexto lo abre el Home (por contexto async) y hay VARIOS
+   // recorridos soportados desde composeHome que llegan al mismo sitio, todos
+diff --git a/lib/enrich.ts b/lib/enrich.ts
+index 3a17976..8489fdb 100644
+--- a/lib/enrich.ts
++++ b/lib/enrich.ts
+@@ -40,6 +40,7 @@ import { hayFallosDisponibilidad, registrarFalloDisponibilidad } from "./fallos-
+ import { registrarDescarteTmdb, withFallosDeFuentes } from "./fallos-tmdb";
+ import { esErrorTmdb } from "./tmdb-error";
+ import { settleAll } from "./settle-all";
++import { barreraDeLote } from "./lote-proveedores";
+ import { producirBusquedaConFallos } from "./busqueda-enriquecido";
+ import {
+   armarFilmografia, armarFilmografiaV1, repararCreditos, resolverBloque, type GrupoObra,
+@@ -231,8 +232,10 @@ export async function watchLinkFor(type: MediaType, id: number): Promise<string
+ // la Etapa 3.a: mismo comportamiento, y cada descarte de causa TMDB queda
+ // registrado en el contexto de fallos (H2).
+ 
+-async function toUITitle(t: RawTitle, type: MediaType, published?: Set<string>): Promise<UITitle> {
+-  const prov = await providersOf(type, t.id);
++async function toUITitle(
++  t: RawTitle, type: MediaType, published?: Set<string>, leerProveedores: typeof providersOf = providersOf,
++): Promise<UITitle> {
++  const prov = await leerProveedores(type, t.id);
+   // Camino central. Con proveedor de TMDB devuelve el MISMO array y no cuesta
+   // nada; sin proveedor consulta los respaldos. Ver `disponibilidadDe`.
+   const codes = await disponibilidadDe(type, t.id, prov);
+@@ -1273,8 +1276,12 @@ export async function genreCovers(): Promise<Record<string, string | null>> {
+ 
+ // La disponibilidad de UNA obra: el mismo camino que `toUITitle` (providersOf +
+ // resolvedor central), sin armar la card, que el cliente ya tiene.
+-async function plataformasDeObra(tipo: MediaType, id: number): Promise<PlatformCode[]> {
+-  return disponibilidadDe(tipo, id, await providersOf(tipo, id));
++// Una barrera por tanda (ver lib/lote-proveedores.ts): así las lecturas de `disp:`
++// y `oficial:` de un bloque salen juntas en vez de una por título.
++function plataformasDeObra() {
++  const leerProveedores = barreraDeLote(providersOf);
++  return async (tipo: MediaType, id: number): Promise<PlatformCode[]> =>
++    disponibilidadDe(tipo, id, await leerProveedores(tipo, id));
+ }
+ 
+ // Lo común a v1 y v2, y lo único que cuesta en caliente: la persona y sus
+@@ -1310,20 +1317,20 @@ async function creditosDePersona(id: number) {
+ /** Contrato v2 (`?filmografia=v2`): no depende de las plataformas del usuario. */
+ export async function personFilmography(id: number): Promise<FilmografiaPersona> {
+   const { det, credits, aObra, person } = await creditosDePersona(id);
+-  const res = await armarFilmografia({ credits, conocidoPor: det.known_for_department, aObra, plataformasDe: plataformasDeObra });
++  const res = await armarFilmografia({ credits, conocidoPor: det.known_for_department, aObra, plataformasDe: plataformasDeObra() });
+   return { person, ...res };
+ }
+ 
+ /** Contrato v1 (sin `filmografia`): bundles Android anteriores. ≤ 40 evaluadas. */
+ export async function personFilmographyLegado(id: number, providers: PlatformCode[]): Promise<FilmografiaLegado> {
+   const { credits, aObra, person } = await creditosDePersona(id);
+-  const res = await armarFilmografiaV1({ credits, providers, aObra, plataformasDe: plataformasDeObra });
++  const res = await armarFilmografiaV1({ credits, providers, aObra, plataformasDe: plataformasDeObra() });
+   return { person, ...res };
+ }
+ 
+ /** "Ver más": la disponibilidad de un bloque de obras (`tipo:id`, máx. 24). */
+ export async function disponibilidadFilmografia(claves: string[]): Promise<DisponibilidadObras> {
+-  return resolverBloque(claves, plataformasDeObra);
++  return resolverBloque(claves, plataformasDeObra());
+ }
+ 
+ // --- Detalle completo (merge TMDB + providers + reseña + relacionados) ---
+@@ -1452,8 +1459,10 @@ export async function detail(
+   // a las plataformas del usuario. Antes no se filtraban y el riel llevaba a
+   // fichas con el cartel "No está en streaming" — callejones sin salida.
+   const recs = (d.recommendations?.results ?? []).filter((r) => r.poster_path).slice(0, 24);
++  // Una barrera para la tanda: ver lib/lote-proveedores.ts.
++  const leerProveedores = barreraDeLote(providersOf);
+   const relatedTodos = await settleAll(
+-    recs.map((r) => toUITitle(r, type, pub)), `related ${type}/${id}`,
++    recs.map((r) => toUITitle(r, type, pub, leerProveedores)), `related ${type}/${id}`,
+   );
+   if (relatedTodos.length < recs.length) degradacion.relacionados = recs.length - relatedTodos.length;
+   const related = (providers.length
+diff --git a/lib/lote-proveedores.test.ts b/lib/lote-proveedores.test.ts
+new file mode 100644
+index 0000000..108082e
+--- /dev/null
++++ b/lib/lote-proveedores.test.ts
+@@ -0,0 +1,52 @@
++import { test } from "node:test";
++import assert from "node:assert/strict";
++import { barreraDeLote } from "./lote-proveedores.ts";
++
++const diferida = <T>() => {
++  let resolve!: (v: T) => void, reject!: (e: unknown) => void;
++  const promise = new Promise<T>((a, b) => { resolve = a; reject = b; });
++  return { promise, resolve, reject };
++};
++const ticks = async () => { for (let i = 0; i < 10; i++) await Promise.resolve(); };
++
++test("nadie sigue hasta que todos los del mismo tick terminaron", async () => {
++  const a = diferida<string>(), b = diferida<string>();
++  const leer = barreraDeLote(async (k: "a" | "b") => (k === "a" ? a : b).promise);
++  const llegadas: string[] = [];
++  const pa = leer("a").then((v) => { llegadas.push(v); });
++  const pb = leer("b").then((v) => { llegadas.push(v); });
++  a.resolve("A");
++  await ticks();
++  assert.deepEqual(llegadas, [], "el rápido no puede adelantarse");
++  b.resolve("B");
++  await Promise.all([pa, pb]);
++  assert.deepEqual(llegadas, ["A", "B"]);
++});
++
++test("cada uno recibe su valor y la lectura se hace una sola vez por pedido", async () => {
++  let n = 0;
++  const leer = barreraDeLote(async (x: number) => { n++; return x * 2; });
++  assert.deepEqual(await Promise.all([leer(1), leer(2), leer(3)]), [2, 4, 6]);
++  assert.equal(n, 3);
++});
++
++test("un fallo le llega sólo a quien lo pidió y no adelanta a los demás", async () => {
++  const lento = diferida<string>();
++  const leer = barreraDeLote(async (k: string) => {
++    if (k === "falla") throw new Error("429");
++    return lento.promise;
++  });
++  const pf = leer("falla"), pl = leer("lento");
++  let termino = false;
++  void pl.then(() => { termino = true; });
++  await ticks();
++  assert.equal(termino, false);
++  lento.resolve("ok");
++  await assert.rejects(pf, /429/);
++  assert.equal(await pl, "ok");
++});
++
++test("sin nadie más, no se traba", async () => {
++  const leer = barreraDeLote(async () => "solo");
++  assert.equal(await leer(), "solo");
++});
+diff --git a/lib/lote-proveedores.ts b/lib/lote-proveedores.ts
+new file mode 100644
+index 0000000..a1f7e3f
+--- /dev/null
++++ b/lib/lote-proveedores.ts
+@@ -0,0 +1,27 @@
++// Una barrera para los títulos de una misma tanda: nadie sigue hasta que TODOS
++// tienen sus proveedores.
++//
++// POR QUÉ. Sin proveedores en Argentina, cada título lee después `oficial:`.
++// El batcher de `lib/cache.ts` sólo junta lo que se pide en el mismo
++// tick, y en frío cada `providersOf` vuelve de TMDB en su propio momento: esas
++// lecturas salían de a una, un MGET por clave. Con la barrera todos llegan a la
++// vez y salen en un solo lote.
++//
++// LO QUE NO AHORRA: las escrituras. Cada SET sigue siendo un comando.
++//
++// La barrera se crea POR TANDA, nunca a nivel de módulo: junta sólo lo que se
++// pide en el mismo tick. Espera a todos con `allSettled` para que un título
++// fallido no adelante a los demás; y su error le llega sólo a quien lo pidió.
++export function barreraDeLote<A extends unknown[], R>(
++  leer: (...args: A) => Promise<R>,
++): (...args: A) => Promise<R> {
++  const pendientes: Promise<R>[] = [];
++  let barrera: Promise<unknown> | null = null;
++  return async (...args: A) => {
++    const propia = leer(...args);
++    pendientes.push(propia);
++    barrera ??= Promise.resolve().then(() => Promise.allSettled(pendientes));
++    await barrera;
++    return propia;
++  };
++}

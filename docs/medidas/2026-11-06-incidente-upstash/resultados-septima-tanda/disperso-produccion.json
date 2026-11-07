@@ -1,0 +1,170 @@
+[
+ {
+  "et": "produccion",
+  "n": "TMDB 40/120",
+  "c": "ficha sin AR",
+  "cmd": 135,
+  "MGET": 67,
+  "SET": 66,
+  "tmdb": 44,
+  "ms": 1471,
+  "rango": [
+   134,
+   135
+  ]
+ },
+ {
+  "et": "produccion",
+  "n": "TMDB 40/120",
+  "c": "ficha mezclada",
+  "cmd": 88,
+  "MGET": 34,
+  "SET": 53,
+  "tmdb": 33,
+  "ms": 984,
+  "rango": [
+   87,
+   89
+  ]
+ },
+ {
+  "et": "produccion",
+  "n": "TMDB 40/120",
+  "c": "persona sin AR",
+  "cmd": 86,
+  "MGET": 38,
+  "SET": 47,
+  "tmdb": 26,
+  "ms": 674,
+  "rango": [
+   78,
+   88
+  ]
+ },
+ {
+  "et": "produccion",
+  "n": "TMDB 40/120",
+  "c": "Ver más sin AR",
+  "cmd": 170,
+  "MGET": 73,
+  "SET": 96,
+  "tmdb": 48,
+  "ms": 969,
+  "rango": [
+   162,
+   170
+  ]
+ },
+ {
+  "et": "produccion",
+  "n": "TMDB 80/250",
+  "c": "ficha sin AR",
+  "cmd": 135,
+  "MGET": 67,
+  "SET": 66,
+  "tmdb": 44,
+  "ms": 1522,
+  "rango": [
+   134,
+   135
+  ]
+ },
+ {
+  "et": "produccion",
+  "n": "TMDB 80/250",
+  "c": "ficha mezclada",
+  "cmd": 88,
+  "MGET": 34,
+  "SET": 53,
+  "tmdb": 33,
+  "ms": 1231,
+  "rango": [
+   84,
+   88
+  ]
+ },
+ {
+  "et": "produccion",
+  "n": "TMDB 80/250",
+  "c": "persona sin AR",
+  "cmd": 86,
+  "MGET": 38,
+  "SET": 47,
+  "tmdb": 26,
+  "ms": 749,
+  "rango": [
+   84,
+   88
+  ]
+ },
+ {
+  "et": "produccion",
+  "n": "TMDB 80/250",
+  "c": "Ver más sin AR",
+  "cmd": 170,
+  "MGET": 73,
+  "SET": 96,
+  "tmdb": 48,
+  "ms": 884,
+  "rango": [
+   167,
+   170
+  ]
+ },
+ {
+  "et": "produccion",
+  "n": "TMDB 150/900",
+  "c": "ficha sin AR",
+  "cmd": 135,
+  "MGET": 67,
+  "SET": 66,
+  "tmdb": 44,
+  "ms": 2552,
+  "rango": [
+   134,
+   135
+  ]
+ },
+ {
+  "et": "produccion",
+  "n": "TMDB 150/900",
+  "c": "ficha mezclada",
+  "cmd": 87,
+  "MGET": 34,
+  "SET": 52,
+  "tmdb": 33,
+  "ms": 2220,
+  "rango": [
+   84,
+   89
+  ]
+ },
+ {
+  "et": "produccion",
+  "n": "TMDB 150/900",
+  "c": "persona sin AR",
+  "cmd": 87,
+  "MGET": 38,
+  "SET": 48,
+  "tmdb": 26,
+  "ms": 1761,
+  "rango": [
+   83,
+   88
+  ]
+ },
+ {
+  "et": "produccion",
+  "n": "TMDB 150/900",
+  "c": "Ver más sin AR",
+  "cmd": 170,
+  "MGET": 73,
+  "SET": 96,
+  "tmdb": 48,
+  "ms": 1710,
+  "rango": [
+   169,
+   170
+  ]
+ }
+]

@@ -1,0 +1,171 @@
+diff --git a/CLAUDE.md b/CLAUDE.md
+index 7bd27dc..517dc9d 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -666,7 +666,7 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
+   🔴 **Los respaldos nunca contradicen a TMDB.** Si TMDB ubica el título en otra
+   plataforma, el dato en conflicto es el nuestro. Y **un fallo nunca es una
+   ausencia**: si Supabase o TMDB se caen se devuelve lo de TMDB y **no se
+-  cachea** (`fallo` viaja hasta `cachedIf`).
++  cachea** (`fallo` viaja por `registrarFalloDisponibilidad`).
+ - **La ÚNICA resta son las SUPRESIONES** (`lib/supresiones-disponibilidad.ts`,
+   issue #24): títulos que TMDB afirma en una plataforma y **el dueño verificó
+   dentro de esa plataforma** que no están. Nacieron el 2026-09-20 con 20
+@@ -689,9 +689,10 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
+   no se ve al deployar. Un test ata las dos versiones. `pv3:` no se toca nunca:
+   la supresión se aplica al leerlo, sobre una copia.
+ - **Un fallo de disponibilidad NO se congela en las cachés de afuera**
+-  (`lib/fallos-disponibilidad.ts`). `disponibilidadDe` no guardaba su `disp:`
+-  cuando la evidencia fallaba, pero devolvía sólo el array de plataformas y la
+-  señal moría ahí: **más afuera sí se guardaba**, así que una caída de dos
++  (`lib/fallos-disponibilidad.ts`). `disponibilidadDe` no guarda nada (la copia
++  `disp:<tipo>:<id>` se retiró por costo; `disp:top-manual` y `oficial:` siguen),
++  pero devolvía sólo el array de plataformas y la señal moría ahí: **más afuera
++  sí se guardaba**, así que una caída de dos
+   segundos dejaba títulos en gris por un día. La señal viaja por **contexto
+   async**, como `withCacheMetrics`: si se pasara por parámetro habría que
+   enhebrarla por `toUITitle` → `enrichRaw` → `listByCategory` → cada llamador, y
+diff --git a/app/api/admin-search/route.ts b/app/api/admin-search/route.ts
+index e7923f8..c3cad7e 100644
+--- a/app/api/admin-search/route.ts
++++ b/app/api/admin-search/route.ts
+@@ -72,7 +72,7 @@ export async function GET(req: NextRequest) {
+     if (!crudos.length) return NextResponse.json({ items: [] });
+ 
+     // `cardsByIds` reusa los MISMOS caches que la app pública (`card:`, `pv3:`,
+-    // `disp:`), así que buscar desde el dashboard no paga proveedores aparte de
++    // `oficial:`), así que buscar desde el dashboard no paga proveedores aparte de
+     // los que ya se hubieran pedido.
+     const cards = await cardsByIds(crudos.map((c) => ({ tipo: c.tipo, id: c.id })));
+     // La clave es `tipo:id` y no el id solo: en la búsqueda combinada pueden
+diff --git a/lib/claves.ts b/lib/claves.ts
+index 8543c34..ecb79ca 100644
+--- a/lib/claves.ts
++++ b/lib/claves.ts
+@@ -83,7 +83,7 @@ export const VERSION_HOME: number =
+  * supresión nueva se vea al deployar y no cuando expiren TTLs de hasta 24 h.
+  *
+  * El Home no la lleva: tiene `VERSION_HOME`, que hay que subir a la vez.
+- * `disp:` tampoco: TTL de 5 min y sólo guarda títulos sin dato de TMDB.
++ * `disp:top-manual` tampoco: TTL de 5 min y guarda evidencia, no títulos armados.
+  * `pv3:` NUNCA: es el dato crudo de TMDB, y la supresión se aplica al leerlo.
+  *
+  * `d1`: las 20 supresiones de Disney+ AR del 2026-09-20.
+@@ -232,7 +232,9 @@ export function clavePeoplePopular(page: number, huella: string): ClaveLocalizad
+ //                           regionales; `pv2:` guardaba ids DEDUPLICADOS, que
+ //                           perdían la frecuencia y no servían para comprobar
+ //                           la dominancia por regiones; `pv3:` cuenta regiones
+-//   disp:<tipo>:<id>        disponibilidad ya resuelta de un título vacío en AR
++//   disp:top-manual         evidencia de los rankings publicados. La copia por
++//                           título (`disp:<tipo>:<id>`) ya no existe: se resuelve
++//                           en memoria desde esta clave y `oficial:`
+ //   oficial:<tipo>:<id>     redes, homepage y estreno para la regla de evidencia
+ //                           oficial. Era `serie:oficial:<id>` y sólo cubría
+ //                           series; ahora cubre los dos tipos, y por eso lleva
+@@ -257,7 +259,6 @@ export function clavePeoplePopular(page: number, huella: string): ClaveLocalizad
+ // con el idioma: más arranques fríos a cambio de nada.
+ export const CLAVES_SIN_HUELLA = [
+   "pv3:", "videos:", "genre:covers:", "people:directors", "ed:pub:", "blocklist:",
+-  // Las dos de disponibilidad guardan códigos de plataforma, ids de red, una
+-  // URL y contadores: ningún título, ninguna sinopsis.
+-  "disp:", "oficial:",
++  // Guarda ids de red, una URL y contadores: ningún título, ninguna sinopsis.
++  "oficial:",
+ ] as const;
+diff --git a/lib/disponibilidad-barrido.test.ts b/lib/disponibilidad-barrido.test.ts
+index f7be0dc..a551d03 100644
+--- a/lib/disponibilidad-barrido.test.ts
++++ b/lib/disponibilidad-barrido.test.ts
+@@ -187,6 +187,18 @@ test("el adaptador REGISTRA el fallo, no se lo queda", () => {
+     "disponibilidadDe perdió la señal: la card, el Home y la lista guardarían resultados incompletos");
+ });
+ 
++test("no hay copia `disp:` por título, y la evidencia manual sigue cacheada", () => {
++  const src = codigo("lib/enrich.ts");
++  const m = /export async function disponibilidadDe\([\s\S]*?\n}/.exec(src);
++  assert.ok(m, "no se encontró disponibilidadDe");
++  assert.doesNotMatch(m![0], /cached|disp:/,
++    "volvió una caché adentro de disponibilidadDe: ver el costo medido en docs/medidas/2026-11-06-incidente-upstash/informe.md");
++  assert.match(m![0], /resolverDisponibilidad\(/);
++  assert.doesNotMatch(TODAS.map(codigo).join("\n"), /`disp:\$\{/, "alguien volvió a escribir `disp:<tipo>:<id>`");
++  assert.match(codigo("lib/top-manual.ts"), /CLAVE_EVIDENCIA_MANUAL = "disp:top-manual"/,
++    "el techo de consultas a Supabase depende de esta clave");
++});
++
+ test("el contexto llega a todos los archivos que cachean títulos", () => {
+   // El conteo por superficie lo fija lib/cache-disponibilidad-inventario.test.ts,
+   // que obliga a clasificar CADA cachedLoc del proyecto. Acá sólo se comprueba
+diff --git a/lib/enrich.ts b/lib/enrich.ts
+index 6eb7777..3c60745 100644
+--- a/lib/enrich.ts
++++ b/lib/enrich.ts
+@@ -16,7 +16,7 @@ import { codeForTmdbId, codesToTmdbIds } from "./providers-ar";
+ import { resolveCategory, genreIdsToSlugs, categoryLabel, categoryBySlug, CATEGORIES, type Category } from "./categories";
+ import { curatedTitles, curatedBlocklist, intercalarEstratos } from "./curated";
+ import { getEditorial, publishedIds } from "./reviews";
+-import { cached, cachedIf, cachedLoc, cachedLocIf, TTL, dailySeed, pickDaily } from "./cache";
++import { cached, cachedLoc, cachedLocIf, TTL, dailySeed, pickDaily } from "./cache";
+ import { claveCard, clavePeoplePopular, claveSearch, claveUltimosSeries } from "./claves";
+ import {
+   HUELLA_IDIOMA, IDIOMA_BASE, IDIOMA_EVIDENCIA, IDIOMA_FALLBACK, claveMixta, clavePorId,
+@@ -159,8 +159,8 @@ async function datosTituloDe(
+  * proveedor, así que sin él cada uno pagaría un round-trip a Redis de más.
+  * Devuelve el MISMO array que guardó `providersOf` — no se muta ni se copia.
+  *
+- * Un `fallo` NO se cachea: `cachedIf` deja pasar el valor y no lo guarda, así
+- * que una caída de Supabase no congela un "no está en ningún lado".
++ * Un `fallo` no queda guardado acá porque acá no se guarda nada: se avisa a las
++ * cachés de afuera y el pedido siguiente vuelve a resolver.
+  */
+ export async function disponibilidadDe(
+   type: MediaType, id: number,
+@@ -177,28 +177,27 @@ export async function disponibilidadDe(
+   // array, así que sigue costando cero.
+   const deTmdb = decisionDeTmdb({ tipo: type, id, deTmdb: prov.codes, hayFlatrateAR: prov.hayFlatrateAR });
+   if (deTmdb) return deTmdb;
+-  let fallo = false;
+-  const res = await cachedIf(`disp:${type}:${id}`, TTL.editorial, async () => {
+-    const r = await resolverDisponibilidad({
+-      tipo: type, id, deTmdb: prov.codes, hayFlatrateAR: prov.hayFlatrateAR, hoy: hoyAR(),
+-      // El Top semanal cargado a mano. Va por el resolvedor central y no
+-      // por un camino propio de /top: si viviera sólo allá, la misma
+-      // película saldría en color en el Top y en gris en la ficha, la
+-      // búsqueda y el Home — el bug que este resolvedor existe para impedir.
+-      leerTopManual,
+-      leerDatosTitulo: () => datosTituloDe(type, id, prov.reg ?? { rt: 0, rp: {}, ru: 0 }),
+-    });
+-    fallo = r.fallo;
+-    // La señal sale de esta función y llega a las cachés de AFUERA. Sin esto,
+-    // `disp:` no se guardaba pero la card, el Home y la lista sí — con el
+-    // título en gris adentro, por 24 h, 6 h y 8 h respectivamente.
+-    if (r.fallo) registrarFalloDisponibilidad();
+-    if (r.procedencia && r.procedencia !== "tmdb-ar") {
+-      console.log(`[disponibilidad] ${type}:${id} -> ${r.plataformas.join(",")} (${r.procedencia})`);
+-    }
+-    return r.plataformas;
+-  }, () => !fallo);
+-  return res;
++  // Sin copia por título (`disp:<tipo>:<id>`): sus dos ingredientes ya están
++  // cacheados (`disp:top-manual` y `oficial:`) y se recalcula en memoria. La copia
++  // costaba una escritura por título en cada vencimiento (5 min) para ahorrar dos
++  // lecturas por visita. Ver docs/medidas/2026-11-06-incidente-upstash/informe.md.
++  const r = await resolverDisponibilidad({
++    tipo: type, id, deTmdb: prov.codes, hayFlatrateAR: prov.hayFlatrateAR, hoy: hoyAR(),
++    // El Top semanal cargado a mano. Va por el resolvedor central y no
++    // por un camino propio de /top: si viviera sólo allá, la misma
++    // película saldría en color en el Top y en gris en la ficha, la
++    // búsqueda y el Home — el bug que este resolvedor existe para impedir.
++    leerTopManual,
++    leerDatosTitulo: () => datosTituloDe(type, id, prov.reg ?? { rt: 0, rp: {}, ru: 0 }),
++  });
++  // La señal sale de esta función y llega a las cachés de AFUERA: sin esto, la
++  // card, el Home y la lista se guardarían con el título en gris adentro, por
++  // 24 h, 6 h y 8 h respectivamente.
++  if (r.fallo) registrarFalloDisponibilidad();
++  if (r.procedencia && r.procedencia !== "tmdb-ar") {
++    console.log(`[disponibilidad] ${type}:${id} -> ${r.plataformas.join(",")} (${r.procedencia})`);
++  }
++  return r.plataformas;
+ }
+ 
+ /**

@@ -1,0 +1,1592 @@
+[
+ {
+  "et": "produccion",
+  "caso": "ficha con AR · primera",
+  "comandos": 32,
+  "MGET": 7,
+  "SET": 24,
+  "tmdb": 24,
+  "claves": 26,
+  "hashes": [
+   "921bd0af"
+  ],
+  "etapas": {
+   "editorial ed:": {
+    "MGET": 2,
+    "clavesLeidas": 2,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 1,
+    "SET": 1,
+    "unicasEscritas": 1,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   },
+   "metadata card:": {
+    "MGET": 1,
+    "clavesLeidas": 1,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 0,
+    "SET": 1,
+    "unicasEscritas": 1,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   },
+   "control (PTTL y otros)": {
+    "MGET": 1,
+    "clavesLeidas": 0,
+    "unicasLeidas": 0,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   },
+   "proveedores principal": {
+    "MGET": 2,
+    "clavesLeidas": 2,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 1,
+    "SET": 1,
+    "unicasEscritas": 1,
+    "repetidasEscritas": 0,
+    "tmdb": 1
+   },
+   "tráiler videos:": {
+    "MGET": 1,
+    "clavesLeidas": 1,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 0,
+    "SET": 1,
+    "unicasEscritas": 1,
+    "repetidasEscritas": 0,
+    "tmdb": 1
+   },
+   "relacionados: proveedores": {
+    "MGET": 1,
+    "clavesLeidas": 20,
+    "unicasLeidas": 20,
+    "repetidasLeidas": 0,
+    "SET": 20,
+    "unicasEscritas": 20,
+    "repetidasEscritas": 0,
+    "tmdb": 20
+   },
+   "titleDetails": {
+    "MGET": 0,
+    "clavesLeidas": 0,
+    "unicasLeidas": 0,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 2
+   }
+  }
+ },
+ {
+  "et": "produccion",
+  "caso": "ficha con AR · segunda",
+  "comandos": 7,
+  "MGET": 6,
+  "SET": 0,
+  "tmdb": 1,
+  "claves": 25,
+  "hashes": [
+   "921bd0af"
+  ],
+  "etapas": {
+   "editorial ed:": {
+    "MGET": 2,
+    "clavesLeidas": 2,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 1,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   },
+   "metadata card:": {
+    "MGET": 1,
+    "clavesLeidas": 1,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   },
+   "control (PTTL y otros)": {
+    "MGET": 1,
+    "clavesLeidas": 0,
+    "unicasLeidas": 0,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   },
+   "proveedores principal": {
+    "MGET": 1,
+    "clavesLeidas": 1,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   },
+   "tráiler videos:": {
+    "MGET": 1,
+    "clavesLeidas": 1,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   },
+   "relacionados: proveedores": {
+    "MGET": 1,
+    "clavesLeidas": 20,
+    "unicasLeidas": 20,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   },
+   "titleDetails": {
+    "MGET": 0,
+    "clavesLeidas": 0,
+    "unicasLeidas": 0,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 1
+   }
+  }
+ },
+ {
+  "et": "produccion",
+  "caso": "ficha con AR · 5 simultáneas",
+  "comandos": 149,
+  "MGET": 35,
+  "SET": 113,
+  "tmdb": 113,
+  "claves": 130,
+  "hashes": [
+   "921bd0af",
+   "921bd0af",
+   "921bd0af",
+   "921bd0af",
+   "921bd0af"
+  ],
+  "etapas": {
+   "editorial ed:": {
+    "MGET": 10,
+    "clavesLeidas": 10,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 9,
+    "SET": 5,
+    "unicasEscritas": 1,
+    "repetidasEscritas": 4,
+    "tmdb": 0
+   },
+   "metadata card:": {
+    "MGET": 5,
+    "clavesLeidas": 5,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 4,
+    "SET": 5,
+    "unicasEscritas": 1,
+    "repetidasEscritas": 4,
+    "tmdb": 0
+   },
+   "control (PTTL y otros)": {
+    "MGET": 1,
+    "clavesLeidas": 0,
+    "unicasLeidas": 0,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   },
+   "proveedores principal": {
+    "MGET": 10,
+    "clavesLeidas": 10,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 9,
+    "SET": 4,
+    "unicasEscritas": 1,
+    "repetidasEscritas": 3,
+    "tmdb": 4
+   },
+   "tráiler videos:": {
+    "MGET": 5,
+    "clavesLeidas": 5,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 4,
+    "SET": 2,
+    "unicasEscritas": 1,
+    "repetidasEscritas": 1,
+    "tmdb": 2
+   },
+   "relacionados: proveedores": {
+    "MGET": 5,
+    "clavesLeidas": 100,
+    "unicasLeidas": 20,
+    "repetidasLeidas": 80,
+    "SET": 97,
+    "unicasEscritas": 20,
+    "repetidasEscritas": 77,
+    "tmdb": 97
+   },
+   "titleDetails": {
+    "MGET": 0,
+    "clavesLeidas": 0,
+    "unicasLeidas": 0,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 10
+   }
+  }
+ },
+ {
+  "et": "produccion",
+  "caso": "ficha con AR · 3 procesos",
+  "comandos": 46,
+  "MGET": 19,
+  "SET": 24,
+  "tmdb": 26,
+  "claves": 76,
+  "hashes": [
+   "921bd0af",
+   "921bd0af",
+   "921bd0af"
+  ],
+  "etapas": {
+   "editorial ed:": {
+    "MGET": 6,
+    "clavesLeidas": 6,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 5,
+    "SET": 1,
+    "unicasEscritas": 1,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   },
+   "metadata card:": {
+    "MGET": 3,
+    "clavesLeidas": 3,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 2,
+    "SET": 1,
+    "unicasEscritas": 1,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   },
+   "control (PTTL y otros)": {
+    "MGET": 3,
+    "clavesLeidas": 0,
+    "unicasLeidas": 0,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   },
+   "proveedores principal": {
+    "MGET": 4,
+    "clavesLeidas": 4,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 3,
+    "SET": 1,
+    "unicasEscritas": 1,
+    "repetidasEscritas": 0,
+    "tmdb": 1
+   },
+   "tráiler videos:": {
+    "MGET": 3,
+    "clavesLeidas": 3,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 2,
+    "SET": 1,
+    "unicasEscritas": 1,
+    "repetidasEscritas": 0,
+    "tmdb": 1
+   },
+   "relacionados: proveedores": {
+    "MGET": 3,
+    "clavesLeidas": 60,
+    "unicasLeidas": 20,
+    "repetidasLeidas": 40,
+    "SET": 20,
+    "unicasEscritas": 20,
+    "repetidasEscritas": 0,
+    "tmdb": 20
+   },
+   "titleDetails": {
+    "MGET": 0,
+    "clavesLeidas": 0,
+    "unicasLeidas": 0,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 4
+   }
+  }
+ },
+ {
+  "et": "produccion",
+  "caso": "ficha sin AR · primera",
+  "comandos": 140,
+  "MGET": 71,
+  "SET": 67,
+  "tmdb": 45,
+  "claves": 90,
+  "hashes": [
+   "caeb9c6c"
+  ],
+  "etapas": {
+   "editorial ed:": {
+    "MGET": 2,
+    "clavesLeidas": 2,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 1,
+    "SET": 1,
+    "unicasEscritas": 1,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   },
+   "metadata card:": {
+    "MGET": 1,
+    "clavesLeidas": 1,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 0,
+    "SET": 1,
+    "unicasEscritas": 1,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   },
+   "control (PTTL y otros)": {
+    "MGET": 2,
+    "clavesLeidas": 0,
+    "unicasLeidas": 0,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   },
+   "proveedores principal": {
+    "MGET": 2,
+    "clavesLeidas": 2,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 1,
+    "SET": 1,
+    "unicasEscritas": 1,
+    "repetidasEscritas": 0,
+    "tmdb": 1
+   },
+   "disp: principal": {
+    "MGET": 2,
+    "clavesLeidas": 2,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 1,
+    "SET": 1,
+    "unicasEscritas": 1,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   },
+   "disp:top-manual": {
+    "MGET": 21,
+    "clavesLeidas": 21,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 20,
+    "SET": 1,
+    "unicasEscritas": 1,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   },
+   "oficial: principal": {
+    "MGET": 1,
+    "clavesLeidas": 1,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 0,
+    "SET": 1,
+    "unicasEscritas": 1,
+    "repetidasEscritas": 0,
+    "tmdb": 1
+   },
+   "tráiler videos:": {
+    "MGET": 1,
+    "clavesLeidas": 1,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 0,
+    "SET": 1,
+    "unicasEscritas": 1,
+    "repetidasEscritas": 0,
+    "tmdb": 1
+   },
+   "relacionados: proveedores": {
+    "MGET": 1,
+    "clavesLeidas": 20,
+    "unicasLeidas": 20,
+    "repetidasLeidas": 0,
+    "SET": 20,
+    "unicasEscritas": 20,
+    "repetidasEscritas": 0,
+    "tmdb": 20
+   },
+   "relacionados: disp:": {
+    "MGET": 20,
+    "clavesLeidas": 20,
+    "unicasLeidas": 20,
+    "repetidasLeidas": 0,
+    "SET": 20,
+    "unicasEscritas": 20,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   },
+   "relacionados: oficial:": {
+    "MGET": 20,
+    "clavesLeidas": 20,
+    "unicasLeidas": 20,
+    "repetidasLeidas": 0,
+    "SET": 20,
+    "unicasEscritas": 20,
+    "repetidasEscritas": 0,
+    "tmdb": 20
+   },
+   "titleDetails": {
+    "MGET": 0,
+    "clavesLeidas": 0,
+    "unicasLeidas": 0,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 2
+   }
+  }
+ },
+ {
+  "et": "produccion",
+  "caso": "ficha sin AR · segunda",
+  "comandos": 9,
+  "MGET": 8,
+  "SET": 0,
+  "tmdb": 1,
+  "claves": 46,
+  "hashes": [
+   "caeb9c6c"
+  ],
+  "etapas": {
+   "editorial ed:": {
+    "MGET": 2,
+    "clavesLeidas": 2,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 1,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   },
+   "metadata card:": {
+    "MGET": 1,
+    "clavesLeidas": 1,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   },
+   "control (PTTL y otros)": {
+    "MGET": 1,
+    "clavesLeidas": 0,
+    "unicasLeidas": 0,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   },
+   "proveedores principal": {
+    "MGET": 1,
+    "clavesLeidas": 1,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   },
+   "disp: principal": {
+    "MGET": 1,
+    "clavesLeidas": 1,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   },
+   "tráiler videos:": {
+    "MGET": 1,
+    "clavesLeidas": 1,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   },
+   "relacionados: proveedores": {
+    "MGET": 1,
+    "clavesLeidas": 20,
+    "unicasLeidas": 20,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   },
+   "relacionados: disp:": {
+    "MGET": 1,
+    "clavesLeidas": 20,
+    "unicasLeidas": 20,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   },
+   "titleDetails": {
+    "MGET": 0,
+    "clavesLeidas": 0,
+    "unicasLeidas": 0,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 1
+   }
+  }
+ },
+ {
+  "et": "produccion",
+  "caso": "ficha sin AR · 5 simultáneas",
+  "comandos": 586,
+  "MGET": 283,
+  "SET": 301,
+  "tmdb": 193,
+  "claves": 426,
+  "hashes": [
+   "caeb9c6c",
+   "caeb9c6c",
+   "caeb9c6c",
+   "caeb9c6c",
+   "caeb9c6c"
+  ],
+  "etapas": {
+   "editorial ed:": {
+    "MGET": 10,
+    "clavesLeidas": 10,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 9,
+    "SET": 5,
+    "unicasEscritas": 1,
+    "repetidasEscritas": 4,
+    "tmdb": 0
+   },
+   "metadata card:": {
+    "MGET": 5,
+    "clavesLeidas": 5,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 4,
+    "SET": 5,
+    "unicasEscritas": 1,
+    "repetidasEscritas": 4,
+    "tmdb": 0
+   },
+   "control (PTTL y otros)": {
+    "MGET": 2,
+    "clavesLeidas": 0,
+    "unicasLeidas": 0,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   },
+   "proveedores principal": {
+    "MGET": 10,
+    "clavesLeidas": 10,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 9,
+    "SET": 4,
+    "unicasEscritas": 1,
+    "repetidasEscritas": 3,
+    "tmdb": 4
+   },
+   "disp: principal": {
+    "MGET": 10,
+    "clavesLeidas": 10,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 9,
+    "SET": 5,
+    "unicasEscritas": 1,
+    "repetidasEscritas": 4,
+    "tmdb": 0
+   },
+   "disp:top-manual": {
+    "MGET": 81,
+    "clavesLeidas": 81,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 80,
+    "SET": 3,
+    "unicasEscritas": 1,
+    "repetidasEscritas": 2,
+    "tmdb": 0
+   },
+   "oficial: principal": {
+    "MGET": 5,
+    "clavesLeidas": 5,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 4,
+    "SET": 5,
+    "unicasEscritas": 1,
+    "repetidasEscritas": 4,
+    "tmdb": 5
+   },
+   "tráiler videos:": {
+    "MGET": 5,
+    "clavesLeidas": 5,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 4,
+    "SET": 3,
+    "unicasEscritas": 1,
+    "repetidasEscritas": 2,
+    "tmdb": 3
+   },
+   "relacionados: proveedores": {
+    "MGET": 5,
+    "clavesLeidas": 100,
+    "unicasLeidas": 20,
+    "repetidasLeidas": 80,
+    "SET": 73,
+    "unicasEscritas": 20,
+    "repetidasEscritas": 53,
+    "tmdb": 73
+   },
+   "relacionados: disp:": {
+    "MGET": 76,
+    "clavesLeidas": 100,
+    "unicasLeidas": 20,
+    "repetidasLeidas": 80,
+    "SET": 100,
+    "unicasEscritas": 20,
+    "repetidasEscritas": 80,
+    "tmdb": 0
+   },
+   "relacionados: oficial:": {
+    "MGET": 76,
+    "clavesLeidas": 100,
+    "unicasLeidas": 20,
+    "repetidasLeidas": 80,
+    "SET": 98,
+    "unicasEscritas": 20,
+    "repetidasEscritas": 78,
+    "tmdb": 98
+   },
+   "titleDetails": {
+    "MGET": 0,
+    "clavesLeidas": 0,
+    "unicasLeidas": 0,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 10
+   }
+  }
+ },
+ {
+  "et": "produccion",
+  "caso": "ficha sin AR · 3 procesos",
+  "comandos": 385,
+  "MGET": 213,
+  "SET": 166,
+  "tmdb": 101,
+  "claves": 270,
+  "hashes": [
+   "caeb9c6c",
+   "caeb9c6c",
+   "caeb9c6c"
+  ],
+  "etapas": {
+   "editorial ed:": {
+    "MGET": 6,
+    "clavesLeidas": 6,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 5,
+    "SET": 3,
+    "unicasEscritas": 1,
+    "repetidasEscritas": 2,
+    "tmdb": 0
+   },
+   "metadata card:": {
+    "MGET": 3,
+    "clavesLeidas": 3,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 2,
+    "SET": 3,
+    "unicasEscritas": 1,
+    "repetidasEscritas": 2,
+    "tmdb": 0
+   },
+   "control (PTTL y otros)": {
+    "MGET": 6,
+    "clavesLeidas": 0,
+    "unicasLeidas": 0,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   },
+   "proveedores principal": {
+    "MGET": 6,
+    "clavesLeidas": 6,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 5,
+    "SET": 2,
+    "unicasEscritas": 1,
+    "repetidasEscritas": 1,
+    "tmdb": 2
+   },
+   "disp: principal": {
+    "MGET": 6,
+    "clavesLeidas": 6,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 5,
+    "SET": 3,
+    "unicasEscritas": 1,
+    "repetidasEscritas": 2,
+    "tmdb": 0
+   },
+   "disp:top-manual": {
+    "MGET": 63,
+    "clavesLeidas": 63,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 62,
+    "SET": 2,
+    "unicasEscritas": 1,
+    "repetidasEscritas": 1,
+    "tmdb": 0
+   },
+   "oficial: principal": {
+    "MGET": 3,
+    "clavesLeidas": 3,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 2,
+    "SET": 3,
+    "unicasEscritas": 1,
+    "repetidasEscritas": 2,
+    "tmdb": 3
+   },
+   "tráiler videos:": {
+    "MGET": 3,
+    "clavesLeidas": 3,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 2,
+    "SET": 3,
+    "unicasEscritas": 1,
+    "repetidasEscritas": 2,
+    "tmdb": 3
+   },
+   "relacionados: proveedores": {
+    "MGET": 3,
+    "clavesLeidas": 60,
+    "unicasLeidas": 20,
+    "repetidasLeidas": 40,
+    "SET": 60,
+    "unicasEscritas": 20,
+    "repetidasEscritas": 40,
+    "tmdb": 60
+   },
+   "relacionados: disp:": {
+    "MGET": 60,
+    "clavesLeidas": 60,
+    "unicasLeidas": 20,
+    "repetidasLeidas": 40,
+    "SET": 60,
+    "unicasEscritas": 20,
+    "repetidasEscritas": 40,
+    "tmdb": 0
+   },
+   "relacionados: oficial:": {
+    "MGET": 60,
+    "clavesLeidas": 60,
+    "unicasLeidas": 20,
+    "repetidasLeidas": 40,
+    "SET": 27,
+    "unicasEscritas": 20,
+    "repetidasEscritas": 7,
+    "tmdb": 27
+   },
+   "titleDetails": {
+    "MGET": 0,
+    "clavesLeidas": 0,
+    "unicasLeidas": 0,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 6
+   }
+  }
+ },
+ {
+  "et": "produccion",
+  "caso": "persona con AR · primera",
+  "comandos": 16,
+  "MGET": 2,
+  "SET": 13,
+  "tmdb": 14,
+  "claves": 13,
+  "hashes": [
+   "5d34ff74"
+  ],
+  "etapas": {
+   "control (PTTL y otros)": {
+    "MGET": 1,
+    "clavesLeidas": 0,
+    "unicasLeidas": 0,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   },
+   "editorial ed:": {
+    "MGET": 1,
+    "clavesLeidas": 1,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 0,
+    "SET": 1,
+    "unicasEscritas": 1,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   },
+   "relacionados: proveedores": {
+    "MGET": 1,
+    "clavesLeidas": 12,
+    "unicasLeidas": 12,
+    "repetidasLeidas": 0,
+    "SET": 12,
+    "unicasEscritas": 12,
+    "repetidasEscritas": 0,
+    "tmdb": 12
+   },
+   "filmografía persona": {
+    "MGET": 0,
+    "clavesLeidas": 0,
+    "unicasLeidas": 0,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 1
+   },
+   "filmografía créditos": {
+    "MGET": 0,
+    "clavesLeidas": 0,
+    "unicasLeidas": 0,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 1
+   }
+  }
+ },
+ {
+  "et": "produccion",
+  "caso": "persona con AR · segunda",
+  "comandos": 3,
+  "MGET": 2,
+  "SET": 0,
+  "tmdb": 2,
+  "claves": 13,
+  "hashes": [
+   "5d34ff74"
+  ],
+  "etapas": {
+   "control (PTTL y otros)": {
+    "MGET": 1,
+    "clavesLeidas": 0,
+    "unicasLeidas": 0,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   },
+   "editorial ed:": {
+    "MGET": 1,
+    "clavesLeidas": 1,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   },
+   "relacionados: proveedores": {
+    "MGET": 1,
+    "clavesLeidas": 12,
+    "unicasLeidas": 12,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   },
+   "filmografía persona": {
+    "MGET": 0,
+    "clavesLeidas": 0,
+    "unicasLeidas": 0,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 1
+   },
+   "filmografía créditos": {
+    "MGET": 0,
+    "clavesLeidas": 0,
+    "unicasLeidas": 0,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 1
+   }
+  }
+ },
+ {
+  "et": "produccion",
+  "caso": "persona con AR · 5 simultáneas",
+  "comandos": 76,
+  "MGET": 10,
+  "SET": 65,
+  "tmdb": 70,
+  "claves": 65,
+  "hashes": [
+   "5d34ff74",
+   "5d34ff74",
+   "5d34ff74",
+   "5d34ff74",
+   "5d34ff74"
+  ],
+  "etapas": {
+   "control (PTTL y otros)": {
+    "MGET": 1,
+    "clavesLeidas": 0,
+    "unicasLeidas": 0,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   },
+   "editorial ed:": {
+    "MGET": 5,
+    "clavesLeidas": 5,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 4,
+    "SET": 5,
+    "unicasEscritas": 1,
+    "repetidasEscritas": 4,
+    "tmdb": 0
+   },
+   "relacionados: proveedores": {
+    "MGET": 5,
+    "clavesLeidas": 60,
+    "unicasLeidas": 12,
+    "repetidasLeidas": 48,
+    "SET": 60,
+    "unicasEscritas": 12,
+    "repetidasEscritas": 48,
+    "tmdb": 60
+   },
+   "filmografía persona": {
+    "MGET": 0,
+    "clavesLeidas": 0,
+    "unicasLeidas": 0,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 5
+   },
+   "filmografía créditos": {
+    "MGET": 0,
+    "clavesLeidas": 0,
+    "unicasLeidas": 0,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 5
+   }
+  }
+ },
+ {
+  "et": "produccion",
+  "caso": "persona con AR · 3 procesos",
+  "comandos": 46,
+  "MGET": 6,
+  "SET": 37,
+  "tmdb": 40,
+  "claves": 39,
+  "hashes": [
+   "5d34ff74",
+   "5d34ff74",
+   "5d34ff74"
+  ],
+  "etapas": {
+   "control (PTTL y otros)": {
+    "MGET": 3,
+    "clavesLeidas": 0,
+    "unicasLeidas": 0,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   },
+   "editorial ed:": {
+    "MGET": 3,
+    "clavesLeidas": 3,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 2,
+    "SET": 3,
+    "unicasEscritas": 1,
+    "repetidasEscritas": 2,
+    "tmdb": 0
+   },
+   "relacionados: proveedores": {
+    "MGET": 3,
+    "clavesLeidas": 36,
+    "unicasLeidas": 12,
+    "repetidasLeidas": 24,
+    "SET": 34,
+    "unicasEscritas": 12,
+    "repetidasEscritas": 22,
+    "tmdb": 34
+   },
+   "filmografía persona": {
+    "MGET": 0,
+    "clavesLeidas": 0,
+    "unicasLeidas": 0,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 3
+   },
+   "filmografía créditos": {
+    "MGET": 0,
+    "clavesLeidas": 0,
+    "unicasLeidas": 0,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 3
+   }
+  }
+ },
+ {
+  "et": "produccion",
+  "caso": "persona sin AR · primera",
+  "comandos": 87,
+  "MGET": 38,
+  "SET": 48,
+  "tmdb": 26,
+  "claves": 49,
+  "hashes": [
+   "c79b7aa3"
+  ],
+  "etapas": {
+   "control (PTTL y otros)": {
+    "MGET": 1,
+    "clavesLeidas": 0,
+    "unicasLeidas": 0,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   },
+   "editorial ed:": {
+    "MGET": 1,
+    "clavesLeidas": 1,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 0,
+    "SET": 1,
+    "unicasEscritas": 1,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   },
+   "relacionados: proveedores": {
+    "MGET": 1,
+    "clavesLeidas": 12,
+    "unicasLeidas": 12,
+    "repetidasLeidas": 0,
+    "SET": 12,
+    "unicasEscritas": 12,
+    "repetidasEscritas": 0,
+    "tmdb": 12
+   },
+   "relacionados: disp:": {
+    "MGET": 12,
+    "clavesLeidas": 12,
+    "unicasLeidas": 12,
+    "repetidasLeidas": 0,
+    "SET": 12,
+    "unicasEscritas": 12,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   },
+   "disp:top-manual": {
+    "MGET": 12,
+    "clavesLeidas": 12,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 11,
+    "SET": 11,
+    "unicasEscritas": 1,
+    "repetidasEscritas": 10,
+    "tmdb": 0
+   },
+   "relacionados: oficial:": {
+    "MGET": 12,
+    "clavesLeidas": 12,
+    "unicasLeidas": 12,
+    "repetidasLeidas": 0,
+    "SET": 12,
+    "unicasEscritas": 12,
+    "repetidasEscritas": 0,
+    "tmdb": 12
+   },
+   "filmografía persona": {
+    "MGET": 0,
+    "clavesLeidas": 0,
+    "unicasLeidas": 0,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 1
+   },
+   "filmografía créditos": {
+    "MGET": 0,
+    "clavesLeidas": 0,
+    "unicasLeidas": 0,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 1
+   }
+  }
+ },
+ {
+  "et": "produccion",
+  "caso": "persona sin AR · segunda",
+  "comandos": 4,
+  "MGET": 3,
+  "SET": 0,
+  "tmdb": 2,
+  "claves": 25,
+  "hashes": [
+   "c79b7aa3"
+  ],
+  "etapas": {
+   "control (PTTL y otros)": {
+    "MGET": 1,
+    "clavesLeidas": 0,
+    "unicasLeidas": 0,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   },
+   "editorial ed:": {
+    "MGET": 1,
+    "clavesLeidas": 1,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   },
+   "relacionados: proveedores": {
+    "MGET": 1,
+    "clavesLeidas": 12,
+    "unicasLeidas": 12,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   },
+   "relacionados: disp:": {
+    "MGET": 1,
+    "clavesLeidas": 12,
+    "unicasLeidas": 12,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   },
+   "filmografía persona": {
+    "MGET": 0,
+    "clavesLeidas": 0,
+    "unicasLeidas": 0,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 1
+   },
+   "filmografía créditos": {
+    "MGET": 0,
+    "clavesLeidas": 0,
+    "unicasLeidas": 0,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 1
+   }
+  }
+ },
+ {
+  "et": "produccion",
+  "caso": "persona sin AR · 5 simultáneas",
+  "comandos": 319,
+  "MGET": 122,
+  "SET": 196,
+  "tmdb": 92,
+  "claves": 211,
+  "hashes": [
+   "c79b7aa3",
+   "c79b7aa3",
+   "c79b7aa3",
+   "c79b7aa3",
+   "c79b7aa3"
+  ],
+  "etapas": {
+   "control (PTTL y otros)": {
+    "MGET": 1,
+    "clavesLeidas": 0,
+    "unicasLeidas": 0,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   },
+   "editorial ed:": {
+    "MGET": 5,
+    "clavesLeidas": 5,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 4,
+    "SET": 5,
+    "unicasEscritas": 1,
+    "repetidasEscritas": 4,
+    "tmdb": 0
+   },
+   "relacionados: proveedores": {
+    "MGET": 5,
+    "clavesLeidas": 60,
+    "unicasLeidas": 12,
+    "repetidasLeidas": 48,
+    "SET": 22,
+    "unicasEscritas": 12,
+    "repetidasEscritas": 10,
+    "tmdb": 22
+   },
+   "relacionados: disp:": {
+    "MGET": 26,
+    "clavesLeidas": 60,
+    "unicasLeidas": 12,
+    "repetidasLeidas": 48,
+    "SET": 60,
+    "unicasEscritas": 12,
+    "repetidasEscritas": 48,
+    "tmdb": 0
+   },
+   "disp:top-manual": {
+    "MGET": 26,
+    "clavesLeidas": 26,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 25,
+    "SET": 49,
+    "unicasEscritas": 1,
+    "repetidasEscritas": 48,
+    "tmdb": 0
+   },
+   "relacionados: oficial:": {
+    "MGET": 60,
+    "clavesLeidas": 60,
+    "unicasLeidas": 12,
+    "repetidasLeidas": 48,
+    "SET": 60,
+    "unicasEscritas": 12,
+    "repetidasEscritas": 48,
+    "tmdb": 60
+   },
+   "filmografía persona": {
+    "MGET": 0,
+    "clavesLeidas": 0,
+    "unicasLeidas": 0,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 5
+   },
+   "filmografía créditos": {
+    "MGET": 0,
+    "clavesLeidas": 0,
+    "unicasLeidas": 0,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 5
+   }
+  }
+ },
+ {
+  "et": "produccion",
+  "caso": "persona sin AR · 3 procesos",
+  "comandos": 216,
+  "MGET": 96,
+  "SET": 117,
+  "tmdb": 64,
+  "claves": 138,
+  "hashes": [
+   "c79b7aa3",
+   "c79b7aa3",
+   "c79b7aa3"
+  ],
+  "etapas": {
+   "control (PTTL y otros)": {
+    "MGET": 3,
+    "clavesLeidas": 0,
+    "unicasLeidas": 0,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   },
+   "editorial ed:": {
+    "MGET": 3,
+    "clavesLeidas": 3,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 2,
+    "SET": 2,
+    "unicasEscritas": 1,
+    "repetidasEscritas": 1,
+    "tmdb": 0
+   },
+   "relacionados: proveedores": {
+    "MGET": 3,
+    "clavesLeidas": 36,
+    "unicasLeidas": 12,
+    "repetidasLeidas": 24,
+    "SET": 26,
+    "unicasEscritas": 12,
+    "repetidasEscritas": 14,
+    "tmdb": 26
+   },
+   "relacionados: disp:": {
+    "MGET": 27,
+    "clavesLeidas": 36,
+    "unicasLeidas": 12,
+    "repetidasLeidas": 24,
+    "SET": 36,
+    "unicasEscritas": 12,
+    "repetidasEscritas": 24,
+    "tmdb": 0
+   },
+   "disp:top-manual": {
+    "MGET": 27,
+    "clavesLeidas": 27,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 26,
+    "SET": 21,
+    "unicasEscritas": 1,
+    "repetidasEscritas": 20,
+    "tmdb": 0
+   },
+   "relacionados: oficial:": {
+    "MGET": 36,
+    "clavesLeidas": 36,
+    "unicasLeidas": 12,
+    "repetidasLeidas": 24,
+    "SET": 32,
+    "unicasEscritas": 12,
+    "repetidasEscritas": 20,
+    "tmdb": 32
+   },
+   "filmografía persona": {
+    "MGET": 0,
+    "clavesLeidas": 0,
+    "unicasLeidas": 0,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 3
+   },
+   "filmografía créditos": {
+    "MGET": 0,
+    "clavesLeidas": 0,
+    "unicasLeidas": 0,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 3
+   }
+  }
+ },
+ {
+  "et": "produccion",
+  "caso": "persona con AR · Ver más",
+  "comandos": 21,
+  "MGET": 1,
+  "SET": 20,
+  "tmdb": 20,
+  "claves": 24,
+  "hashes": [
+   "d1743458"
+  ],
+  "etapas": {
+   "relacionados: proveedores": {
+    "MGET": 1,
+    "clavesLeidas": 24,
+    "unicasLeidas": 24,
+    "repetidasLeidas": 0,
+    "SET": 20,
+    "unicasEscritas": 20,
+    "repetidasEscritas": 0,
+    "tmdb": 20
+   }
+  }
+ },
+ {
+  "et": "produccion",
+  "caso": "persona sin AR · Ver más",
+  "comandos": 122,
+  "MGET": 62,
+  "SET": 60,
+  "tmdb": 40,
+  "claves": 88,
+  "hashes": [
+   "ac801565"
+  ],
+  "etapas": {
+   "relacionados: proveedores": {
+    "MGET": 1,
+    "clavesLeidas": 24,
+    "unicasLeidas": 24,
+    "repetidasLeidas": 0,
+    "SET": 20,
+    "unicasEscritas": 20,
+    "repetidasEscritas": 0,
+    "tmdb": 20
+   },
+   "relacionados: disp:": {
+    "MGET": 21,
+    "clavesLeidas": 24,
+    "unicasLeidas": 24,
+    "repetidasLeidas": 0,
+    "SET": 20,
+    "unicasEscritas": 20,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   },
+   "disp:top-manual": {
+    "MGET": 20,
+    "clavesLeidas": 20,
+    "unicasLeidas": 1,
+    "repetidasLeidas": 19,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   },
+   "relacionados: oficial:": {
+    "MGET": 20,
+    "clavesLeidas": 20,
+    "unicasLeidas": 20,
+    "repetidasLeidas": 0,
+    "SET": 20,
+    "unicasEscritas": 20,
+    "repetidasEscritas": 0,
+    "tmdb": 20
+   }
+  }
+ },
+ {
+  "et": "produccion",
+  "caso": "persona sin AR · Ver más repetido",
+  "comandos": 2,
+  "MGET": 2,
+  "SET": 0,
+  "tmdb": 0,
+  "claves": 48,
+  "hashes": [
+   "ac801565"
+  ],
+  "etapas": {
+   "relacionados: proveedores": {
+    "MGET": 1,
+    "clavesLeidas": 24,
+    "unicasLeidas": 24,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   },
+   "relacionados: disp:": {
+    "MGET": 1,
+    "clavesLeidas": 24,
+    "unicasLeidas": 24,
+    "repetidasLeidas": 0,
+    "SET": 0,
+    "unicasEscritas": 0,
+    "repetidasEscritas": 0,
+    "tmdb": 0
+   }
+  }
+ }
+]

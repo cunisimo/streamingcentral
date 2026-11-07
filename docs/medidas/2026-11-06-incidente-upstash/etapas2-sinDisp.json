@@ -1,0 +1,299 @@
+[
+ {
+  "et": "sinDisp",
+  "caso": "ficha con AR · tibia (5 min vencidos)",
+  "cmd": 8,
+  "MGET": 6,
+  "SET": 1,
+  "tmdb": 1,
+  "h": "921bd0af"
+ },
+ {
+  "et": "sinDisp",
+  "caso": "ficha con AR · caliente tras tibia",
+  "cmd": 7,
+  "MGET": 6,
+  "SET": 0,
+  "tmdb": 1,
+  "h": "921bd0af"
+ },
+ {
+  "et": "sinDisp",
+  "caso": "ficha sin AR · tibia (5 min vencidos)",
+  "cmd": 13,
+  "MGET": 10,
+  "SET": 2,
+  "tmdb": 1,
+  "h": "caeb9c6c"
+ },
+ {
+  "et": "sinDisp",
+  "caso": "ficha sin AR · caliente tras tibia",
+  "cmd": 11,
+  "MGET": 10,
+  "SET": 0,
+  "tmdb": 1,
+  "h": "caeb9c6c"
+ },
+ {
+  "et": "sinDisp",
+  "caso": "persona con AR · tibia (5 min vencidos)",
+  "cmd": 4,
+  "MGET": 2,
+  "SET": 1,
+  "tmdb": 2,
+  "h": "5d34ff74"
+ },
+ {
+  "et": "sinDisp",
+  "caso": "persona con AR · caliente tras tibia",
+  "cmd": 3,
+  "MGET": 2,
+  "SET": 0,
+  "tmdb": 2,
+  "h": "5d34ff74"
+ },
+ {
+  "et": "sinDisp",
+  "caso": "persona sin AR · tibia (5 min vencidos)",
+  "cmd": 29,
+  "MGET": 15,
+  "SET": 13,
+  "tmdb": 2,
+  "h": "c79b7aa3"
+ },
+ {
+  "et": "sinDisp",
+  "caso": "persona sin AR · caliente tras tibia",
+  "cmd": 5,
+  "MGET": 4,
+  "SET": 0,
+  "tmdb": 2,
+  "h": "c79b7aa3"
+ },
+ {
+  "et": "sinDisp",
+  "caso": "persona sin AR · Ver más, 5 min vencidos",
+  "cmd": 91,
+  "MGET": 26,
+  "SET": 64,
+  "tmdb": 40,
+  "h": "ac801565"
+ },
+ {
+  "et": "sinDisp",
+  "caso": "sin tráiler con AR · primera",
+  "cmd": 32,
+  "MGET": 7,
+  "SET": 24,
+  "tmdb": 24,
+  "h": "72de64fa"
+ },
+ {
+  "et": "sinDisp",
+  "caso": "sin tráiler con AR · segunda",
+  "cmd": 8,
+  "MGET": 6,
+  "SET": 1,
+  "tmdb": 2,
+  "h": "72de64fa"
+ },
+ {
+  "et": "sinDisp",
+  "caso": "sin tráiler con AR · tercera",
+  "cmd": 8,
+  "MGET": 6,
+  "SET": 1,
+  "tmdb": 2,
+  "h": "72de64fa"
+ },
+ {
+  "et": "sinDisp",
+  "caso": "sin tráiler sin AR · primera",
+  "cmd": 61,
+  "MGET": 13,
+  "SET": 46,
+  "tmdb": 45,
+  "h": "3813bad8"
+ },
+ {
+  "et": "sinDisp",
+  "caso": "sin tráiler sin AR · segunda",
+  "cmd": 12,
+  "MGET": 10,
+  "SET": 1,
+  "tmdb": 2,
+  "h": "3813bad8"
+ },
+ {
+  "et": "sinDisp",
+  "caso": "sin tráiler sin AR · tercera",
+  "cmd": 12,
+  "MGET": 10,
+  "SET": 1,
+  "tmdb": 2,
+  "h": "3813bad8"
+ },
+ {
+  "et": "sinDisp",
+  "caso": "ficha con AR · 5 simultáneas r1",
+  "cmd": 150,
+  "MGET": 35,
+  "SET": 114,
+  "tmdb": 116,
+  "h": "921bd0af"
+ },
+ {
+  "et": "sinDisp",
+  "caso": "ficha con AR · 5 simultáneas r2",
+  "cmd": 150,
+  "MGET": 35,
+  "SET": 114,
+  "tmdb": 114,
+  "h": "921bd0af"
+ },
+ {
+  "et": "sinDisp",
+  "caso": "ficha con AR · 5 simultáneas r3",
+  "cmd": 126,
+  "MGET": 35,
+  "SET": 90,
+  "tmdb": 90,
+  "h": "921bd0af"
+ },
+ {
+  "et": "sinDisp",
+  "caso": "ficha con AR · 5 simultáneas r4",
+  "cmd": 99,
+  "MGET": 35,
+  "SET": 63,
+  "tmdb": 63,
+  "h": "921bd0af"
+ },
+ {
+  "et": "sinDisp",
+  "caso": "ficha con AR · 5 simultáneas r5",
+  "cmd": 155,
+  "MGET": 35,
+  "SET": 119,
+  "tmdb": 119,
+  "h": "921bd0af"
+ },
+ {
+  "et": "sinDisp",
+  "caso": "ficha sin AR · 5 simultáneas r1",
+  "cmd": 224,
+  "MGET": 65,
+  "SET": 158,
+  "tmdb": 156,
+  "h": "caeb9c6c"
+ },
+ {
+  "et": "sinDisp",
+  "caso": "ficha sin AR · 5 simultáneas r2",
+  "cmd": 209,
+  "MGET": 65,
+  "SET": 143,
+  "tmdb": 141,
+  "h": "caeb9c6c"
+ },
+ {
+  "et": "sinDisp",
+  "caso": "ficha sin AR · 5 simultáneas r3",
+  "cmd": 204,
+  "MGET": 65,
+  "SET": 138,
+  "tmdb": 136,
+  "h": "caeb9c6c"
+ },
+ {
+  "et": "sinDisp",
+  "caso": "ficha sin AR · 5 simultáneas r4",
+  "cmd": 232,
+  "MGET": 65,
+  "SET": 166,
+  "tmdb": 162,
+  "h": "caeb9c6c"
+ },
+ {
+  "et": "sinDisp",
+  "caso": "ficha sin AR · 5 simultáneas r5",
+  "cmd": 247,
+  "MGET": 65,
+  "SET": 181,
+  "tmdb": 179,
+  "h": "caeb9c6c"
+ },
+ {
+  "et": "sinDisp",
+  "caso": "persona sin AR · 5 simultáneas r1",
+  "cmd": 199,
+  "MGET": 53,
+  "SET": 145,
+  "tmdb": 115,
+  "h": "c79b7aa3"
+ },
+ {
+  "et": "sinDisp",
+  "caso": "persona sin AR · 5 simultáneas r2",
+  "cmd": 187,
+  "MGET": 42,
+  "SET": 144,
+  "tmdb": 125,
+  "h": "c79b7aa3"
+ },
+ {
+  "et": "sinDisp",
+  "caso": "persona sin AR · 5 simultáneas r3",
+  "cmd": 213,
+  "MGET": 53,
+  "SET": 159,
+  "tmdb": 128,
+  "h": "c79b7aa3"
+ },
+ {
+  "et": "sinDisp",
+  "caso": "persona sin AR · 5 simultáneas r4",
+  "cmd": 203,
+  "MGET": 53,
+  "SET": 149,
+  "tmdb": 118,
+  "h": "c79b7aa3"
+ },
+ {
+  "et": "sinDisp",
+  "caso": "persona sin AR · 5 simultáneas r5",
+  "cmd": 209,
+  "MGET": 53,
+  "SET": 155,
+  "tmdb": 124,
+  "h": "c79b7aa3"
+ },
+ {
+  "et": "sinDisp",
+  "caso": "persona sin AR · primera r1",
+  "cmd": 53,
+  "MGET": 15,
+  "SET": 37,
+  "tmdb": 26,
+  "h": "c79b7aa3"
+ },
+ {
+  "et": "sinDisp",
+  "caso": "persona sin AR · primera r2",
+  "cmd": 53,
+  "MGET": 15,
+  "SET": 37,
+  "tmdb": 26,
+  "h": "c79b7aa3"
+ },
+ {
+  "et": "sinDisp",
+  "caso": "persona sin AR · primera r3",
+  "cmd": 53,
+  "MGET": 15,
+  "SET": 37,
+  "tmdb": 26,
+  "h": "c79b7aa3"
+ }
+]

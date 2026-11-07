@@ -1,0 +1,558 @@
+[
+ {
+  "caso": "reco p1 FRÍA",
+  "status": 200,
+  "http": 116,
+  "comandos": 116,
+  "MGET": 8,
+  "claves": 119,
+  "SET": 107,
+  "otros": "PTTL:1",
+  "rechazados": 0,
+  "tmdb": 116,
+  "items": 20,
+  "setPor": {
+   "reco": 25,
+   "ed": 2,
+   "pv3": 80
+  }
+ },
+ {
+  "caso": "reco p1 CALIENTE",
+  "status": 200,
+  "http": 1,
+  "comandos": 1,
+  "MGET": 1,
+  "claves": 1,
+  "SET": 0,
+  "otros": "",
+  "rechazados": 0,
+  "tmdb": 0,
+  "items": 20,
+  "setPor": {}
+ },
+ {
+  "caso": "title p1 FRÍA",
+  "status": 200,
+  "http": 28,
+  "comandos": 28,
+  "MGET": 4,
+  "claves": 23,
+  "SET": 23,
+  "otros": "PTTL:1",
+  "rechazados": 0,
+  "tmdb": 23,
+  "items": null,
+  "setPor": {
+   "pv3": 21,
+   "videos": 1,
+   "ed": 1
+  }
+ },
+ {
+  "caso": "title p1 CALIENTE",
+  "status": 200,
+  "http": 6,
+  "comandos": 6,
+  "MGET": 4,
+  "claves": 23,
+  "SET": 1,
+  "otros": "PTTL:1",
+  "rechazados": 0,
+  "tmdb": 2,
+  "items": null,
+  "setPor": {
+   "videos": 1
+  }
+ },
+ {
+  "caso": "person p1 FRÍA",
+  "status": 200,
+  "http": 16,
+  "comandos": 16,
+  "MGET": 2,
+  "claves": 13,
+  "SET": 13,
+  "otros": "PTTL:1",
+  "rechazados": 0,
+  "tmdb": 14,
+  "items": null,
+  "setPor": {
+   "ed": 1,
+   "pv3": 12
+  }
+ },
+ {
+  "caso": "person p1 CALIENTE",
+  "status": 200,
+  "http": 3,
+  "comandos": 3,
+  "MGET": 2,
+  "claves": 13,
+  "SET": 0,
+  "otros": "PTTL:1",
+  "rechazados": 0,
+  "tmdb": 2,
+  "items": null,
+  "setPor": {}
+ },
+ {
+  "caso": "reco sinAR p1 FRÍA",
+  "status": 200,
+  "http": 343,
+  "comandos": 343,
+  "MGET": 128,
+  "claves": 239,
+  "SET": 213,
+  "otros": "PTTL:2",
+  "rechazados": 0,
+  "tmdb": 156,
+  "items": 20,
+  "setPor": {
+   "reco": 25,
+   "ed": 2,
+   "pv3": 80,
+   "disp": 66,
+   "oficial": 40
+  }
+ },
+ {
+  "caso": "reco sinAR p1 CALIENTE",
+  "status": 200,
+  "http": 1,
+  "comandos": 1,
+  "MGET": 1,
+  "claves": 1,
+  "SET": 0,
+  "otros": "",
+  "rechazados": 0,
+  "tmdb": 0,
+  "items": 20,
+  "setPor": {}
+ },
+ {
+  "caso": "title sinAR p1 FRÍA",
+  "status": 200,
+  "http": 134,
+  "comandos": 134,
+  "MGET": 67,
+  "claves": 86,
+  "SET": 66,
+  "otros": "PTTL:1",
+  "rechazados": 0,
+  "tmdb": 44,
+  "items": null,
+  "setPor": {
+   "pv3": 21,
+   "disp": 22,
+   "oficial": 21,
+   "videos": 1,
+   "ed": 1
+  }
+ },
+ {
+  "caso": "title sinAR p1 CALIENTE",
+  "status": 200,
+  "http": 8,
+  "comandos": 8,
+  "MGET": 6,
+  "claves": 44,
+  "SET": 1,
+  "otros": "PTTL:1",
+  "rechazados": 0,
+  "tmdb": 2,
+  "items": null,
+  "setPor": {
+   "videos": 1
+  }
+ },
+ {
+  "caso": "person sinAR p1 FRÍA",
+  "status": 200,
+  "http": 88,
+  "comandos": 88,
+  "MGET": 38,
+  "claves": 49,
+  "SET": 49,
+  "otros": "PTTL:1",
+  "rechazados": 0,
+  "tmdb": 26,
+  "items": null,
+  "setPor": {
+   "ed": 1,
+   "pv3": 12,
+   "disp": 24,
+   "oficial": 12
+  }
+ },
+ {
+  "caso": "person sinAR p1 CALIENTE",
+  "status": 200,
+  "http": 4,
+  "comandos": 4,
+  "MGET": 3,
+  "claves": 25,
+  "SET": 0,
+  "otros": "PTTL:1",
+  "rechazados": 0,
+  "tmdb": 2,
+  "items": null,
+  "setPor": {}
+ },
+ {
+  "caso": "reco p2 FRÍA",
+  "status": 200,
+  "http": 116,
+  "comandos": 116,
+  "MGET": 8,
+  "claves": 119,
+  "SET": 107,
+  "otros": "PTTL:1",
+  "rechazados": 0,
+  "tmdb": 116,
+  "items": 20,
+  "setPor": {
+   "reco": 25,
+   "ed": 2,
+   "pv3": 80
+  }
+ },
+ {
+  "caso": "reco p2 CALIENTE",
+  "status": 200,
+  "http": 1,
+  "comandos": 1,
+  "MGET": 1,
+  "claves": 1,
+  "SET": 0,
+  "otros": "",
+  "rechazados": 0,
+  "tmdb": 0,
+  "items": 20,
+  "setPor": {}
+ },
+ {
+  "caso": "title p2 FRÍA",
+  "status": 200,
+  "http": 28,
+  "comandos": 28,
+  "MGET": 4,
+  "claves": 23,
+  "SET": 23,
+  "otros": "PTTL:1",
+  "rechazados": 0,
+  "tmdb": 23,
+  "items": null,
+  "setPor": {
+   "pv3": 21,
+   "videos": 1,
+   "ed": 1
+  }
+ },
+ {
+  "caso": "title p2 CALIENTE",
+  "status": 200,
+  "http": 6,
+  "comandos": 6,
+  "MGET": 4,
+  "claves": 23,
+  "SET": 1,
+  "otros": "PTTL:1",
+  "rechazados": 0,
+  "tmdb": 2,
+  "items": null,
+  "setPor": {
+   "videos": 1
+  }
+ },
+ {
+  "caso": "person p2 FRÍA",
+  "status": 200,
+  "http": 16,
+  "comandos": 16,
+  "MGET": 2,
+  "claves": 13,
+  "SET": 13,
+  "otros": "PTTL:1",
+  "rechazados": 0,
+  "tmdb": 14,
+  "items": null,
+  "setPor": {
+   "ed": 1,
+   "pv3": 12
+  }
+ },
+ {
+  "caso": "person p2 CALIENTE",
+  "status": 200,
+  "http": 3,
+  "comandos": 3,
+  "MGET": 2,
+  "claves": 13,
+  "SET": 0,
+  "otros": "PTTL:1",
+  "rechazados": 0,
+  "tmdb": 2,
+  "items": null,
+  "setPor": {}
+ },
+ {
+  "caso": "reco sinAR p2 FRÍA",
+  "status": 200,
+  "http": 356,
+  "comandos": 356,
+  "MGET": 131,
+  "claves": 242,
+  "SET": 224,
+  "otros": "PTTL:1",
+  "rechazados": 0,
+  "tmdb": 157,
+  "items": 20,
+  "setPor": {
+   "reco": 25,
+   "ed": 2,
+   "pv3": 80,
+   "disp": 76,
+   "oficial": 41
+  }
+ },
+ {
+  "caso": "reco sinAR p2 CALIENTE",
+  "status": 200,
+  "http": 1,
+  "comandos": 1,
+  "MGET": 1,
+  "claves": 1,
+  "SET": 0,
+  "otros": "",
+  "rechazados": 0,
+  "tmdb": 0,
+  "items": 20,
+  "setPor": {}
+ },
+ {
+  "caso": "title sinAR p2 FRÍA",
+  "status": 200,
+  "http": 134,
+  "comandos": 134,
+  "MGET": 67,
+  "claves": 86,
+  "SET": 66,
+  "otros": "PTTL:1",
+  "rechazados": 0,
+  "tmdb": 44,
+  "items": null,
+  "setPor": {
+   "pv3": 21,
+   "disp": 22,
+   "oficial": 21,
+   "videos": 1,
+   "ed": 1
+  }
+ },
+ {
+  "caso": "title sinAR p2 CALIENTE",
+  "status": 200,
+  "http": 8,
+  "comandos": 8,
+  "MGET": 6,
+  "claves": 44,
+  "SET": 1,
+  "otros": "PTTL:1",
+  "rechazados": 0,
+  "tmdb": 2,
+  "items": null,
+  "setPor": {
+   "videos": 1
+  }
+ },
+ {
+  "caso": "person sinAR p2 FRÍA",
+  "status": 200,
+  "http": 88,
+  "comandos": 88,
+  "MGET": 38,
+  "claves": 49,
+  "SET": 49,
+  "otros": "PTTL:1",
+  "rechazados": 0,
+  "tmdb": 26,
+  "items": null,
+  "setPor": {
+   "ed": 1,
+   "pv3": 12,
+   "disp": 24,
+   "oficial": 12
+  }
+ },
+ {
+  "caso": "person sinAR p2 CALIENTE",
+  "status": 200,
+  "http": 4,
+  "comandos": 4,
+  "MGET": 3,
+  "claves": 25,
+  "SET": 0,
+  "otros": "PTTL:1",
+  "rechazados": 0,
+  "tmdb": 2,
+  "items": null,
+  "setPor": {}
+ },
+ {
+  "caso": "reco base",
+  "status": 200,
+  "http": 116,
+  "comandos": 116,
+  "MGET": 8,
+  "claves": 119,
+  "SET": 107,
+  "otros": "PTTL:1",
+  "rechazados": 0,
+  "tmdb": 116,
+  "items": 20,
+  "setPor": {
+   "reco": 25,
+   "ed": 2,
+   "pv3": 80
+  }
+ },
+ {
+  "caso": "reco voto nuevo",
+  "status": 200,
+  "http": 24,
+  "comandos": 24,
+  "MGET": 7,
+  "claves": 119,
+  "SET": 16,
+  "otros": "PTTL:1",
+  "rechazados": 0,
+  "tmdb": 16,
+  "items": 20,
+  "setPor": {
+   "reco": 4,
+   "pv3": 12
+  }
+ },
+ {
+  "caso": "reco otras plataformas",
+  "status": 200,
+  "http": 54,
+  "comandos": 54,
+  "MGET": 7,
+  "claves": 119,
+  "SET": 46,
+  "otros": "PTTL:1",
+  "rechazados": 0,
+  "tmdb": 45,
+  "items": 20,
+  "setPor": {
+   "reco": 7,
+   "pv3": 39
+  }
+ },
+ {
+  "caso": "reco a las 6 h (vence el riel)",
+  "status": 200,
+  "http": 8,
+  "comandos": 8,
+  "MGET": 7,
+  "claves": 119,
+  "SET": 1,
+  "otros": "",
+  "rechazados": 0,
+  "tmdb": 0,
+  "items": 20,
+  "setPor": {
+   "reco": 1
+  }
+ },
+ {
+  "caso": "reco a las 8 h (+ pv3, disp, oficial)",
+  "status": 200,
+  "http": 92,
+  "comandos": 92,
+  "MGET": 8,
+  "claves": 119,
+  "SET": 83,
+  "otros": "PTTL:1",
+  "rechazados": 0,
+  "tmdb": 80,
+  "items": 20,
+  "setPor": {
+   "ed": 2,
+   "pv3": 80,
+   "reco": 1
+  }
+ },
+ {
+  "caso": "reco sin sesión",
+  "status": 401,
+  "http": 0,
+  "comandos": 0,
+  "MGET": 0,
+  "claves": 0,
+  "SET": 0,
+  "otros": "",
+  "rechazados": 0,
+  "tmdb": 0,
+  "items": 0,
+  "setPor": {}
+ },
+ {
+  "caso": "reco perfil sin señales",
+  "status": 200,
+  "http": 0,
+  "comandos": 0,
+  "MGET": 0,
+  "claves": 0,
+  "SET": 0,
+  "otros": "",
+  "rechazados": 0,
+  "tmdb": 0,
+  "items": 0,
+  "setPor": {}
+ },
+ {
+  "caso": "agotada reco",
+  "status": 200,
+  "http": 0,
+  "comandos": 0,
+  "MGET": 0,
+  "claves": 0,
+  "SET": 0,
+  "otros": "",
+  "rechazados": 139,
+  "tmdb": 134,
+  "items": 20,
+  "setPor": {}
+ },
+ {
+  "caso": "agotada title",
+  "status": 200,
+  "http": 0,
+  "comandos": 0,
+  "MGET": 0,
+  "claves": 0,
+  "SET": 0,
+  "otros": "",
+  "rechazados": 27,
+  "tmdb": 23,
+  "items": null,
+  "setPor": {}
+ },
+ {
+  "caso": "agotada person",
+  "status": 200,
+  "http": 0,
+  "comandos": 0,
+  "MGET": 0,
+  "claves": 0,
+  "SET": 0,
+  "otros": "",
+  "rechazados": 15,
+  "tmdb": 14,
+  "items": null,
+  "setPor": {}
+ }
+]

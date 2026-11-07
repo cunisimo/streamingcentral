@@ -1,6 +1,6 @@
 # Estado de Yump
 
-> **Estado canónico. Actualizado el 6 de noviembre de 2026.**
+> **Estado canónico. Actualizado el 7 de noviembre de 2026.**
 > Leer este bloque antes de los antecedentes históricos. Arquitectura y reglas:
 > [`CLAUDE.md`](../CLAUDE.md). Problemas históricos: [`ISSUES.md`](ISSUES.md).
 > No duplicar este estado en otros manuales: enlazarlo.
@@ -15,6 +15,18 @@ debajo de "Antecedentes anteriores al 09/09/2026" es histórico. Categorías de 
 **deploy** (deployment de Vercel *Production – streamingcentral* en la API
 pública de deployments de GitHub, estado `success`), **dueño** (informado por
 el dueño), **Producción** (comprobado contra `app.yump.ar`).
+
+**Incidente de Upstash (6/11/2026; Redis recuperado por cambio de plan, causa sin
+corregir).** La cuota de 500.000 comandos se agotó (`/api/health`: 500000/500000;
+panel: 676.016) y la app respondió sin caché. **Informado por el dueño:** activó
+Upstash Fixed 250 MB desde Vercel para `yumpapp`, sin regiones de lectura adicionales,
+con Prod Pack y Auto Upgrade desactivados; el panel muestra comandos ilimitados. Probó
+la app en su celular después del cambio y el Home volvió a cargar bien al salir de una
+ficha. **Esa prueba resuelve el síntoma inmediato, nada más:** no demuestra que el
+cliente conserve el Home ni que haya dejado de llamar a `/api/home` al volver. Causa
+más probable del consumo: `/api/title` y `/api/person` en frío, con títulos sin
+plataforma argentina; el origen del tráfico sigue sin confirmar. Detalle:
+`docs/medidas/2026-11-06-incidente-upstash/informe.md`.
 
 **Producción web (06/11/2026).** `main` = **`17e13a1`**: PR #1, código del AAB 5
 integrado por fast-forward y autorizado por el dueño. Deploy Production
@@ -1572,6 +1584,67 @@ no están registrados. El dueño informó el 05/11 que `5 (1.3.0)` está publica
 reusa su diseño, no se mergea.
 
 ## Evidencia y alcance de esta actualización
+
+- **Incidente de Upstash: versión final lista para revisar antes del deploy (2026-11-07;
+  banco local con dobles; dos commits locales, SIN push, merge, deploy ni cambios en
+  Producción).** Rama `fix/costo-fichas-y-robots` (`wt-fichas`) sobre `main` `035de15`:
+  commit **`37e3d06`** (código y pruebas) y el commit de esta documentación. **Código: lectura compartida de `disp:top-manual` por tanda** (persona,
+  «Ver más» y relacionados de la ficha) y **`public/robots.txt`** (sólo `Reflectionbot`,
+  `Disallow: /`; local 200 `text/plain`). **Banco, producción → final:** ficha sin AR fría 140 → 113,
+  persona sin AR fría 86 → 57, «Ver más» vencido 167 → 102 (Supabase 21 → 1), caliente sin cambios,
+  Home/búsqueda/listas iguales; TMDB 4087 = 4087; 0 de 104 respuestas distintas y 35 pasos de
+  navegador con el mismo hash; sin demora consistente (persona fría +23/+34 ms, por debajo del
+  umbral). **Fuera, como parches:** la barrera de proveedores (+230 a +440 ms consistentes con un
+  proveedor lento o colgado) y quitar `disp:` por título (+30 a +100 ms en caliente; ahorra
+  ~−150 ms y −23 comandos con caché vencida; **decisión del dueño**). **Home → ficha → volver
+  (banco):** 1 llamada a `/api/home` por vuelta, 1 comando en caliente: el cliente no conserva el
+  Home. **Sobre el diff final (base `035de15`):** `tsc` 0 errores; `npm test` 2581: 2571 pasan, 0 fallan, 10 omitidas;
+  `npm run build` y `/robots.txt` OK en banco (200, `text/plain; charset=UTF-8`, bytes exactos con LF). **Firewall, sólo propuesta:** una regla de rate
+  limit, `Request Path` empieza con `/api/title/` OR con `/api/person/`, ventana fija de 60 s,
+  30 solicitudes, clave IP, acción **Log**; sin publicar ni 429.
+  **🔴 Pendiente en Android (dispositivo real):** Home → ficha → Atrás (que vuelva al Home con su
+  posición; hoy pide 1 vez `/api/home`) y Persona → «Ver más» (12 → 36 → 60 obras,
+  disponibilidad y orden). El cambio es sólo de servidor: el AAB 5 de Play sirve tal cual una vez
+  desplegado; antes, hace falta una Preview accesible y un APK de depuración con esa base
+  (procedimiento en la séptima tanda del informe). **Sin probar además:** latencia real de Redis y TMDB,
+  instancias de Vercel. **Siguiente paso:** revisión del dueño, decisión sobre `disp:` (parche
+  aparte), prueba en Android y, si aprueba, push, merge y deploy (pendientes, decisión suya). Detalle: séptima tanda del informe.
+- **Incidente de Upstash: cambio de plan del dueño (2026-11-06; informado por el dueño,
+  panel y celular; Claude no lo comprobó ni tocó el plan).** Upstash Fixed 250 MB activado
+  desde Vercel para `yumpapp`, sin regiones de lectura adicionales, Prod Pack y Auto Upgrade
+  desactivados; el panel muestra comandos ilimitados. Prueba manual en celular: el Home
+  volvió a cargar bien al salir de una ficha. **Sin demostrar:** que el cliente conserve el
+  Home o haya dejado de llamar a `/api/home` al volver; la carga correcta es compatible con
+  una nueva llamada servida desde Redis recuperado. La decisión sobre Pay as You Go de la
+  entrada siguiente queda reemplazada por este cambio.
+- **Incidente de Upstash: diagnóstico (2026-11-06; sólo lectura en Producción, sin
+  cambios ni deploy).** Último deploy de Production al diagnosticar: `dffd1d7`, 01/11 00:32 UTC
+  (GitHub); después se desplegó `17e13a1` (entrada del merge del PR #1). **Panel/logs (dueño):** 100.000–145.000 comandos diarios del 2 al 5/11;
+  límite cruzado el 5–6/11; ~15.000 invocaciones en ~12 h. **Banco con dobles:**
+  prefetch y `/persona` 0 comandos; caliente / fría con AR / fría sin AR:
+  `/api/te-va-a-gustar` 1 / 116 / 343–356, `/api/title` 6 / 28 / 134, `/api/person`
+  3 / 16 / 88. Con la cuota agotada: HTTP 200 sin caché. **Producción, agregados:**
+  sin salto de actividad con sesión en noviembre (`view_history` 02–05/11: 4, 6, 4, 1
+  fichas; 1–3 cuentas), lo que no alcanza al volumen del panel. **Sin verificar:** qué
+  tráfico sostuvo el consumo, cuándo empezó, y cómo factura Upstash MGET y scripts. No
+  hay una misma ventana con datos de Vercel y Upstash. **Gráfico de Vercel (dueño):**
+  1.000–2.000 invocaciones diarias antes del 29/10 y 30.000–33.000 del 3 al 5/11.
+  **Banco, cuatro SHA (`915ef2e`, `ca02c4f`, `e8929e5`, `dffd1d7`):** misma navegación,
+  77–78 comandos y caché idéntica; +1 ejecución por carga desde reseñas. Sin regresión
+  reproducible. **Firewall (dueño, 5–6/11):** una JA4 con ~45.400 solicitudes, con IP principales
+  en `16.216.88.`; ese rango es de Reflectionbot (RDAP, DNS confirmado y lista oficial).
+  `app.yump.ar/robots.txt` da 404. **Sin demostrar:** rutas pedidas, relación con
+  `/api/title` y `/api/person`, y vínculo con Redis. *(Histórico: la barrera de lote que se
+  preparó ese día quedó descartada en la séptima tanda; ver la entrada del 7/11.)* Informe:
+  `docs/medidas/2026-11-06-incidente-upstash/informe.md`.
+  **Facturación (documentación de Upstash):** MGET = 1 comando; en un pipeline se cobra cada comando,
+  así que agrupar SET no ahorra. **Banco, por etapa (sin aplicar):** de las 66 escrituras de
+  `/api/title` sin AR, 21 son copias `disp:` evitables y ninguna se repite en una visita sola; persona
+  repite 11 veces `disp:top-manual`. Sin `disp:`, ficha sin AR 83 → 60 en frío y 36 → 13 con 5 min
+  vencidos, 9 → 11 en caliente, mismas respuestas. Falta medir Home, búsqueda y listas antes de aplicarlo.
+  La barrera suma 140–400 ms con un proveedor lento o colgado, muestra de 3 con ruido de hasta ±200 ms.
+  *(Histórico: la capacidad con 500.000 comandos y la decisión de Pay as You Go quedaron sin efecto
+  por el plan Fixed; lo de `disp:` y la barrera lo reemplaza la entrada del 7/11.)*
 
 - **Merge del PR #1 (código del AAB 5) y deploy web (2026-11-06; autorizado por el
   dueño).** Sin migraciones y sin AAB nuevo. Antes del merge, API pública de GitHub:

@@ -1,0 +1,172 @@
+[
+ {
+  "et": "rama",
+  "n": "ficha sin AR",
+  "modo": "5 en un proceso",
+  "cmd": 335,
+  "MGET": 50,
+  "SET": 283,
+  "tmdb": 175,
+  "ms": 1232,
+  "rangoCmd": [
+   284,
+   345
+  ],
+  "h": [
+   "caeb9c6c"
+  ]
+ },
+ {
+  "et": "rama",
+  "n": "ficha sin AR",
+  "modo": "6 en 3 instancias",
+  "cmd": 398,
+  "MGET": 60,
+  "SET": 335,
+  "tmdb": 205,
+  "ms": 1239,
+  "rangoCmd": [
+   269,
+   422
+  ],
+  "h": [
+   "caeb9c6c"
+  ]
+ },
+ {
+  "et": "rama",
+  "n": "ficha con AR",
+  "modo": "5 en un proceso",
+  "cmd": 116,
+  "MGET": 20,
+  "SET": 95,
+  "tmdb": 96,
+  "ms": 1108,
+  "rangoCmd": [
+   114,
+   136
+  ],
+  "h": [
+   "921bd0af"
+  ]
+ },
+ {
+  "et": "rama",
+  "n": "ficha con AR",
+  "modo": "6 en 3 instancias",
+  "cmd": 141,
+  "MGET": 24,
+  "SET": 114,
+  "tmdb": 117,
+  "ms": 634,
+  "rangoCmd": [
+   130,
+   160
+  ],
+  "h": [
+   "921bd0af"
+  ]
+ },
+ {
+  "et": "rama",
+  "n": "ficha mezclada",
+  "modo": "5 en un proceso",
+  "cmd": 249,
+  "MGET": 53,
+  "SET": 190,
+  "tmdb": 119,
+  "ms": 1238,
+  "rangoCmd": [
+   221,
+   300
+  ],
+  "h": [
+   "64bc07aa"
+  ]
+ },
+ {
+  "et": "rama",
+  "n": "ficha mezclada",
+  "modo": "6 en 3 instancias",
+  "cmd": 314,
+  "MGET": 69,
+  "SET": 242,
+  "tmdb": 154,
+  "ms": 1232,
+  "rangoCmd": [
+   242,
+   358
+  ],
+  "h": [
+   "64bc07aa"
+  ]
+ },
+ {
+  "et": "rama",
+  "n": "persona sin AR",
+  "modo": "5 en un proceso",
+  "cmd": 280,
+  "MGET": 69,
+  "SET": 218,
+  "tmdb": 115,
+  "ms": 928,
+  "rangoCmd": [
+   253,
+   311
+  ],
+  "h": [
+   "c79b7aa3"
+  ]
+ },
+ {
+  "et": "rama",
+  "n": "persona sin AR",
+  "modo": "6 en 3 instancias",
+  "cmd": 298,
+  "MGET": 63,
+  "SET": 243,
+  "tmdb": 131,
+  "ms": 682,
+  "rangoCmd": [
+   292,
+   338
+  ],
+  "h": [
+   "c79b7aa3"
+  ]
+ },
+ {
+  "et": "rama",
+  "n": "persona con AR",
+  "modo": "5 en un proceso",
+  "cmd": 75,
+  "MGET": 10,
+  "SET": 64,
+  "tmdb": 69,
+  "ms": 369,
+  "rangoCmd": [
+   73,
+   76
+  ],
+  "h": [
+   "5d34ff74"
+  ]
+ },
+ {
+  "et": "rama",
+  "n": "persona con AR",
+  "modo": "6 en 3 instancias",
+  "cmd": 81,
+  "MGET": 12,
+  "SET": 66,
+  "tmdb": 72,
+  "ms": 452,
+  "rangoCmd": [
+   68,
+   90
+  ],
+  "h": [
+   "5d34ff74"
+  ]
+ }
+]

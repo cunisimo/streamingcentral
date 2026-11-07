@@ -1,0 +1,197 @@
+diff --git a/lib/enrich.ts b/lib/enrich.ts
+index 3a17976..6eb7777 100644
+--- a/lib/enrich.ts
++++ b/lib/enrich.ts
+@@ -40,6 +40,7 @@ import { hayFallosDisponibilidad, registrarFalloDisponibilidad } from "./fallos-
+ import { registrarDescarteTmdb, withFallosDeFuentes } from "./fallos-tmdb";
+ import { esErrorTmdb } from "./tmdb-error";
+ import { settleAll } from "./settle-all";
++import { lecturaCompartida } from "./lectura-compartida";
+ import { producirBusquedaConFallos } from "./busqueda-enriquecido";
+ import {
+   armarFilmografia, armarFilmografiaV1, repararCreditos, resolverBloque, type GrupoObra,
+@@ -168,6 +169,7 @@ export async function disponibilidadDe(
+     hayFlatrateAR?: boolean;
+     reg?: ResumenRegional;
+   },
++  leerTopManual: typeof evidenciaTopManual = evidenciaTopManual,
+ ): Promise<PlatformCode[]> {
+   // El atajo pasa por `decisionDeTmdb` y no devuelve `prov.codes` crudo: ahí
+   // se aplican las SUPRESIONES (lib/supresiones-disponibilidad.ts), que son la
+@@ -183,7 +185,7 @@ export async function disponibilidadDe(
+       // por un camino propio de /top: si viviera sólo allá, la misma
+       // película saldría en color en el Top y en gris en la ficha, la
+       // búsqueda y el Home — el bug que este resolvedor existe para impedir.
+-      leerTopManual: evidenciaTopManual,
++      leerTopManual,
+       leerDatosTitulo: () => datosTituloDe(type, id, prov.reg ?? { rt: 0, rp: {}, ru: 0 }),
+     });
+     fallo = r.fallo;
+@@ -231,11 +233,14 @@ export async function watchLinkFor(type: MediaType, id: number): Promise<string
+ // la Etapa 3.a: mismo comportamiento, y cada descarte de causa TMDB queda
+ // registrado en el contexto de fallos (H2).
+ 
+-async function toUITitle(t: RawTitle, type: MediaType, published?: Set<string>): Promise<UITitle> {
++async function toUITitle(
++  t: RawTitle, type: MediaType, published?: Set<string>,
++  leerTopManual: typeof evidenciaTopManual = evidenciaTopManual,
++): Promise<UITitle> {
+   const prov = await providersOf(type, t.id);
+   // Camino central. Con proveedor de TMDB devuelve el MISMO array y no cuesta
+   // nada; sin proveedor consulta los respaldos. Ver `disponibilidadDe`.
+-  const codes = await disponibilidadDe(type, t.id, prov);
++  const codes = await disponibilidadDe(type, t.id, prov, leerTopManual);
+   return {
+     id: t.id, type, title: titleOf(t), year: yearOf(t),
+     runtime: null, poster: img(t.poster_path),
+@@ -1273,8 +1278,11 @@ export async function genreCovers(): Promise<Record<string, string | null>> {
+ 
+ // La disponibilidad de UNA obra: el mismo camino que `toUITitle` (providersOf +
+ // resolvedor central), sin armar la card, que el cliente ya tiene.
+-async function plataformasDeObra(tipo: MediaType, id: number): Promise<PlatformCode[]> {
+-  return disponibilidadDe(tipo, id, await providersOf(tipo, id));
++// Una lectura de la evidencia manual por tanda: ver lib/lectura-compartida.ts.
++function plataformasDeObra() {
++  const leerTopManual = lecturaCompartida(evidenciaTopManual);
++  return async (tipo: MediaType, id: number): Promise<PlatformCode[]> =>
++    disponibilidadDe(tipo, id, await providersOf(tipo, id), leerTopManual);
+ }
+ 
+ // Lo común a v1 y v2, y lo único que cuesta en caliente: la persona y sus
+@@ -1310,20 +1318,20 @@ async function creditosDePersona(id: number) {
+ /** Contrato v2 (`?filmografia=v2`): no depende de las plataformas del usuario. */
+ export async function personFilmography(id: number): Promise<FilmografiaPersona> {
+   const { det, credits, aObra, person } = await creditosDePersona(id);
+-  const res = await armarFilmografia({ credits, conocidoPor: det.known_for_department, aObra, plataformasDe: plataformasDeObra });
++  const res = await armarFilmografia({ credits, conocidoPor: det.known_for_department, aObra, plataformasDe: plataformasDeObra() });
+   return { person, ...res };
+ }
+ 
+ /** Contrato v1 (sin `filmografia`): bundles Android anteriores. ≤ 40 evaluadas. */
+ export async function personFilmographyLegado(id: number, providers: PlatformCode[]): Promise<FilmografiaLegado> {
+   const { credits, aObra, person } = await creditosDePersona(id);
+-  const res = await armarFilmografiaV1({ credits, providers, aObra, plataformasDe: plataformasDeObra });
++  const res = await armarFilmografiaV1({ credits, providers, aObra, plataformasDe: plataformasDeObra() });
+   return { person, ...res };
+ }
+ 
+ /** "Ver más": la disponibilidad de un bloque de obras (`tipo:id`, máx. 24). */
+ export async function disponibilidadFilmografia(claves: string[]): Promise<DisponibilidadObras> {
+-  return resolverBloque(claves, plataformasDeObra);
++  return resolverBloque(claves, plataformasDeObra());
+ }
+ 
+ // --- Detalle completo (merge TMDB + providers + reseña + relacionados) ---
+@@ -1452,8 +1460,10 @@ export async function detail(
+   // a las plataformas del usuario. Antes no se filtraban y el riel llevaba a
+   // fichas con el cartel "No está en streaming" — callejones sin salida.
+   const recs = (d.recommendations?.results ?? []).filter((r) => r.poster_path).slice(0, 24);
++  // Una lectura de la evidencia manual para la tanda: ver lib/lectura-compartida.ts.
++  const leerTopManual = lecturaCompartida(evidenciaTopManual);
+   const relatedTodos = await settleAll(
+-    recs.map((r) => toUITitle(r, type, pub)), `related ${type}/${id}`,
++    recs.map((r) => toUITitle(r, type, pub, leerTopManual)), `related ${type}/${id}`,
+   );
+   if (relatedTodos.length < recs.length) degradacion.relacionados = recs.length - relatedTodos.length;
+   const related = (providers.length
+diff --git a/lib/lectura-compartida.test.ts b/lib/lectura-compartida.test.ts
+new file mode 100644
+index 0000000..9daf486
+--- /dev/null
++++ b/lib/lectura-compartida.test.ts
+@@ -0,0 +1,42 @@
++import { test } from "node:test";
++import assert from "node:assert/strict";
++import { readFileSync } from "node:fs";
++import { lecturaCompartida } from "./lectura-compartida.ts";
++
++const enrich = readFileSync(new URL("./enrich.ts", import.meta.url), "utf8").replace(/\r\n/g, "\n");
++
++test("toda la tanda comparte una sola lectura y el mismo valor", async () => {
++  let n = 0;
++  const leer = lecturaCompartida(async () => { n++; return new Map([["movie:1", ["n"]]]); });
++  const [a, b, c] = await Promise.all([leer(), leer(), leer()]);
++  assert.equal(n, 1);
++  assert.equal(a, b);
++  assert.equal(b, c);
++  assert.equal(await leer(), a, "quien llega después reusa el resultado");
++  assert.equal(n, 1);
++});
++
++test("un fallo le llega a toda la tanda y no se reintenta dentro de ella", async () => {
++  let n = 0;
++  const leer = lecturaCompartida(async () => { n++; throw new Error("supabase"); });
++  await assert.rejects(leer(), /supabase/);
++  await assert.rejects(leer(), /supabase/);
++  assert.equal(n, 1);
++});
++
++test("otra tanda vuelve a leer: el fallo y el valor no cruzan pedidos", async () => {
++  let n = 0;
++  const fabrica = () => lecturaCompartida(async () => { n++; return n; });
++  assert.equal(await fabrica()(), 1);
++  assert.equal(await fabrica()(), 2);
++});
++
++test("en enrich la lectura se crea por tanda, nunca a nivel de módulo", () => {
++  const usos = enrich.match(/lecturaCompartida\(evidenciaTopManual\)/g) ?? [];
++  assert.equal(usos.length, 2, "se esperaba persona/«Ver más» y relacionados de la ficha");
++  assert.doesNotMatch(enrich, /^(const|let|export const) [^\n]*lecturaCompartida\(/m);
++  const tanda = /function plataformasDeObra\(\) \{[\s\S]*?\n\}/.exec(enrich);
++  assert.ok(tanda, "no se encontró plataformasDeObra");
++  assert.match(tanda![0], /lecturaCompartida\(evidenciaTopManual\)/);
++  assert.match(tanda![0], /disponibilidadDe\(.*leerTopManual\)/);
++});
+diff --git a/lib/lectura-compartida.ts b/lib/lectura-compartida.ts
+new file mode 100644
+index 0000000..e0f6b09
+--- /dev/null
++++ b/lib/lectura-compartida.ts
+@@ -0,0 +1,14 @@
++// Una sola lectura para los títulos de una misma tanda.
++//
++// POR QUÉ. En frío, todos los títulos sin proveedores en Argentina de un bloque
++// piden `disp:top-manual` a la vez: la clave todavía no está y cada uno la lee,
++// consulta Supabase y la escribe. Es la misma evidencia para todos.
++//
++// Se crea POR TANDA, nunca a nivel de módulo: un valor a nivel de proceso mezclaría
++// pedidos distintos, con sus señales y sus fallos. Si la lectura falla, ese fallo le
++// llega a toda la tanda (cada título lo informa como siempre) y no se reintenta
++// hasta el pedido siguiente.
++export function lecturaCompartida<R>(leer: () => Promise<R>): () => Promise<R> {
++  let enCurso: Promise<R> | null = null;
++  return () => (enCurso ??= leer());
++}
+diff --git a/lib/robots-txt.test.ts b/lib/robots-txt.test.ts
+new file mode 100644
+index 0000000..a9b6d0d
+--- /dev/null
++++ b/lib/robots-txt.test.ts
+@@ -0,0 +1,19 @@
++import { test } from "node:test";
++import assert from "node:assert/strict";
++import { existsSync, readFileSync } from "node:fs";
++
++const raiz = new URL("../", import.meta.url);
++
++test("/robots.txt frena sólo a Reflectionbot y nada más", () => {
++  assert.equal(
++    readFileSync(new URL("public/robots.txt", raiz), "utf8").replace(/\r\n/g, "\n"),
++    "User-agent: Reflectionbot\nDisallow: /\n",
++    "cualquier otra línea puede sacar de los buscadores a Yump o a sus App Links",
++  );
++});
++
++test("ninguna ruta de Next le gana al archivo estático", () => {
++  for (const f of ["app/robots.ts", "app/robots.tsx", "app/robots.txt", "app/robots.txt/route.ts"]) {
++    assert.equal(existsSync(new URL(f, raiz)), false, f);
++  }
++});
+diff --git a/public/robots.txt b/public/robots.txt
+new file mode 100644
+index 0000000..de8020b
+--- /dev/null
++++ b/public/robots.txt
+@@ -0,0 +1,2 @@
++User-agent: Reflectionbot
++Disallow: /

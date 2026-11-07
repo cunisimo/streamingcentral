@@ -1,0 +1,170 @@
+[
+ {
+  "et": "rama",
+  "n": "TMDB 40/120",
+  "c": "ficha sin AR",
+  "cmd": 78,
+  "MGET": 10,
+  "SET": 66,
+  "tmdb": 44,
+  "ms": 1533,
+  "rango": [
+   77,
+   78
+  ]
+ },
+ {
+  "et": "rama",
+  "n": "TMDB 40/120",
+  "c": "ficha mezclada",
+  "cmd": 70,
+  "MGET": 16,
+  "SET": 53,
+  "tmdb": 33,
+  "ms": 976,
+  "rango": [
+   70,
+   70
+  ]
+ },
+ {
+  "et": "rama",
+  "n": "TMDB 40/120",
+  "c": "persona sin AR",
+  "cmd": 66,
+  "MGET": 16,
+  "SET": 49,
+  "tmdb": 26,
+  "ms": 730,
+  "rango": [
+   66,
+   66
+  ]
+ },
+ {
+  "et": "rama",
+  "n": "TMDB 40/120",
+  "c": "Ver más sin AR",
+  "cmd": 124,
+  "MGET": 27,
+  "SET": 96,
+  "tmdb": 48,
+  "ms": 878,
+  "rango": [
+   124,
+   124
+  ]
+ },
+ {
+  "et": "rama",
+  "n": "TMDB 80/250",
+  "c": "ficha sin AR",
+  "cmd": 78,
+  "MGET": 10,
+  "SET": 66,
+  "tmdb": 44,
+  "ms": 1435,
+  "rango": [
+   77,
+   78
+  ]
+ },
+ {
+  "et": "rama",
+  "n": "TMDB 80/250",
+  "c": "ficha mezclada",
+  "cmd": 70,
+  "MGET": 16,
+  "SET": 53,
+  "tmdb": 33,
+  "ms": 1317,
+  "rango": [
+   70,
+   71
+  ]
+ },
+ {
+  "et": "rama",
+  "n": "TMDB 80/250",
+  "c": "persona sin AR",
+  "cmd": 66,
+  "MGET": 16,
+  "SET": 49,
+  "tmdb": 26,
+  "ms": 779,
+  "rango": [
+   66,
+   66
+  ]
+ },
+ {
+  "et": "rama",
+  "n": "TMDB 80/250",
+  "c": "Ver más sin AR",
+  "cmd": 124,
+  "MGET": 27,
+  "SET": 96,
+  "tmdb": 48,
+  "ms": 798,
+  "rango": [
+   124,
+   124
+  ]
+ },
+ {
+  "et": "rama",
+  "n": "TMDB 150/900",
+  "c": "ficha sin AR",
+  "cmd": 77,
+  "MGET": 10,
+  "SET": 66,
+  "tmdb": 44,
+  "ms": 2497,
+  "rango": [
+   77,
+   78
+  ]
+ },
+ {
+  "et": "rama",
+  "n": "TMDB 150/900",
+  "c": "ficha mezclada",
+  "cmd": 71,
+  "MGET": 16,
+  "SET": 53,
+  "tmdb": 33,
+  "ms": 2973,
+  "rango": [
+   71,
+   71
+  ]
+ },
+ {
+  "et": "rama",
+  "n": "TMDB 150/900",
+  "c": "persona sin AR",
+  "cmd": 66,
+  "MGET": 16,
+  "SET": 49,
+  "tmdb": 26,
+  "ms": 1615,
+  "rango": [
+   66,
+   66
+  ]
+ },
+ {
+  "et": "rama",
+  "n": "TMDB 150/900",
+  "c": "Ver más sin AR",
+  "cmd": 124,
+  "MGET": 27,
+  "SET": 96,
+  "tmdb": 48,
+  "ms": 1533,
+  "rango": [
+   124,
+   124
+  ]
+ }
+]

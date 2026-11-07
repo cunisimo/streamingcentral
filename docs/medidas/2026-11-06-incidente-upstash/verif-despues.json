@@ -1,0 +1,295 @@
+{
+ "title AR con tráiler": {
+  "status": 200,
+  "hash": "093ce932dc4d",
+  "plataformas": [
+   "n"
+  ],
+  "trailer": null,
+  "relacionados": 12,
+  "relConPlataforma": 12,
+  "degradacion": null,
+  "obras": 0,
+  "obrasConPlataforma": 0
+ },
+ "title AR con tráiler (caliente)": {
+  "status": 200,
+  "hash": "093ce932dc4d",
+  "plataformas": [
+   "n"
+  ],
+  "trailer": null,
+  "relacionados": 12,
+  "relConPlataforma": 12,
+  "degradacion": null,
+  "obras": 0,
+  "obrasConPlataforma": 0
+ },
+ "title AR sin tráiler": {
+  "status": 200,
+  "hash": "5fd3e99e2cbe",
+  "plataformas": [
+   "d"
+  ],
+  "trailer": null,
+  "relacionados": 12,
+  "relConPlataforma": 12,
+  "degradacion": null,
+  "obras": 0,
+  "obrasConPlataforma": 0
+ },
+ "title AR sin tráiler (caliente)": {
+  "status": 200,
+  "hash": "5fd3e99e2cbe",
+  "plataformas": [
+   "d"
+  ],
+  "trailer": null,
+  "relacionados": 12,
+  "relConPlataforma": 12,
+  "degradacion": null,
+  "obras": 0,
+  "obrasConPlataforma": 0
+ },
+ "title serie AR": {
+  "status": 200,
+  "hash": "69fad7d18a69",
+  "plataformas": [
+   "m"
+  ],
+  "trailer": null,
+  "relacionados": 12,
+  "relConPlataforma": 12,
+  "degradacion": null,
+  "obras": 0,
+  "obrasConPlataforma": 0
+ },
+ "title serie AR (caliente)": {
+  "status": 200,
+  "hash": "69fad7d18a69",
+  "plataformas": [
+   "m"
+  ],
+  "trailer": null,
+  "relacionados": 12,
+  "relConPlataforma": 12,
+  "degradacion": null,
+  "obras": 0,
+  "obrasConPlataforma": 0
+ },
+ "title sinAR con evidencia": {
+  "status": 200,
+  "hash": "16d5af4a3f55",
+  "plataformas": [
+   "n"
+  ],
+  "trailer": null,
+  "relacionados": 6,
+  "relConPlataforma": 6,
+  "degradacion": null,
+  "obras": 0,
+  "obrasConPlataforma": 0
+ },
+ "title sinAR con evidencia (caliente)": {
+  "status": 200,
+  "hash": "16d5af4a3f55",
+  "plataformas": [
+   "n"
+  ],
+  "trailer": null,
+  "relacionados": 6,
+  "relConPlataforma": 6,
+  "degradacion": null,
+  "obras": 0,
+  "obrasConPlataforma": 0
+ },
+ "title sinAR propia": {
+  "status": 200,
+  "hash": "728d7601a391",
+  "plataformas": [
+   "n"
+  ],
+  "trailer": null,
+  "relacionados": 6,
+  "relConPlataforma": 6,
+  "degradacion": null,
+  "obras": 0,
+  "obrasConPlataforma": 0
+ },
+ "title sinAR propia (caliente)": {
+  "status": 200,
+  "hash": "728d7601a391",
+  "plataformas": [
+   "n"
+  ],
+  "trailer": null,
+  "relacionados": 6,
+  "relConPlataforma": 6,
+  "degradacion": null,
+  "obras": 0,
+  "obrasConPlataforma": 0
+ },
+ "title serie sinAR": {
+  "status": 200,
+  "hash": "f2f87c71eb4e",
+  "plataformas": [],
+  "trailer": null,
+  "relacionados": 7,
+  "relConPlataforma": 7,
+  "degradacion": null,
+  "obras": 0,
+  "obrasConPlataforma": 0
+ },
+ "title serie sinAR (caliente)": {
+  "status": 200,
+  "hash": "f2f87c71eb4e",
+  "plataformas": [],
+  "trailer": null,
+  "relacionados": 7,
+  "relConPlataforma": 7,
+  "degradacion": null,
+  "obras": 0,
+  "obrasConPlataforma": 0
+ },
+ "title sin plataformas de usuario": {
+  "status": 200,
+  "hash": "3ce77bfb0100",
+  "plataformas": [
+   "n"
+  ],
+  "trailer": null,
+  "relacionados": 12,
+  "relConPlataforma": 4,
+  "degradacion": null,
+  "obras": 0,
+  "obrasConPlataforma": 0
+ },
+ "title sin plataformas de usuario (caliente)": {
+  "status": 200,
+  "hash": "3ce77bfb0100",
+  "plataformas": [
+   "n"
+  ],
+  "trailer": null,
+  "relacionados": 12,
+  "relConPlataforma": 4,
+  "degradacion": null,
+  "obras": 0,
+  "obrasConPlataforma": 0
+ },
+ "person AR": {
+  "status": 200,
+  "hash": "5d34ff747015",
+  "trailer": null,
+  "degradacion": null,
+  "obras": 12,
+  "obrasConPlataforma": 12,
+  "sinDisponibilidad": 0
+ },
+ "person AR (caliente)": {
+  "status": 200,
+  "hash": "5d34ff747015",
+  "trailer": null,
+  "degradacion": null,
+  "obras": 12,
+  "obrasConPlataforma": 12,
+  "sinDisponibilidad": 0
+ },
+ "person sinAR con evidencia": {
+  "status": 200,
+  "hash": "c79b7aa3c684",
+  "trailer": null,
+  "degradacion": null,
+  "obras": 12,
+  "obrasConPlataforma": 6,
+  "sinDisponibilidad": 0
+ },
+ "person sinAR con evidencia (caliente)": {
+  "status": 200,
+  "hash": "c79b7aa3c684",
+  "trailer": null,
+  "degradacion": null,
+  "obras": 12,
+  "obrasConPlataforma": 6,
+  "sinDisponibilidad": 0
+ },
+ "person v1 sinAR": {
+  "status": 200,
+  "hash": "11d3996026e4",
+  "trailer": null,
+  "degradacion": null,
+  "obras": 0,
+  "obrasConPlataforma": 0
+ },
+ "person v1 sinAR (caliente)": {
+  "status": 200,
+  "hash": "11d3996026e4",
+  "trailer": null,
+  "degradacion": null,
+  "obras": 0,
+  "obrasConPlataforma": 0
+ },
+ "person items": {
+  "status": 200,
+  "hash": "e8b26b78b4e6",
+  "trailer": null,
+  "degradacion": null,
+  "obras": 24,
+  "obrasConPlataforma": 8,
+  "sinDisponibilidad": 0
+ },
+ "person items (caliente)": {
+  "status": 200,
+  "hash": "e8b26b78b4e6",
+  "trailer": null,
+  "degradacion": null,
+  "obras": 24,
+  "obrasConPlataforma": 8,
+  "sinDisponibilidad": 0
+ },
+ "429 parcial title": {
+  "status": 200,
+  "hash": "8298f8524a7d",
+  "plataformas": [
+   "n"
+  ],
+  "trailer": null,
+  "relacionados": 12,
+  "relConPlataforma": 12,
+  "degradacion": {
+   "relacionados": 6
+  },
+  "obras": 0,
+  "obrasConPlataforma": 0
+ },
+ "429 parcial person": {
+  "status": 500,
+  "hash": "e4fe17546a03",
+  "trailer": null,
+  "degradacion": null,
+  "obras": 0,
+  "obrasConPlataforma": 0
+ },
+ "agotada title sinAR": {
+  "status": 200,
+  "hash": "16d5af4a3f55",
+  "plataformas": [
+   "n"
+  ],
+  "trailer": null,
+  "relacionados": 6,
+  "relConPlataforma": 6,
+  "degradacion": null,
+  "obras": 0,
+  "obrasConPlataforma": 0
+ },
+ "agotada person": {
+  "status": 200,
+  "hash": "c79b7aa3c684",
+  "trailer": null,
+  "degradacion": null,
+  "obras": 12,
+  "obrasConPlataforma": 6,
+  "sinDisponibilidad": 0
+ }
+}

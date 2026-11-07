@@ -1,0 +1,170 @@
+[
+ {
+  "et": "sbAmbasFicha",
+  "n": "TMDB 40/120",
+  "c": "ficha sin AR",
+  "cmd": 55,
+  "MGET": 9,
+  "SET": 45,
+  "tmdb": 44,
+  "ms": 1057,
+  "rango": [
+   54,
+   58
+  ]
+ },
+ {
+  "et": "sbAmbasFicha",
+  "n": "TMDB 40/120",
+  "c": "ficha mezclada",
+  "cmd": 41,
+  "MGET": 6,
+  "SET": 34,
+  "tmdb": 33,
+  "ms": 796,
+  "rango": [
+   41,
+   41
+  ]
+ },
+ {
+  "et": "sbAmbasFicha",
+  "n": "TMDB 40/120",
+  "c": "persona sin AR",
+  "cmd": 31,
+  "MGET": 4,
+  "SET": 26,
+  "tmdb": 26,
+  "ms": 524,
+  "rango": [
+   31,
+   31
+  ]
+ },
+ {
+  "et": "sbAmbasFicha",
+  "n": "TMDB 40/120",
+  "c": "Ver más sin AR",
+  "cmd": 53,
+  "MGET": 3,
+  "SET": 49,
+  "tmdb": 48,
+  "ms": 473,
+  "rango": [
+   53,
+   53
+  ]
+ },
+ {
+  "et": "sbAmbasFicha",
+  "n": "TMDB 80/250",
+  "c": "ficha sin AR",
+  "cmd": 57,
+  "MGET": 11,
+  "SET": 45,
+  "tmdb": 44,
+  "ms": 1104,
+  "rango": [
+   54,
+   61
+  ]
+ },
+ {
+  "et": "sbAmbasFicha",
+  "n": "TMDB 80/250",
+  "c": "ficha mezclada",
+  "cmd": 41,
+  "MGET": 6,
+  "SET": 34,
+  "tmdb": 33,
+  "ms": 945,
+  "rango": [
+   41,
+   42
+  ]
+ },
+ {
+  "et": "sbAmbasFicha",
+  "n": "TMDB 80/250",
+  "c": "persona sin AR",
+  "cmd": 31,
+  "MGET": 4,
+  "SET": 26,
+  "tmdb": 26,
+  "ms": 658,
+  "rango": [
+   31,
+   32
+  ]
+ },
+ {
+  "et": "sbAmbasFicha",
+  "n": "TMDB 80/250",
+  "c": "Ver más sin AR",
+  "cmd": 53,
+  "MGET": 3,
+  "SET": 49,
+  "tmdb": 48,
+  "ms": 596,
+  "rango": [
+   53,
+   54
+  ]
+ },
+ {
+  "et": "sbAmbasFicha",
+  "n": "TMDB 150/900",
+  "c": "ficha sin AR",
+  "cmd": 55,
+  "MGET": 9,
+  "SET": 45,
+  "tmdb": 44,
+  "ms": 2100,
+  "rango": [
+   54,
+   60
+  ]
+ },
+ {
+  "et": "sbAmbasFicha",
+  "n": "TMDB 150/900",
+  "c": "ficha mezclada",
+  "cmd": 41,
+  "MGET": 6,
+  "SET": 34,
+  "tmdb": 33,
+  "ms": 2156,
+  "rango": [
+   41,
+   42
+  ]
+ },
+ {
+  "et": "sbAmbasFicha",
+  "n": "TMDB 150/900",
+  "c": "persona sin AR",
+  "cmd": 31,
+  "MGET": 4,
+  "SET": 26,
+  "tmdb": 26,
+  "ms": 1461,
+  "rango": [
+   31,
+   31
+  ]
+ },
+ {
+  "et": "sbAmbasFicha",
+  "n": "TMDB 150/900",
+  "c": "Ver más sin AR",
+  "cmd": 53,
+  "MGET": 3,
+  "SET": 49,
+  "tmdb": 48,
+  "ms": 1384,
+  "rango": [
+   53,
+   54
+  ]
+ }
+]
