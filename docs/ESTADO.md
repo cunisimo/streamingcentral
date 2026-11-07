@@ -1616,10 +1616,20 @@ reusa su diseño, no se mergea.
   **Informado por el dueño:** su prueba por Wi‑Fi con la app de Play contra Producción
   confirmó la recuperación del servicio.
   **No comprobado:** recorrido Android con el código nuevo (Home → ficha → Atrás,
-  Persona → «Ver más»); efecto sobre el consumo diario de Upstash (mirar el panel en
-  los próximos días); que Reflectionbot respete `robots.txt`.
+  Persona → «Ver más»).
+  **Pendiente de medir (lo de arriba es banco local y comprobaciones puntuales, no
+  consumo real):**
+  - **Consumo real de Redis:** comandos diarios de Upstash en el panel durante los
+    días siguientes al deploy del 07/11, comparados con los 100.000–145.000 diarios
+    del 2 al 5/11 y con el pico del 6/11. Sin esa serie no se puede afirmar que el
+    cambio bajó el consumo en Producción.
+  - **Tráfico de Reflectionbot:** si baja después de publicar `robots.txt` (logs de
+    Vercel por User-Agent y rangos de `/api/title/…` y `/api/person/…`). `robots.txt`
+    es una pedida, no un bloqueo: si el tráfico sigue, el siguiente paso es la regla
+    de Firewall, decisión del dueño.
   **Pendiente (decisión del dueño):** regla de Firewall en modo Log (propuesta en el
-  informe), parche opcional sin `disp:` por título.
+  informe; sin publicar), parche opcional sin `disp:` por título (fuera del PR #2 y de
+  `main`).
 
 - **Incidente de Upstash: versión final lista para revisar antes del deploy (2026-11-07;
   banco local con dobles; dos commits locales, SIN push, merge, deploy ni cambios en
