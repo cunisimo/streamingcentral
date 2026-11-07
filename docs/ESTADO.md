@@ -28,7 +28,12 @@ más probable del consumo: `/api/title` y `/api/person` en frío, con títulos s
 plataforma argentina; el origen del tráfico sigue sin confirmar. Detalle:
 `docs/medidas/2026-11-06-incidente-upstash/informe.md`.
 
-**Producción web (06/11/2026).** `main` = **`17e13a1`**: PR #1, código del AAB 5
+**Producción web (07/11/2026).** `main` = **`5be7d96`**: PR #2 (lectura compartida de
+`disp:top-manual` + `robots.txt` contra Reflectionbot, e informe del incidente),
+integrado por fast-forward y autorizado por el dueño. Deploy Production **7623078068**
+`success`. Comprobado en `app.yump.ar`: `/robots.txt`, ficha con relacionados y
+filmografía con «Ver más» (12 → 36 → 60). Firewall sin publicar. Ver la entrada del 07/11.
+**Antes (06/11/2026).** `main` = **`17e13a1`**: PR #1, código del AAB 5
 integrado por fast-forward y autorizado por el dueño. Deploy Production
 **7610153320** `success`. Comprobado en `app.yump.ar`: aviso del registro y
 géneros debajo de Música. Ver la entrada del 06/11.
@@ -1584,6 +1589,37 @@ no están registrados. El dueño informó el 05/11 que `5 (1.3.0)` está publica
 reusa su diseño, no se mergea.
 
 ## Evidencia y alcance de esta actualización
+
+- **Merge del PR #2 y deploy web (2026-11-07; autorizado por el dueño).** Sin
+  migraciones, sin AAB nuevo, sin cambios de variables ni de Firewall.
+  **Git/GitHub:** rama `fix/costo-fichas-y-robots` subida sin forzar; PR
+  https://github.com/cunisimo/streamingcentral/pull/2 abierto por la API de GitHub
+  (cabeza `5be7d96`, `mergeable_state: clean`, `Vercel` `success`, `Vercel Preview
+  Comments` `success`). `main` pasó de `035de15` a `5be7d96` por fast-forward, sin
+  commit de merge, para desplegar el mismo commit validado en la Preview; GitHub marca
+  el PR `merged` (15:24:31 UTC).
+  **Preview (comprobado por Claude en el Chrome del dueño, con su sesión de Vercel;
+  la Preview pide login):** `/robots.txt` = `User-agent: Reflectionbot` /
+  `Disallow: /`; `/api/title/movie/550` 200 con 7 relacionados, los 7 con plataforma,
+  sin `degradacion`; `/api/person/287?filmografia=v2` 200 (102 obras de actuación, 12
+  con disponibilidad) y dos «Ver más» por `items=` de 24, 200, 24 resueltas cada uno;
+  en la página `/persona/287`, 12 → 36 → 60 tarjetas sin duplicados; ficha
+  `/titulo/movie/550` con 7 relacionados.
+  **Deploy:** Production **7623078068**, `success` (GitHub, 15:25:21 UTC).
+  **Producción, comprobado por Claude en `app.yump.ar`:** `/robots.txt` con los mismos
+  bytes (LF); `/api/title/movie/550` 200 con 7 relacionados con plataforma y CORS
+  `https://localhost`; persona 287 v2 200 y los dos «Ver más» 200 con 24 resueltas;
+  `/persona/287` en navegador 12 → 36 → 60 sin duplicados; `/api/health`: Redis OK,
+  sin 429 ni pausas en 60 min. El título sale «El club de la pelea» en Producción y
+  «El club de la lucha» en la Preview: es la configuración de idioma de cada entorno
+  (`IDIOMA_TITULOS`), no este cambio.
+  **Informado por el dueño:** su prueba por Wi‑Fi con la app de Play contra Producción
+  confirmó la recuperación del servicio.
+  **No comprobado:** recorrido Android con el código nuevo (Home → ficha → Atrás,
+  Persona → «Ver más»); efecto sobre el consumo diario de Upstash (mirar el panel en
+  los próximos días); que Reflectionbot respete `robots.txt`.
+  **Pendiente (decisión del dueño):** regla de Firewall en modo Log (propuesta en el
+  informe), parche opcional sin `disp:` por título.
 
 - **Incidente de Upstash: versión final lista para revisar antes del deploy (2026-11-07;
   banco local con dobles; dos commits locales, SIN push, merge, deploy ni cambios en
