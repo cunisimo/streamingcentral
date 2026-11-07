@@ -40,6 +40,7 @@ import { hayFallosDisponibilidad, registrarFalloDisponibilidad } from "./fallos-
 import { registrarDescarteTmdb, withFallosDeFuentes } from "./fallos-tmdb";
 import { esErrorTmdb } from "./tmdb-error";
 import { settleAll } from "./settle-all";
+import { lecturaCompartida } from "./lectura-compartida";
 import { producirBusquedaConFallos } from "./busqueda-enriquecido";
 import {
   armarFilmografia, armarFilmografiaV1, repararCreditos, resolverBloque, type GrupoObra,
@@ -168,6 +169,7 @@ export async function disponibilidadDe(
     hayFlatrateAR?: boolean;
     reg?: ResumenRegional;
   },
+  leerTopManual: typeof evidenciaTopManual = evidenciaTopManual,
 ): Promise<PlatformCode[]> {
   // El atajo pasa por `decisionDeTmdb` y no devuelve `prov.codes` crudo: ahí
   // se aplican las SUPRESIONES (lib/supresiones-disponibilidad.ts), que son la
@@ -183,7 +185,7 @@ export async function disponibilidadDe(
       // por un camino propio de /top: si viviera sólo allá, la misma
       // película saldría en color en el Top y en gris en la ficha, la
       // búsqueda y el Home — el bug que este resolvedor existe para impedir.
-      leerTopManual: evidenciaTopManual,
+      leerTopManual,
       leerDatosTitulo: () => datosTituloDe(type, id, prov.reg ?? { rt: 0, rp: {}, ru: 0 }),
     });
     fallo = r.fallo;
@@ -231,11 +233,14 @@ export async function watchLinkFor(type: MediaType, id: number): Promise<string 
 // la Etapa 3.a: mismo comportamiento, y cada descarte de causa TMDB queda
 // registrado en el contexto de fallos (H2).
 
-async function toUITitle(t: RawTitle, type: MediaType, published?: Set<string>): Promise<UITitle> {
+async function toUITitle(
+  t: RawTitle, type: MediaType, published?: Set<string>,
+  leerTopManual: typeof evidenciaTopManual = evidenciaTopManual,
+): Promise<UITitle> {
   const prov = await providersOf(type, t.id);
   // Camino central. Con proveedor de TMDB devuelve el MISMO array y no cuesta
   // nada; sin proveedor consulta los respaldos. Ver `disponibilidadDe`.
-  const codes = await disponibilidadDe(type, t.id, prov);
+  const codes = await disponibilidadDe(type, t.id, prov, leerTopManual);
   return {
     id: t.id, type, title: titleOf(t), year: yearOf(t),
     runtime: null, poster: img(t.poster_path),
@@ -1273,8 +1278,11 @@ export async function genreCovers(): Promise<Record<string, string | null>> {
 
 // La disponibilidad de UNA obra: el mismo camino que `toUITitle` (providersOf +
 // resolvedor central), sin armar la card, que el cliente ya tiene.
-async function plataformasDeObra(tipo: MediaType, id: number): Promise<PlatformCode[]> {
-  return disponibilidadDe(tipo, id, await providersOf(tipo, id));
+// Una lectura de la evidencia manual por tanda: ver lib/lectura-compartida.ts.
+function plataformasDeObra() {
+  const leerTopManual = lecturaCompartida(evidenciaTopManual);
+  return async (tipo: MediaType, id: number): Promise<PlatformCode[]> =>
+    disponibilidadDe(tipo, id, await providersOf(tipo, id), leerTopManual);
 }
 
 // Lo común a v1 y v2, y lo único que cuesta en caliente: la persona y sus
@@ -1310,20 +1318,20 @@ async function creditosDePersona(id: number) {
 /** Contrato v2 (`?filmografia=v2`): no depende de las plataformas del usuario. */
 export async function personFilmography(id: number): Promise<FilmografiaPersona> {
   const { det, credits, aObra, person } = await creditosDePersona(id);
-  const res = await armarFilmografia({ credits, conocidoPor: det.known_for_department, aObra, plataformasDe: plataformasDeObra });
+  const res = await armarFilmografia({ credits, conocidoPor: det.known_for_department, aObra, plataformasDe: plataformasDeObra() });
   return { person, ...res };
 }
 
 /** Contrato v1 (sin `filmografia`): bundles Android anteriores. ≤ 40 evaluadas. */
 export async function personFilmographyLegado(id: number, providers: PlatformCode[]): Promise<FilmografiaLegado> {
   const { credits, aObra, person } = await creditosDePersona(id);
-  const res = await armarFilmografiaV1({ credits, providers, aObra, plataformasDe: plataformasDeObra });
+  const res = await armarFilmografiaV1({ credits, providers, aObra, plataformasDe: plataformasDeObra() });
   return { person, ...res };
 }
 
 /** "Ver más": la disponibilidad de un bloque de obras (`tipo:id`, máx. 24). */
 export async function disponibilidadFilmografia(claves: string[]): Promise<DisponibilidadObras> {
-  return resolverBloque(claves, plataformasDeObra);
+  return resolverBloque(claves, plataformasDeObra());
 }
 
 // --- Detalle completo (merge TMDB + providers + reseña + relacionados) ---
@@ -1452,8 +1460,10 @@ export async function detail(
   // a las plataformas del usuario. Antes no se filtraban y el riel llevaba a
   // fichas con el cartel "No está en streaming" — callejones sin salida.
   const recs = (d.recommendations?.results ?? []).filter((r) => r.poster_path).slice(0, 24);
+  // Una lectura de la evidencia manual para la tanda: ver lib/lectura-compartida.ts.
+  const leerTopManual = lecturaCompartida(evidenciaTopManual);
   const relatedTodos = await settleAll(
-    recs.map((r) => toUITitle(r, type, pub)), `related ${type}/${id}`,
+    recs.map((r) => toUITitle(r, type, pub, leerTopManual)), `related ${type}/${id}`,
   );
   if (relatedTodos.length < recs.length) degradacion.relacionados = recs.length - relatedTodos.length;
   const related = (providers.length
