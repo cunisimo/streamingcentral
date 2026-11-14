@@ -102,6 +102,53 @@ export const RECOMMENDER_CATEGORIES: Category[] = [
     tv:    { keywords: [10349, 10617, 5096], withoutGenres: [99], alt: { keywords: [10349, 10617, 5096], genres: [99] } } },
 ];
 
+// --- Exclusiones del RIEL de una categoría ----------------------------------
+// Géneros que sacan un título del riel de esa categoría en el Home y de su
+// «Ver todas» (/categoria/<slug>), AUNQUE el título también lleve el género de
+// la categoría. No tocan la ficha (conserva todos sus géneros) ni la
+// elegibilidad del título para los otros rieles.
+//
+// Por qué no va en `Rule.withoutGenres`: esa regla también entra cuando la
+// categoría es el SEGUNDO género de un cruce (`listByCategory` une las dos
+// exclusiones), y "Terror para llorar" (terror × drama) quedaría vacío. Y la
+// usan además el chip "Drama intenso" del hero y las portadas de género, que
+// quedan fuera de esta regla de producto.
+//
+// Drama/movie: TMDB etiqueta con Drama (18) a muchas de terror —It: Capítulo 2
+// (movie/474350) trae Terror, Suspenso y Drama—, así que el riel Drama mostraba
+// terror. Regla del dueño (2026-11-14): una película de Terror no va en Drama.
+// Las series no se tocan: Terror en tv es una keyword, no un género.
+export const EXCLUSIONES_RIEL: Readonly<Record<string, Partial<Record<MediaType, readonly number[]>>>> = {
+  drama: { movie: [27] },
+};
+
+export function excluidosDelRiel(slug: string | undefined, tipo: MediaType): number[] {
+  return slug ? [...(EXCLUSIONES_RIEL[slug]?.[tipo] ?? [])] : [];
+}
+
+// Filtro sobre los géneros que YA trae el listado de discover (`genre_ids`):
+// sin consultas individuales a TMDB. Es la red de seguridad de `without_genres`
+// para lo que llegue de cachés, rellenos o fallbacks armados con otra receta.
+export function admiteEnRiel(slug: string | undefined, tipo: MediaType, genreIds: readonly number[] | undefined): boolean {
+  const fuera = excluidosDelRiel(slug, tipo);
+  if (!fuera.length) return true;
+  return !(genreIds ?? []).some((g) => fuera.includes(g));
+}
+
+// Lo mismo sobre una lista de crudos de discover. Lo usan el riel del Home
+// (ventana, página extra) y `listByCategory` («Ver todas»).
+export function filtrarRiel<T extends { genre_ids?: number[] }>(slug: string | undefined, tipo: MediaType, rs: T[]): T[] {
+  return excluidosDelRiel(slug, tipo).length ? rs.filter((r) => admiteEnRiel(slug, tipo, r.genre_ids)) : rs;
+}
+
+// Un cruce de /categoria/<slug> que PIDE un género excluido de ese riel ("Drama
+// con sustos" = drama × terror) quedaría vacío por construcción: no se muestra.
+export function cruceExcluido(slug: string, cruce: string, tipo: MediaType): boolean {
+  const fuera = excluidosDelRiel(slug, tipo);
+  if (!fuera.length) return false;
+  return (resolveCategory(cruce, tipo).genres ?? []).some((g) => fuera.includes(g));
+}
+
 const BY_SLUG = new Map([...CATEGORIES, ...RECOMMENDER_CATEGORIES].map((c) => [c.slug, c]));
 export const categoryLabel = (slug: string) => BY_SLUG.get(slug)?.label ?? slug;
 export const categoryBySlug = (slug: string): Category | undefined => BY_SLUG.get(slug);

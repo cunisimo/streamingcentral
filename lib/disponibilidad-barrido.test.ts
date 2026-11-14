@@ -277,13 +277,14 @@ test("la fuente del riel usa el tipo elegido, no `movie` fijo", () => {
     "las dos páginas (p1 y su fallback p2) tienen que usar el mismo tipo");
 });
 
-test("la versión de la clave del Home es v7", () => {
+test("la versión de la clave del Home es v8", () => {
   // v6: un payload v5 cacheado no traía el selector de "Últimos". v7: un
-  // payload v6 cacheado trae cards con Disney+ en las 20 suprimidas (#24).
+  // payload v6 cacheado trae cards con Disney+ en las 20 suprimidas (#24). v8: un
+  // payload v7 cacheado trae terror en el riel Drama (It: Capítulo 2).
   // Sin subir la versión, el cambio no se vería hasta que expirara el TTL.
   // Desde la Etapa 2 la versión es UNA constante para las cinco familias del
   // Home (lib/claves-home.test.ts).
-  assert.match(codigo("lib/claves.ts"), /export const VERSION_HOME: number =[\s\S]*?: 7;/);
+  assert.match(codigo("lib/claves.ts"), /export const VERSION_HOME: number =[\s\S]*?: 8;/);
 });
 
 test("los skeletons reservan el selector también en el primer riel", () => {
@@ -482,7 +483,9 @@ test("cambiar el registro de supresiones obliga a subir las versiones de caché"
   // una, subí VERSION_DISPONIBILIDAD y VERSION_HOME y actualizá estos números.
   const claves = codigo("lib/claves.ts");
   assert.match(claves, /export const VERSION_DISPONIBILIDAD = 1;/);
-  assert.match(claves, /export const VERSION_HOME: number =[\s\S]*?: 7;/);
+  // VERSION_HOME subió a 8 por otro motivo (Terror fuera del riel Drama,
+  // 2026-11-14); el registro de supresiones no cambió desde v7.
+  assert.match(claves, /export const VERSION_HOME: number =[\s\S]*?: 8;/);
 });
 
 test("las cuatro familias que guardan plataformas resueltas llevan VERSION_DISPONIBILIDAD", () => {

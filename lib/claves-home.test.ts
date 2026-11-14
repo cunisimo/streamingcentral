@@ -19,14 +19,14 @@ import { calcularHuella } from "./idioma.ts";
 
 const H = calcularHuella("es-MX", true);
 
-test("VERSION_HOME es 7 y claveHome produce los bytes esperados", () => {
+test("VERSION_HOME es 8 y claveHome produce los bytes esperados", () => {
   // (a) del plan RED de la Etapa 2: la fresca no cambiaba ni un byte y un
   // payload `v6` cacheado seguía siendo HIT. Con las supresiones (#24) la
   // versión SUBIÓ a v7 a propósito: un `v6` trae cards con Disney+ en las 20
   // películas suprimidas, y tiene que dejar de servirse al deployar.
-  assert.equal(VERSION_HOME, 7);
-  assert.equal(claveHome(3523671066, "d,m,n", "", H), "home:es-MX+f.r1:v7:3523671066:d,m,n:");
-  assert.equal(claveHome(3523671066, "d,m,n", "", ""), "home:v7:3523671066:d,m,n:");
+  assert.equal(VERSION_HOME, 8);
+  assert.equal(claveHome(3523671066, "d,m,n", "", H), "home:es-MX+f.r1:v8:3523671066:d,m,n:");
+  assert.equal(claveHome(3523671066, "d,m,n", "", ""), "home:v8:3523671066:d,m,n:");
   // Y el literal de la versión no vive escrito adentro de `claveHome`: sale de la constante.
   const src = readFileSync("lib/claves.ts", "utf8");
   assert.doesNotMatch(src, /`home:\$\{pre\(huella\)\}v\d+:/, "claveHome tiene que derivar la versión de VERSION_HOME");
@@ -47,11 +47,11 @@ test("las cinco familias del Home comparten el segmento v<VERSION_HOME>", () => 
     assert.equal(Number(m![1]), VERSION_HOME, `${nombre}: ${clave}`);
   }
   // Las formas exactas, para poder mirarlas en el panel.
-  assert.equal(claves.fresca, "home:es-MX+f.r1:v7:123:d,m,n:accion:tv");
-  assert.equal(claves.ub, "home:ub:es-MX+f.r1:v7:d,m,n:accion:tv");
-  assert.equal(claves.gen, "home:gen:es-MX+f.r1:v7:d,m,n:accion:tv");
-  assert.equal(claves.degradado, "home:degradado:es-MX+f.r1:v7:123:d,m,n:accion:tv");
-  assert.equal(claves.turno, "home:turno:es-MX+f.r1:v7:123:d,m,n:accion:tv");
+  assert.equal(claves.fresca, "home:es-MX+f.r1:v8:123:d,m,n:accion:tv");
+  assert.equal(claves.ub, "home:ub:es-MX+f.r1:v8:d,m,n:accion:tv");
+  assert.equal(claves.gen, "home:gen:es-MX+f.r1:v8:d,m,n:accion:tv");
+  assert.equal(claves.degradado, "home:degradado:es-MX+f.r1:v8:123:d,m,n:accion:tv");
+  assert.equal(claves.turno, "home:turno:es-MX+f.r1:v8:123:d,m,n:accion:tv");
 });
 
 test("el UB y su generación NO llevan semilla; el turno y el degradado SÍ", () => {

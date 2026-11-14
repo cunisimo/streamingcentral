@@ -16,6 +16,30 @@ debajo de "Antecedentes anteriores al 09/09/2026" es histórico. Categorías de 
 pública de deployments de GitHub, estado `success`), **dueño** (informado por
 el dueño), **Producción** (comprobado contra `app.yump.ar`).
 
+**Rama `fix/drama-sin-terror` (14/11/2026; lista para revisar, SIN integrar ni
+desplegar).** Regla del dueño: una película de Terror no va en el riel Drama, aunque
+TMDB también la etiquete Drama. **Causa (Producción, 14/11):** It: Capítulo 2
+(`movie/474350`) trae Terror + Suspenso + Drama en TMDB y la receta de Drama era
+`with_genres=18` sin exclusión, así que entraba por la consulta principal: Home con
+Max, riel Drama en Películas, puesto 2 de 20 (junto con It, 346364); «Ver todas»
+`/api/discover?genre=drama&providers=m`, página 2 (con It, El abogado del diablo y
+Entrevista con el vampiro). No era relleno, fallback ni caché. **Cambio (Git):**
+`EXCLUSIONES_RIEL` en `lib/categories.ts` (sólo `drama/movie → [27]`), aplicado en
+la ventana y la página extra del riel del Home (`sinGeneros` → `without_genres`, la
+misma receta en las dos) y en «Ver todas» (`/api/discover?riel=1` →
+`listByCategory({ rielCategoria })`), más un filtro sobre los `genre_ids` que ya trae
+discover: cero llamadas a TMDB adicionales. `/categoria/drama` en Películas oculta el
+cruce «Drama con sustos». `VERSION_HOME` 7 → **8** para descartar los Home y últimos
+buenos `v7` cacheados; las recetas de pool cambian de hash solas. Series, los demás
+rieles, el chip «Drama intenso» del hero, el buscador y «Terror para llorar» no
+cambian. **Verificado:** `lib/riel-drama-sin-terror.test.ts` (12 tests), suite
+completa 2593 / 0 fallas / 18 omitidos, `tsc` y `npm run build` limpios. **No
+verificado:** el Home ni «Ver todas» contra TMDB real en local (no hay credenciales
+no productivas; las productivas no se usan en el banco), ni en un Preview. Límite:
+el bundle Android ya publicado tiene su propio `CategoryView` y no manda `riel=1`,
+así que su «Ver todas» de Drama sigue igual hasta un AAB nuevo; el riel del Home sí
+se corrige para la app también, porque lo arma el servidor.
+
 **Incidente de Upstash (6/11/2026; Redis recuperado por cambio de plan, causa sin
 corregir).** La cuota de 500.000 comandos se agotó (`/api/health`: 500000/500000;
 panel: 676.016) y la app respondió sin caché. **Informado por el dueño:** activó

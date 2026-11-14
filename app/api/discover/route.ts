@@ -80,6 +80,10 @@ async function manejar(req: NextRequest) {
       // ("Terror en dibujos"), no mezclada en el listado principal. Lo familiar
       // sí se muestra: acá el usuario ya eligió un género a propósito.
       scope: "browse",
+      // «Ver todas» de un riel del Home (/categoria/<slug>) lo pide con
+      // `riel=1`: aplica sus exclusiones (Terror fuera de Drama en películas).
+      // El buscador no lo manda y queda como estaba.
+      rielCategoria: sp.get("riel") === "1",
       extra: Object.keys(extra).length ? extra : undefined,
     });
     return NextResponse.json({ items });
