@@ -24,7 +24,7 @@ import { calcularHuella } from "./idioma.ts";
 
 test("modo compatible: las doce familias producen los bytes pre-tanda-1", () => {
   const H = "";   // la huella vacía, que es lo que se pasaba en la tanda 1
-  assert.equal(claveHome(3523671066, "d,m,n", "", H), "home:v7:3523671066:d,m,n:");
+  assert.equal(claveHome(3523671066, "d,m,n", "", H), "home:v8:3523671066:d,m,n:");
   assert.equal(
     clavePoolCache("v1", "AR", "2026-08-23", "movie", "n", "pop.abc123", 2, H),
     "disc:v1:AR:2026-08-23:movie:n:pop.abc123:p2",
@@ -57,7 +57,7 @@ test("modo compatible: las doce familias producen los bytes pre-tanda-1", () => 
 test("tanda 2: las doce familias llevan la huella es-MX+f.r1", () => {
   const H = calcularHuella("es-MX", true);
   assert.equal(H, "es-MX+f.r1");
-  assert.equal(claveHome(3523671066, "d,m,n", "", H), "home:es-MX+f.r1:v7:3523671066:d,m,n:");
+  assert.equal(claveHome(3523671066, "d,m,n", "", H), "home:es-MX+f.r1:v8:3523671066:d,m,n:");
   assert.equal(
     clavePoolCache("v1", "AR", "2026-08-23", "movie", "n", "pop.abc123", 2, H),
     "disc:es-MX+f.r1:v1:AR:2026-08-23:movie:n:pop.abc123:p2",

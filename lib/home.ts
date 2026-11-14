@@ -36,6 +36,7 @@ import {
 // acá arrastraría lib/enrich → lib/cache → Upstash Redis al bundle del navegador.
 import { HOME_GENRES, defaultTypeFor } from "@/components/data";
 import { soloAnimePlatform } from "./audience";
+import { excluidosDelRiel, filtrarRiel } from "./categories";
 import { backendCache, conPlazoRedis, dailySeed, leerAcotadasHome, leerVarias, opsTurnoAcotadoHome, opsTurnoHome, pausaTmdb, pickDaily, TTL, withMetricas } from "./cache";
 import { canonizarProviders, canonizarTipos, claveDeTipos } from "./canonizar-home";
 import { crearVueloHome } from "./home-vuelo";
@@ -372,17 +373,27 @@ function genreRail(
   // en la 4, así que ya trajo 4-6 y su extra es la 7. Pedir la 4 fija le habría
   // dado candidatos que ya tenía, y al riel más profundo —el único que necesita
   // el fallback— lo habría dejado sin él.
+  //
+  // Exclusiones del riel (lib/categories.ts → EXCLUSIONES_RIEL; hoy sólo
+  // Terror fuera de Drama en películas). Van DOS veces y a propósito: como
+  // `sinGeneros` de la receta —TMDB las saca con `without_genres`, así que ni la
+  // ventana, ni la paginación, ni la página extra las traen, y el hash nuevo de
+  // la receta no reusa pools cacheados con la vieja— y como filtro sobre los
+  // `genre_ids` que ya trae el crudo, por si algo llegara armado con otra
+  // receta. Ninguna de las dos cuesta una llamada a TMDB.
+  const sinRiel = excluidosDelRiel(genre, tipo);
   const pedirExtra = () =>
-    safe(c, `genre:${genre} página extra`, [] as RawTitle[], () =>
-      categoryCandidates({
+    safe(c, `genre:${genre} página extra`, [] as RawTitle[], async () => filtrarRiel(genre, tipo,
+      await categoryCandidates({
         tipo, genre, providers, startPage: desde + FETCH_BUFFER, pages: 1, scope: "home",
+        ...(sinRiel.length ? { sinGeneros: sinRiel } : {}),
         // Se reusa el eje ya resuelto (`ejeFijo`) en vez de volver a elegirlo:
         // la extra tiene que ser la página siguiente de LA MISMA receta, y
         // además así no se vuelve a correr la verificación del guard.
         ...(eje ? { superficie: SUPERFICIE_RIEL, ejeFijo: eje } : {}),
-      }));
+      })));
   return armarRiel(
-    c, genre, tipo, providers, used, candidatos, admite, VISIBLE_CARDS, pedirExtra,
+    c, genre, tipo, providers, used, filtrarRiel(genre, tipo, candidatos), admite, VISIBLE_CARDS, pedirExtra,
   );
 }
 
@@ -491,6 +502,8 @@ export async function composeHome(opts: {
         safe(c, `genre:${g} candidatos`, vacioDeSuperficie, () =>
           candidatosDeSuperficie({
             tipo, genre: g, providers, startPage: 1, pages: FETCH_BUFFER, scope: "home",
+            // La misma receta que la página extra de `genreRail` (ver allí).
+            ...(excluidosDelRiel(g, tipo).length ? { sinGeneros: excluidosDelRiel(g, tipo) } : {}),
             ...(ejesEnRieles() ? { superficie: SUPERFICIE_RIEL } : {}),
           })))),
       // Miniseries. Se pide SIEMPRE que el riel esté encendido, en paralelo con

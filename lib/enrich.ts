@@ -13,7 +13,7 @@ import {
   type RawTitle, type RawDetail, type CreditEntry,
 } from "./tmdb";
 import { codeForTmdbId, codesToTmdbIds } from "./providers-ar";
-import { resolveCategory, genreIdsToSlugs, categoryLabel, categoryBySlug, CATEGORIES, type Category } from "./categories";
+import { resolveCategory, genreIdsToSlugs, categoryLabel, categoryBySlug, CATEGORIES, excluidosDelRiel, filtrarRiel, type Category } from "./categories";
 import { curatedTitles, curatedBlocklist, intercalarEstratos } from "./curated";
 import { getEditorial, publishedIds } from "./reviews";
 import { cached, cachedIf, cachedLoc, cachedLocIf, TTL, dailySeed, pickDaily } from "./cache";
@@ -264,6 +264,11 @@ export async function listByCategory(opts: {
   // Descarta lo que no tenga póster y sinopsis (ver abajo). Lo usa "Últimos
   // lanzamientos", que ya no filtra por cantidad de votos.
   soloCompletos?: boolean;
+  /** Aplica las exclusiones del RIEL de `genre` (`EXCLUSIONES_RIEL` en
+   *  lib/categories.ts: hoy, Terror fuera de Drama en películas). Lo pide sólo
+   *  «Ver todas» (/categoria/<slug>, vía `/api/discover?riel=1`); el buscador,
+   *  el hero y las portadas de género no lo piden y quedan como estaban. */
+  rielCategoria?: boolean;
   /** Señal de salida: `fallo` queda en true si la reparación de idioma falló.
    *  Quien cachee el resultado tiene que pasarla. (Su único cacheador, el Top
    *  por popularidad `top:pop:`, se retiró el 2026-10-20 con
@@ -322,9 +327,14 @@ export async function listByCategory(opts: {
   // por consulta y solo si esa página trae algún título roto. `listByCategory`
   // alimenta /categoria, /top y los carruseles de audiencia, así que sin esto
   // quedaba fuera de la reparación una de las superficies más grandes.
+  // Exclusiones del riel: por la consulta (`without_genres`, así cada página de
+  // TMDB ya viene sin ellas y la paginación no se corta) y, abajo, otra vez
+  // sobre los `genre_ids` del crudo. Son del género PRINCIPAL: en "Terror para
+  // llorar" (terror × drama) el principal es Terror y no se aplican.
+  const sinRiel = opts.rielCategoria ? excluidosDelRiel(opts.genre, opts.tipo) : [];
   const paramsBase = {
     ...base,
-    withoutGenres: sinTodo([...(rule.withoutGenres ?? []), ...(rule2.withoutGenres ?? [])]),
+    withoutGenres: sinTodo([...(rule.withoutGenres ?? []), ...(rule2.withoutGenres ?? []), ...sinRiel]),
     genres: genres.length ? genres : undefined,
     keywords: keywords.length ? keywords : undefined,
     extra,
@@ -332,7 +342,7 @@ export async function listByCategory(opts: {
   let falloIdiomaCat = false;
   const paramsAlt = rule.alt ? {
     ...base,
-    withoutGenres: sinTodo(rule.alt.withoutGenres),
+    withoutGenres: sinTodo([...(rule.alt.withoutGenres ?? []), ...sinRiel]),
     genres: rule.alt.genres,
     keywords: rule.alt.keywords,
     extra: opts.extra,
@@ -386,6 +396,7 @@ export async function listByCategory(opts: {
     }
     crudos = mezcla;
   }
+  if (opts.rielCategoria) crudos = filtrarRiel(opts.genre, opts.tipo, crudos);
 
   // Ficha completa: con póster y con sinopsis. Se filtra ANTES del corte a 20
   // para no gastar cupo en títulos que se van a descartar igual. TMDB no puede
