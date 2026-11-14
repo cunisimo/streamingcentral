@@ -32,13 +32,17 @@ discover: cero llamadas a TMDB adicionales. `/categoria/drama` en Películas ocu
 cruce «Drama con sustos». `VERSION_HOME` 7 → **8** para descartar los Home y últimos
 buenos `v7` cacheados; las recetas de pool cambian de hash solas. Series, los demás
 rieles, el chip «Drama intenso» del hero, el buscador y «Terror para llorar» no
-cambian. **Verificado:** `lib/riel-drama-sin-terror.test.ts` (12 tests), suite
-completa 2593 / 0 fallas / 18 omitidos, `tsc` y `npm run build` limpios. **No
-verificado:** el Home ni «Ver todas» contra TMDB real en local (no hay credenciales
-no productivas; las productivas no se usan en el banco), ni en un Preview. Límite:
-el bundle Android ya publicado tiene su propio `CategoryView` y no manda `riel=1`,
-así que su «Ver todas» de Drama sigue igual hasta un AAB nuevo; el riel del Home sí
-se corrige para la app también, porque lo arma el servidor.
+cambian. **Android publicado, sin AAB nuevo:** en el JS de los AAB vc3, vc4 y vc5
+(`releases/*.aab` → `base/assets/public/_next/static/chunks`), «Ver todas» pide
+`/api/discover?tipo&genre[&genre2]&providers` **sin `page`**, el buscador por género
+manda **siempre `page=N`** y el chip «Drama intenso» usa `/api/recomendaciones`. Así
+que el servidor reconoce «Ver todas» del Android viejo por la ausencia de `page`
+(`pideRielCategoria`, `lib/discover-params.ts`); la web nueva manda además `riel=1`.
+En esos bundles el cruce «Drama con sustos» queda vacío y `Shelf` lo oculta
+(`items.length < minimo → null`). **Verificado:** `lib/riel-drama-sin-terror.test.ts`
+(16 tests, con las URLs exactas de los bundles), suite completa 2597 / 0 fallas,
+`tsc` y `npm run build` limpios. La prueba de la Preview con los parámetros del AAB
+se registra en el PR.
 
 **Incidente de Upstash (6/11/2026; Redis recuperado por cambio de plan, causa sin
 corregir).** La cuota de 500.000 comandos se agotó (`/api/health`: 500000/500000;

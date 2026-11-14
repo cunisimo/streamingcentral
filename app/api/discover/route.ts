@@ -3,6 +3,7 @@ import { listByCategory } from "@/lib/enrich";
 import { COUNTRY_LANG } from "@/lib/countries";
 import type { MediaType, PlatformCode } from "@/lib/types";
 import { conCors, opcionesCors } from "@/lib/cors";
+import { pideRielCategoria } from "@/lib/discover-params";
 
 export const dynamic = "force-dynamic";
 
@@ -80,10 +81,11 @@ async function manejar(req: NextRequest) {
       // ("Terror en dibujos"), no mezclada en el listado principal. Lo familiar
       // sí se muestra: acá el usuario ya eligió un género a propósito.
       scope: "browse",
-      // «Ver todas» de un riel del Home (/categoria/<slug>) lo pide con
-      // `riel=1`: aplica sus exclusiones (Terror fuera de Drama en películas).
-      // El buscador no lo manda y queda como estaba.
-      rielCategoria: sp.get("riel") === "1",
+      // «Ver todas» de un riel del Home (/categoria/<slug>): aplica sus
+      // exclusiones (Terror fuera de Drama en películas). La web nueva manda
+      // `riel=1`; el Android publicado se reconoce porque no manda `page`, que el
+      // buscador siempre manda (ver lib/discover-params.ts).
+      rielCategoria: pideRielCategoria(sp),
       extra: Object.keys(extra).length ? extra : undefined,
     });
     return NextResponse.json({ items });

@@ -17,6 +17,7 @@ import path from "node:path";
 import {
   EXCLUSIONES_RIEL, admiteEnRiel, cruceExcluido, excluidosDelRiel, filtrarRiel, resolveCategory,
 } from "./categories.ts";
+import { pideRielCategoria } from "./discover-params.ts";
 
 const raiz = path.resolve(import.meta.dirname, "..");
 /** El código sin comentarios: la prosa explica las reglas y no las infringe. */
@@ -124,7 +125,38 @@ test("«Ver todas»: /categoria pide riel=1 en todos sus rieles y la ruta lo apl
   assert.match(vista, /`\/api\/discover\?tipo=\$\{tipo\}&genre=\$\{slug\}&riel=1`/, "Populares sin riel=1");
   assert.match(vista, /`\/api\/discover\?tipo=\$\{tipo\}&genre=\$\{slug\}&genre2=\$\{c\.slug\}&riel=1`/, "cruces sin riel=1");
   assert.match(vista, /cruceExcluido\(slug, c\.slug, tipo\)/);
-  assert.match(codigo("app/api/discover/route.ts"), /rielCategoria: sp\.get\("riel"\) === "1"/);
+  assert.match(codigo("app/api/discover/route.ts"), /rielCategoria: pideRielCategoria\(sp\),/);
+});
+
+// --- Android publicado (AAB vc3, vc4, vc5): las URLs EXACTAS de su bundle ------
+// Copiadas de base/assets/public/_next/static/chunks de cada .aab, con valores.
+const P = "providers=n,d,m";
+const pide = (q: string) => pideRielCategoria(new URLSearchParams(q));
+
+test("AAB publicado: «Ver todas» de Drama (riel y cruces) se reconoce sin riel=1", () => {
+  assert.equal(pide(`tipo=movie&genre=drama&${P}`), true, "Populares en Drama");
+  assert.equal(pide(`tipo=movie&genre=drama&${P}&country=ar`), true, "Populares con país");
+  assert.equal(pide(`tipo=movie&genre=drama&genre2=comedia&${P}`), true, "Drama con risas");
+});
+
+test("AAB publicado: el buscador por género NO se toca (siempre manda page)", () => {
+  assert.equal(pide(`tipo=movie&genre=drama&page=1&${P}`), false);
+  assert.equal(pide(`tipo=movie&genre=drama&page=3&${P}&country=ar&age=13&decade=1990`), false);
+  assert.equal(pide(`tipo=movie&country=ar&${P}`), false, "exploración por país");
+});
+
+test("web nueva: riel=1 es explícito", () => {
+  assert.equal(pide(`tipo=movie&genre=drama&riel=1&${P}`), true);
+  assert.equal(pide(`tipo=movie&genre=drama&genre2=terror&riel=1&${P}`), true);
+});
+
+test("cruces intencionales: «Terror para llorar» y series quedan igual aunque se reconozca «Ver todas»", () => {
+  // El reconocimiento sólo dice «esto es Ver todas»; qué se excluye lo decide
+  // el género PRINCIPAL y el tipo.
+  assert.equal(pide(`tipo=movie&genre=terror&genre2=drama&${P}`), true);
+  assert.deepEqual(excluidosDelRiel("terror", "movie"), []);
+  assert.equal(pide(`tipo=tv&genre=drama&${P}`), true);
+  assert.deepEqual(excluidosDelRiel("drama", "tv"), []);
 });
 
 test("«Ver todas»: listByCategory excluye en la consulta (toda página) y filtra los crudos", () => {
