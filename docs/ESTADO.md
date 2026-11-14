@@ -16,8 +16,8 @@ debajo de "Antecedentes anteriores al 09/09/2026" es histórico. Categorías de 
 pública de deployments de GitHub, estado `success`), **dueño** (informado por
 el dueño), **Producción** (comprobado contra `app.yump.ar`).
 
-**Rama `fix/drama-sin-terror` (14/11/2026; lista para revisar, SIN integrar ni
-desplegar).** Regla del dueño: una película de Terror no va en el riel Drama, aunque
+**Terror fuera del riel Drama de películas (PR #4, rama `fix/drama-sin-terror`;
+INTEGRADO Y DESPLEGADO el 14/11/2026, merge `1aa7e03`).** Regla del dueño: una película de Terror no va en el riel Drama, aunque
 TMDB también la etiquete Drama. **Causa (Producción, 14/11):** It: Capítulo 2
 (`movie/474350`) trae Terror + Suspenso + Drama en TMDB y la receta de Drama era
 `with_genres=18` sin exclusión, así que entraba por la consulta principal: Home con
@@ -42,7 +42,15 @@ En esos bundles el cruce «Drama con sustos» queda vacío y `Shelf` lo oculta
 (`items.length < minimo → null`). **Verificado:** `lib/riel-drama-sin-terror.test.ts`
 (16 tests, con las URLs exactas de los bundles), suite completa 2597 / 0 fallas,
 `tsc` y `npm run build` limpios. La prueba de la Preview con los parámetros del AAB
-se registra en el PR.
+se registra en el PR. **Producción (14/11, después del deploy de `1aa7e03`; deployment
+de Producción de GitHub para ese commit, mismas URLs que arma el AAB):** con Max,
+«Ver todas» de Drama 20 títulos y 0 de terror, sin It: Capítulo 2 (antes traía «Una
+historia de Derry» y, en la página 2, It 2); Drama × comedia 0 de terror; Drama × terror
+vacío; Home con `drama:movie`: riel Drama 0 de terror y riel Terror con It: Capítulo 2.
+Sin cambios: buscador por género (páginas 1 y 2, la 2 sigue con It e It 2), «Ver todas»
+de Terror, «Terror para llorar» (con It 2) y series de Drama. Con n,d,m da lo mismo
+(It 2 no entra en las 20 del riel Terror del Home porque compite con más títulos; sigue
+en «Terror para llorar»). **No probado:** la app instalada en un teléfono.
 
 **Incidente de Upstash (6/11/2026; Redis recuperado por cambio de plan, causa sin
 corregir).** La cuota de 500.000 comandos se agotó (`/api/health`: 500000/500000;
@@ -60,7 +68,32 @@ plataforma argentina; el origen del tráfico sigue sin confirmar. Detalle:
 `disp:top-manual` + `robots.txt` contra Reflectionbot, e informe del incidente),
 integrado por fast-forward y autorizado por el dueño. Deploy Production **7623078068**
 `success`. Comprobado en `app.yump.ar`: `/robots.txt`, ficha con relacionados y
-filmografía con «Ver más» (12 → 36 → 60). Firewall sin publicar. Ver la entrada del 07/11.
+filmografía con «Ver más» (12 → 36 → 60). Ver la entrada del 07/11. (Al deploy, el
+Firewall no tenía reglas; su estado actual está en el párrafo siguiente.)
+
+**Firewall de Vercel (`streamingcentral`; estado al 14/11/2026).** Una sola regla
+custom, **«Deny Reflectionbot»**: `User Agent` *contains* `Reflectionbot` **AND**
+`Request Path` *does not equal* `/robots.txt` → **Deny**. La creó y publicó Claude el
+**07/11 ≈ 14:40 ART (17:40 UTC)** con autorización expresa del dueño en el chat, después
+de verificar que el bot seguía activo ~2 h 15 min después del `robots.txt` (Past Hour
+13:37–14:37 ART: 2,6 mil de ~2,6 mil solicitudes). **Panel (07/11):** al publicar,
+denegadas con ese UA desde `16.216.88.x` (AS Google LLC) y las permitidas cayeron a ~0;
+con `curl` y el UA del bot, `/`, `/titulo/movie/550` y `/api/title/movie/550` → 403 y
+`/robots.txt` → 200; sin ese UA, ficha y `/api/health` 200. **Panel (14/11, sólo
+lectura):** Audit Log = una sola publicación (versión #1, 07/11, «created and enabled
+Deny Reflectionbot»), regla activa; Traffic del último día: 974 permitidas y 189
+denegadas, **todas por "DDoS Mitigation" de Vercel y ninguna por la regla**; Reflectionbot
+no figura entre los agentes del día. O sea: en las últimas 24 h el bot **no envió
+tráfico** (dejó de pedir, por `robots.txt` o por los 403; el panel no permite separar
+las dos causas). Esas 189 son de otro cliente (IP `34.79.135.70`, AS Google LLC, UA
+`Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36` truncado): las frena la
+mitigación automática de Vercel, no una regla nuestra; no se tocó. Sin cambios en Bot
+Protection (Off), AI Bots, IP Blocking, System Bypass ni Attack Mode. **Límite del
+plan Hobby:** Traffic sólo muestra la última hora o el último día, así que entre el
+08/11 y el 13/11 no hay serie. Seguimiento de Redis y del bot:
+`docs/medidas/2026-11-06-incidente-upstash/seguimiento-redis.md`. Quitar la regla o
+pasarla a Log es decisión del dueño.
+
 **Antes (06/11/2026).** `main` = **`17e13a1`**: PR #1, código del AAB 5
 integrado por fast-forward y autorizado por el dueño. Deploy Production
 **7610153320** `success`. Comprobado en `app.yump.ar`: aviso del registro y
@@ -1655,8 +1688,10 @@ reusa su diseño, no se mergea.
     Vercel por User-Agent y rangos de `/api/title/…` y `/api/person/…`). `robots.txt`
     es una pedida, no un bloqueo: si el tráfico sigue, el siguiente paso es la regla
     de Firewall, decisión del dueño.
-  **Pendiente (decisión del dueño):** regla de Firewall en modo Log (propuesta en el
-  informe; sin publicar), parche opcional sin `disp:` por título (fuera del PR #2 y de
+  **Pendiente (decisión del dueño):** ~~regla de Firewall en modo Log (propuesta en el
+  informe; sin publicar)~~ — **reemplazado:** el 07/11 el dueño autorizó y se publicó
+  la regla «Deny Reflectionbot» (ver el resumen vigente, «Firewall de Vercel»).
+  Sigue pendiente el parche opcional sin `disp:` por título (fuera del PR #2 y de
   `main`).
 
 - **Incidente de Upstash: versión final lista para revisar antes del deploy (2026-11-07;
