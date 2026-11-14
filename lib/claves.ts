@@ -61,6 +61,10 @@ const marcar = (s: string) => s as ClaveLocalizada;
  * seguiría mostrando en Disney+ hasta 36 h (último bueno). Sube junto con
  * `VERSION_DISPONIBILIDAD`, y un test lo exige.
  *
+ * `v8`: el riel Drama de películas excluye Terror (`EXCLUSIONES_RIEL` en
+ * lib/categories.ts). Un `v7` cacheado —fresca 6 h, último bueno hasta 36 h—
+ * seguiría mostrando It: Capítulo 2 en Drama después de deployar.
+ *
  * Etapa 2 (#17): las CINCO familias del Home la comparten —fresca, último
  * bueno, generación, degradado compartido y turno—, porque el último bueno y el
  * degradado son el MISMO contrato de payload que la fresca. Subirla las
@@ -72,7 +76,7 @@ const marcar = (s: string) => s as ClaveLocalizada;
 export const VERSION_HOME: number =
   process.env.YUMP_BANCO === "1" && /^\d+$/.test(process.env.YUMP_BANCO_VERSION_HOME ?? "")
     ? Number(process.env.YUMP_BANCO_VERSION_HOME)
-    : 7;
+    : 8;
 
 /**
  * La versión de las PLATAFORMAS RESUELTAS que viaja en cuatro familias: card,
