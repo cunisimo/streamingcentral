@@ -16,8 +16,8 @@ debajo de "Antecedentes anteriores al 09/09/2026" es histórico. Categorías de 
 pública de deployments de GitHub, estado `success`), **dueño** (informado por
 el dueño), **Producción** (comprobado contra `app.yump.ar`).
 
-**Rama `fix/drama-sin-terror` (14/11/2026; lista para revisar, SIN integrar ni
-desplegar).** Regla del dueño: una película de Terror no va en el riel Drama, aunque
+**Terror fuera del riel Drama de películas (PR #4, rama `fix/drama-sin-terror`;
+INTEGRADO Y DESPLEGADO el 14/11/2026, merge `1aa7e03`).** Regla del dueño: una película de Terror no va en el riel Drama, aunque
 TMDB también la etiquete Drama. **Causa (Producción, 14/11):** It: Capítulo 2
 (`movie/474350`) trae Terror + Suspenso + Drama en TMDB y la receta de Drama era
 `with_genres=18` sin exclusión, así que entraba por la consulta principal: Home con
@@ -42,7 +42,15 @@ En esos bundles el cruce «Drama con sustos» queda vacío y `Shelf` lo oculta
 (`items.length < minimo → null`). **Verificado:** `lib/riel-drama-sin-terror.test.ts`
 (16 tests, con las URLs exactas de los bundles), suite completa 2597 / 0 fallas,
 `tsc` y `npm run build` limpios. La prueba de la Preview con los parámetros del AAB
-se registra en el PR.
+se registra en el PR. **Producción (14/11, después del deploy de `1aa7e03`; deployment
+de Producción de GitHub para ese commit, mismas URLs que arma el AAB):** con Max,
+«Ver todas» de Drama 20 títulos y 0 de terror, sin It: Capítulo 2 (antes traía «Una
+historia de Derry» y, en la página 2, It 2); Drama × comedia 0 de terror; Drama × terror
+vacío; Home con `drama:movie`: riel Drama 0 de terror y riel Terror con It: Capítulo 2.
+Sin cambios: buscador por género (páginas 1 y 2, la 2 sigue con It e It 2), «Ver todas»
+de Terror, «Terror para llorar» (con It 2) y series de Drama. Con n,d,m da lo mismo
+(It 2 no entra en las 20 del riel Terror del Home porque compite con más títulos; sigue
+en «Terror para llorar»). **No probado:** la app instalada en un teléfono.
 
 **Incidente de Upstash (6/11/2026; Redis recuperado por cambio de plan, causa sin
 corregir).** La cuota de 500.000 comandos se agotó (`/api/health`: 500000/500000;
