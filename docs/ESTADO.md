@@ -1,6 +1,6 @@
 # Estado de Yump
 
-> **Estado canónico. Actualizado el 7 de noviembre de 2026.**
+> **Estado canónico. Actualizado el 18 de noviembre de 2026.**
 > Leer este bloque antes de los antecedentes históricos. Arquitectura y reglas:
 > [`CLAUDE.md`](../CLAUDE.md). Problemas históricos: [`ISSUES.md`](ISSUES.md).
 > No duplicar este estado en otros manuales: enlazarlo.
@@ -15,6 +15,56 @@ debajo de "Antecedentes anteriores al 09/09/2026" es histórico. Categorías de 
 **deploy** (deployment de Vercel *Production – streamingcentral* en la API
 pública de deployments de GitHub, estado `success`), **dueño** (informado por
 el dueño), **Producción** (comprobado contra `app.yump.ar`).
+
+**Editor del Top semanal (rama `feat/top-dashboard-ux`, 18/11/2026; lista para que la
+pruebe el dueño, SIN integrar ni desplegar).** Pedido del dueño: mover con flechas era
+lento, aprobar con un checkbox era confuso y los pósters de la búsqueda eran chicos.
+**Qué es "aprobar" (Git, sin cambios):** es la marca «revisado» del BLOQUE
+(`revisado_por`, columna derivada `revisado`); aprobar NO publica: sólo hace que el bloque
+entre en «Publicar revisados» (`publicar_top`), y recién ahí se ve en `/top` (hasta 1 min,
+`TTL_PUBLICACIONES`). Cualquier cambio de contenido o de fecha la quita (trigger
+`top_entries_invalidan_revision` y `reemplazar_entradas`). **Cambio (Git):** la pantalla
+pasó a `components/admin/top/TopEditor.tsx`; `app/admin/top/page.tsx` sólo arma el
+transporte real (`lib/top-transporte.ts`). Búsqueda a la izquierda y ranking a la derecha
+desde 1000 px, una columna en pantallas angostas. Tirador por fila para arrastrar con mouse
+o táctil (`touch-action: none` sólo en el tirador: el resto de la página scrollea), con las
+filas intermedias corriéndose, el número final y un casillero de destino a la vista;
+flechas/Inicio/Fin en el tirador y «Mover al puesto…» en cada fila. Botón «Aprobar» →
+«Aprobada» + «Deshacer aprobación», con estado de guardado. Resultados con póster de
+92×138 (ampliable en un `<dialog>` con póster grande, título original, sinopsis y
+plataformas), año, título original si difiere y «Agregar» / «Ya está en el puesto X»;
+agregar ocupa el primer puesto libre y resalta la fila; con los diez ocupados, o con
+«Reemplazar…», se elige qué título reemplazar antes de aplicar. `/api/admin-search` suma
+`tituloOriginal` y `resumen`, que vienen en la MISMA respuesta de TMDB (0 llamadas más).
+**Guardado (Git):** `SincronizadorTop` (`lib/top-editor-nucleo.ts`): una escritura en vuelo
+por vez, los órdenes seguidos del mismo bloque se funden, lo pendiente se reaplica sobre
+cada respuesta (una respuesta tardía no pisa el último movimiento) y un fallo detiene la
+cola conservando lo pendiente, con «Reintentar» o «Descartar cambios y volver a lo
+guardado». Tres acciones nuevas en `/api/admin/top`, detrás de la misma puerta admin+MFA y
+SIN migración: `ordenar` (orden ABSOLUTO; el servidor exige una permutación exacta de lo que
+hay en la base —`validarNuevoOrden`— y escribe con `reemplazar_entradas`, una transacción),
+`agregar` (`insert`: los `unique` rechazan un puesto ocupado o un título repetido) y
+`reemplazar` (`update` condicionado al título esperado); un conflicto responde 409 y el
+panel ofrece recargar. Las acciones viejas (`guardar`, `reordenar`) siguen en la ruta.
+**Verificado:** `lib/top-editor-nucleo.test.ts` (19 tests: reglas, los 100 pares contra el
+reordenamiento anterior, fundido de órdenes, respuesta tardía, fallo/reintento/descarte,
+conflicto, 12 rondas al azar con fallos contra el banco sin duplicar ni perder títulos,
+cableado de la ruta), suite completa 2616 / 0 fallas, `tsc` y `npm run build` limpios.
+**Banco local (navegador, sin Supabase ni Producción):** `app/revision-local/top` con la
+base en memoria `lib/banco-top.ts` (404 en producción y sin `TOP_REVISION_LOCAL=1`; no viaja
+en el AAB). Recorrido hecho: dos «Drácula» y dos «It» distinguidos por póster/año/original;
+alta en el primer libre con resaltado; duplicado → «Ya está en el puesto X»; 8→2 por
+arrastre y por «Mover al puesto…»; arrastre táctil con indicador; aprobar, deshacer y
+"mover quita la aprobación"; reemplazo con el bloque lleno y en uno a medias; 4
+movimientos rápidos con 1,5 s de demora = 2 escrituras; fallo simulado → reintentar y
+descartar; "otra pestaña" → 409 y recarga; recargar conserva orden y aprobación; teclado
+(el foco sigue al título) y 375 px sin scroll horizontal; modo claro y oscuro. **No
+probado:** el camino real con Supabase (RLS, triggers, MFA) —se prueba en una Preview con
+la sesión del admin—, iOS Safari con el dedo real y lectores de pantalla. **Limitaciones:**
+dos pestañas del panel guardando el MISMO bloque a la vez tienen una ventana mínima entre
+leer y escribir en `ordenar` (cerrarla exige una función nueva en la base); no hay forma
+de quitar un título (tampoco la había: se reemplaza); las filas del ranking no muestran
+póster (las entradas guardan sólo título e id).
 
 **Terror fuera del riel Drama de películas (PR #4, rama `fix/drama-sin-terror`;
 INTEGRADO Y DESPLEGADO el 14/11/2026, merge `1aa7e03`).** Regla del dueño: una película de Terror no va en el riel Drama, aunque

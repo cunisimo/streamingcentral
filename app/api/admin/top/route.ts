@@ -3,9 +3,11 @@ import {
   adminDeToken, supabaseComoUsuario, tokenDeHeader,
 } from "@/lib/admin-auth";
 import {
-  bloquesConPublicacion, cambiarFecha, copiarPublicado, guardarPosicion,
-  marcarRevisado, obtenerBorradores, publicar, reordenar, restaurarBorrador,
+  ConflictoTop, agregarEnPosicion, bloquesConPublicacion, cambiarFecha, copiarPublicado,
+  guardarPosicion, marcarRevisado, obtenerBorradores, ordenarEntradas, publicar,
+  reemplazarEnPosicion, reordenar, restaurarBorrador,
 } from "@/lib/top-manual";
+import type { EntradaTop } from "@/lib/top-manual-nucleo";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const dynamic = "force-dynamic";
@@ -66,6 +68,17 @@ export async function POST(req: NextRequest) {
   const accion = String(body.accion ?? "");
   const id = String(body.id ?? "");
   const num = (v: unknown) => (Number.isFinite(Number(v)) ? Number(v) : NaN);
+  // Una entrada completa y con forma válida, o null. El tipo tiene que ser el
+  // del bloque; eso lo comprueba el trigger `top_entry_tipo_coherente`.
+  const entradaValida = (v: unknown): EntradaTop | null => {
+    const e = v as Partial<EntradaTop> | null;
+    if (!e || !(Number(e.posicion) >= 1 && Number(e.posicion) <= 10) || !Number.isInteger(Number(e.posicion))) return null;
+    if (e.tipo !== "movie" && e.tipo !== "tv") return null;
+    if (!Number.isInteger(Number(e.tmdb_id)) || Number(e.tmdb_id) <= 0) return null;
+    const titulo = String(e.titulo ?? "").trim();
+    if (!titulo) return null;
+    return { posicion: Number(e.posicion), tipo: e.tipo, tmdb_id: Number(e.tmdb_id), titulo };
+  };
 
   try {
     switch (accion) {
@@ -77,6 +90,37 @@ export async function POST(req: NextRequest) {
         await guardarPosicion(p.sb, id, {
           posicion: e.posicion, tipo: e.tipo, tmdb_id: e.tmdb_id, titulo: String(e.titulo ?? "").trim(),
         });
+        break;
+      }
+      // --- Las tres acciones del editor nuevo (components/admin/top) ---------
+      // Ver lib/top-editor-nucleo.ts: el panel manda órdenes ABSOLUTOS y
+      // escrituras condicionadas, de a una por vez.
+      case "ordenar": {
+        const lista = Array.isArray(body.entradas) ? body.entradas : null;
+        if (!id || !lista || lista.length > 10) {
+          return NextResponse.json({ error: "orden inválido" }, { status: 400 });
+        }
+        const propuestas = lista.map((x) => {
+          const e = x as Partial<EntradaTop>;
+          return { posicion: Number(e?.posicion), tipo: e?.tipo as "movie" | "tv", tmdb_id: Number(e?.tmdb_id), titulo: "" };
+        });
+        await ordenarEntradas(p.sb, id, propuestas);
+        break;
+      }
+      case "agregar": {
+        const e = entradaValida(body.entrada);
+        if (!id || !e) return NextResponse.json({ error: "entrada inválida" }, { status: 400 });
+        await agregarEnPosicion(p.sb, id, e);
+        break;
+      }
+      case "reemplazar": {
+        const e = entradaValida(body.entrada);
+        const r = body.reemplaza as { tipo?: unknown; tmdb_id?: unknown } | null;
+        const tmdbViejo = Number(r?.tmdb_id);
+        if (!id || !e || !r || (r.tipo !== "movie" && r.tipo !== "tv") || !Number.isInteger(tmdbViejo)) {
+          return NextResponse.json({ error: "reemplazo inválido" }, { status: 400 });
+        }
+        await reemplazarEnPosicion(p.sb, id, e, { tipo: r.tipo, tmdb_id: tmdbViejo });
         break;
       }
       case "reordenar": {
@@ -123,6 +167,11 @@ export async function POST(req: NextRequest) {
     // y no puede quedar mostrando algo que ya cambió.
     return NextResponse.json(await estado(p.sb));
   } catch (e) {
+    // Un conflicto (409) no es una falla del servidor: el bloque cambió desde
+    // que el panel lo leyó. El panel no reintenta a ciegas: ofrece recargar.
+    if (e instanceof ConflictoTop) {
+      return NextResponse.json({ error: e.message, conflicto: true }, { status: 409 });
+    }
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }
 }

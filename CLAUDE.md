@@ -591,6 +591,11 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   triggers, no la buena conducta del código. Un índice PARCIAL da un solo
   borrador por bloque sin impedir publicar el mismo bloque muchas veces. Lo que
   se publica tarda hasta un minuto en verse en `/top` (`TTL_PUBLICACIONES`).
+  **El editor (`components/admin/top/TopEditor.tsx`) guarda por un SINCRONIZADOR**
+  (`lib/top-editor-nucleo.ts`): una escritura por vez, órdenes ABSOLUTOS que el servidor
+  sólo acepta si son una permutación de lo que hay en la base (`ordenar`), altas con
+  `insert` y reemplazos condicionados; un fallo conserva lo pendiente. «Aprobar» es la
+  marca `revisado` del bloque y NO publica. Banco sin Supabase: `/revision-local/top`.
   **Publicar es una función de la base** (`publicar_top`, `security invoker`):
   valida las diez posiciones y cambia el estado en una transacción. Si eso
   viviera en la API, entre validar y escribir cabría cualquier cosa y una
