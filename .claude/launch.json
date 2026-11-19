@@ -46,6 +46,18 @@
         "3100"
       ],
       "port": 3100
+    },
+    {
+      "name": "top-local",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "--env-file=.env.top-local",
+        "node_modules/next/dist/bin/next",
+        "dev",
+        "-p",
+        "3120"
+      ],
+      "port": 3120
     }
   ]
 }

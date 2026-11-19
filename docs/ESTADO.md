@@ -1,6 +1,6 @@
 # Estado de Yump
 
-> **Estado canónico. Actualizado el 7 de noviembre de 2026.**
+> **Estado canónico. Actualizado el 18 de noviembre de 2026.**
 > Leer este bloque antes de los antecedentes históricos. Arquitectura y reglas:
 > [`CLAUDE.md`](../CLAUDE.md). Problemas históricos: [`ISSUES.md`](ISSUES.md).
 > No duplicar este estado en otros manuales: enlazarlo.
@@ -15,6 +15,87 @@ debajo de "Antecedentes anteriores al 09/09/2026" es histórico. Categorías de 
 **deploy** (deployment de Vercel *Production – streamingcentral* en la API
 pública de deployments de GitHub, estado `success`), **dueño** (informado por
 el dueño), **Producción** (comprobado contra `app.yump.ar`).
+
+**Editor del Top semanal (PR #6, rama `feat/top-dashboard-ux`, 18-19/11/2026; interfaz
+aprobada por el dueño y validada en Supabase local; LISTO PARA INTEGRAR, SIN integrar ni
+desplegar).** Pedido del dueño: mover con flechas era
+lento, aprobar con un checkbox era confuso y los pósters de la búsqueda eran chicos.
+**Qué es "aprobar" (Git, sin cambios):** es la marca «revisado» del BLOQUE
+(`revisado_por`, columna derivada `revisado`); aprobar NO publica: sólo hace que el bloque
+entre en «Publicar revisados» (`publicar_top`), y recién ahí se ve en `/top` (hasta 1 min,
+`TTL_PUBLICACIONES`). Cualquier cambio de contenido o de fecha la quita (trigger
+`top_entries_invalidan_revision` y `reemplazar_entradas`). **Cambio (Git):** la pantalla
+pasó a `components/admin/top/TopEditor.tsx`; `app/admin/top/page.tsx` sólo arma el
+transporte real (`lib/top-transporte.ts`). Búsqueda a la izquierda y ranking a la derecha
+desde 1000 px, una columna en pantallas angostas. Tirador por fila para arrastrar con mouse
+o táctil (`touch-action: none` sólo en el tirador: el resto de la página scrollea), con las
+filas intermedias corriéndose, el número final y un casillero de destino a la vista;
+flechas/Inicio/Fin en el tirador y «Mover al puesto…» en cada fila. Botón «Aprobar» →
+«Aprobada» + «Deshacer aprobación», con estado de guardado. «Deshacer cambios del bloque»
+y «Corregir la publicación vigente» quedaron en UN botón, «Restaurar el último Top
+publicado» (pedido del dueño, 18/11; acción `restaurar` → `copiarPublicado`, sin cambio
+de API): pide confirmación («Cancelar» / «Restaurar borrador») y, sin publicación del
+bloque, queda deshabilitado con «Este bloque todavía no tiene un Top publicado para
+restaurar». Verificado en el banco: cancelar no toca el borrador; restaurar lo deja igual
+al último publicado, sin aprobación y sin tocar la publicación. Resultados con póster de
+92×138 (ampliable en un `<dialog>` con póster grande, título original, sinopsis y
+plataformas), año, título original si difiere y «Agregar» / «Ya está en el puesto X»;
+agregar ocupa el primer puesto libre y resalta la fila; con los diez ocupados, o con
+«Reemplazar…», se elige qué título reemplazar antes de aplicar. `/api/admin-search` suma
+`tituloOriginal` y `resumen`, que vienen en la MISMA respuesta de TMDB (0 llamadas más).
+**Guardado (Git):** `SincronizadorTop` (`lib/top-editor-nucleo.ts`): una escritura en vuelo
+por vez, los órdenes seguidos del mismo bloque se funden, lo pendiente se reaplica sobre
+cada respuesta (una respuesta tardía no pisa el último movimiento) y un fallo detiene la
+cola conservando lo pendiente, con «Reintentar» o «Descartar cambios y volver a lo
+guardado». Tres acciones nuevas en `/api/admin/top`, detrás de la misma puerta admin+MFA y
+SIN migración: `ordenar` (orden ABSOLUTO; el servidor exige una permutación exacta de lo que
+hay en la base —`validarNuevoOrden`— y escribe con `reemplazar_entradas`, una transacción),
+`agregar` (`insert`: los `unique` rechazan un puesto ocupado o un título repetido) y
+`reemplazar` (`update` condicionado al título esperado); un conflicto responde 409 y el
+panel ofrece recargar. Las acciones viejas (`guardar`, `reordenar`) siguen en la ruta.
+**Verificado:** `lib/top-editor-nucleo.test.ts` (19 tests: reglas, los 100 pares contra el
+reordenamiento anterior, fundido de órdenes, respuesta tardía, fallo/reintento/descarte,
+conflicto, 12 rondas al azar con fallos contra el banco sin duplicar ni perder títulos,
+cableado de la ruta), suite completa 2616 / 0 fallas, `tsc` y `npm run build` limpios.
+**Banco local (navegador, sin Supabase ni Producción):** `app/revision-local/top` con la
+base en memoria `lib/banco-top.ts` (404 en producción y sin `TOP_REVISION_LOCAL=1`; no viaja
+en el AAB). Recorrido hecho: dos «Drácula» y dos «It» distinguidos por póster/año/original;
+alta en el primer libre con resaltado; duplicado → «Ya está en el puesto X»; 8→2 por
+arrastre y por «Mover al puesto…»; arrastre táctil con indicador; aprobar, deshacer y
+"mover quita la aprobación"; reemplazo con el bloque lleno y en uno a medias; 4
+movimientos rápidos con 1,5 s de demora = 2 escrituras; fallo simulado → reintentar y
+descartar; "otra pestaña" → 409 y recarga; recargar conserva orden y aprobación; teclado
+(el foco sigue al título) y 375 px sin scroll horizontal; modo claro y oscuro.
+**Supabase local (19/11, `supabase start` + `scripts/sala/db-local.mjs`, sin Producción;
+pedido del dueño):** batería `scripts/top/pruebas-editor-local.mjs` contra la ruta REAL de la
+app local, con Auth local, dos factores TOTP verificados, RLS y los triggers de 007; **30 de
+30** con el código final (y 4 corridas previas estables). Cubre: sin token 401, usuario 403,
+admin aal1 403, admin con UN factor 403, PostgREST directo sin MFA completo rechazado (RLS y
+`no autorizado`), anon sin borradores; agregar / ocupado / repetido (409), ordenar 8→2 con
+títulos de la base, órdenes inválidos 409 sin tocar nada, reemplazo condicionado, trigger de
+tipo; aprobar firma con el uid del token (no del cuerpo) y ordenar, reemplazar y cambiar la
+fecha la quitan; publicar exige aprobación y crea el borrador siguiente; lo publicado no se
+edita ni se borra; restaurar vuelve a la publicación sin aprobación y sin tocarla; y los
+casos de dos pestañas. **Defecto encontrado y corregido:** dos «ordenar» simultáneos del
+mismo bloque respondían **500** «duplicate key» (la base quedaba bien: la segunda
+transacción se revertía); ahora es **409** (`ordenarEntradas` → `ConflictoTop`). Además,
+recorrido en el navegador de `/admin/top` contra la base local con una cuenta admin de
+prueba (login + TOTP): arrastre 8→2, aprobar, «Publicar revisados», «Mover al puesto…» y
+«Restaurar borrador», cada paso comprobado en la base. Entorno local, no defectos: se
+concede SELECT de `profiles` a `authenticated` sólo durante la prueba (como en E4), y
+`user_items` da 403 en local. **Riesgos medidos (dos pestañas, mismo bloque), sin
+migración no se cierran:** (1) un «agregar» que confirma entre la lectura y la escritura de
+un «ordenar» de la otra pestaña se borra aunque respondió 200: **1, 3, 5, 5 y 10 de 27**
+intentos con desfasajes de 0 a 78 ms; (2) una aprobación sobre contenido que esa pestaña no
+vio queda aprobada (confirmado). **Decisión del dueño (19/11): LIMITACIÓN DOCUMENTADA, sin
+migración** —no edita el ranking desde dos pestañas o sesiones a la vez—. Cerrarlos exigiría
+una versión por bloque; no reabrir sin que el dueño lo pida. **Observación fuera de este PR:** `/admin/mfa` elige "el primer factor
+verificado" en un orden que varía entre pedidos; con dos factores, a veces pide el de
+respaldo y rechaza el código de la app habitual (visto en local: alternó principal/respaldo).
+**No probado:** Producción o una Preview con la sesión real del dueño, iOS Safari con el dedo
+y lectores de pantalla. **Limitaciones:** las dos de arriba; no hay forma de quitar un título
+(tampoco la había: se reemplaza); las filas del ranking no muestran póster (las entradas
+guardan sólo título e id).
 
 **Terror fuera del riel Drama de películas (PR #4, rama `fix/drama-sin-terror`;
 INTEGRADO Y DESPLEGADO el 14/11/2026, merge `1aa7e03`).** Regla del dueño: una película de Terror no va en el riel Drama, aunque

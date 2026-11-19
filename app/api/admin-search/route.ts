@@ -43,7 +43,15 @@ export async function GET(req: NextRequest) {
   if (!q) return NextResponse.json({ items: [] });
 
   try {
-    type Crudo = { id: number; tipo: MediaType; titulo: string; year: number | null };
+    // `original` y `resumen` vienen en la MISMA respuesta de búsqueda de TMDB:
+    // sirven para distinguir dos títulos homónimos (dashboard del Top) y no
+    // cuestan ninguna llamada.
+    type Crudo = { id: number; tipo: MediaType; titulo: string; year: number | null;
+      original: string | null; resumen: string | null };
+    const extras = (r: { original_title?: string; original_name?: string; overview?: string }) => ({
+      original: r.original_title || r.original_name || null,
+      resumen: r.overview?.trim() || null,
+    });
     const anio = (r: { release_date?: string; first_air_date?: string }) =>
       Number((r.release_date || r.first_air_date || "").slice(0, 4)) || null;
 
@@ -51,7 +59,7 @@ export async function GET(req: NextRequest) {
     if (tipo) {
       const res = await searchDeTipo(tipo, q);
       crudos = (res.results ?? []).slice(0, 8).map((r) => ({
-        id: r.id, tipo, titulo: r.title || r.name || "", year: anio(r),
+        id: r.id, tipo, titulo: r.title || r.name || "", year: anio(r), ...extras(r),
       }));
     } else {
       const res = await searchMulti(q);
@@ -62,10 +70,11 @@ export async function GET(req: NextRequest) {
           // `RawMulti` incluye personas, que no tienen `title` ni fechas. El
           // filtro de arriba ya las sacó; el cast lo hace explícito.
           const t = r as { id: number; media_type: MediaType; title?: string;
-            name?: string; release_date?: string; first_air_date?: string };
+            name?: string; release_date?: string; first_air_date?: string;
+            original_title?: string; original_name?: string; overview?: string };
           return {
             id: t.id, tipo: t.media_type,
-            titulo: t.title || t.name || "", year: anio(t),
+            titulo: t.title || t.name || "", year: anio(t), ...extras(t),
           };
         });
     }
@@ -90,6 +99,8 @@ export async function GET(req: NextRequest) {
         titulo: c?.title || r.titulo,
         year: c?.year ?? r.year,
         poster: c?.poster ?? null,
+        tituloOriginal: r.original,
+        resumen: r.resumen,
         plataformas: c?.platforms ?? [],
         // `false` NO significa "no está": significa que TMDB todavía no lo
         // confirma para Argentina. El dashboard lo muestra como advertencia y

@@ -3,6 +3,7 @@ node_modules
 .env.local
 .env.sala-local
 .env.comunidad-local
+.env.top-local
 .DS_Store
 *.log
 

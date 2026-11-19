@@ -260,7 +260,10 @@ test("el contador de preparación no vuelve a leer `/api/top`", () => {
   // No es un barrido decorativo: leer la fuente servida es EXACTAMENTE el bug.
   // Como el cutover es atómico, `/api/top` sólo puede decir 0 o 12, así que
   // cualquier contador derivado de ahí vuelve a saltar de golpe.
-  const src = readFileSync(new URL("../app/admin/top/page.tsx", import.meta.url), "utf8")
+  // Desde el editor nuevo la pantalla vive en components/admin/top/TopEditor.tsx
+  // y la página sólo arma el transporte: se miran LAS DOS.
+  const src = ["../app/admin/top/page.tsx", "../components/admin/top/TopEditor.tsx"]
+    .map((r) => readFileSync(new URL(r, import.meta.url), "utf8")).join("\n")
     .replace(/\/\*[\s\S]*?\*\//g, "").replace(/^[ 	]*\/\/.*$/gm, "");
   assert.doesNotMatch(src, /["`']\/api\/top/,
     "el panel volvió a pedir `/api/top` para el contador");

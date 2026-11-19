@@ -19,6 +19,7 @@ import {
   BLOQUES, claveBloque, evidenciaDeRankings, posicionesDeReordenar,
   type EntradaTop, type FilaEvidencia,
 } from "./top-manual-nucleo";
+import { entradasDeOrden, validarNuevoOrden } from "./top-editor-nucleo";
 import type { MediaType, PlatformCode } from "./types";
 
 /** Cinco minutos, igual que la evidencia del top oficial y por lo mismo: el
@@ -288,13 +289,18 @@ export async function copiarPublicado(sb: SupabaseClient, borradorId: string): P
 export async function reemplazarEntradas(
   sb: SupabaseClient, borradorId: string, entradas: EntradaTop[],
 ): Promise<void> {
-  const { error } = await sb.rpc("reemplazar_entradas", {
+  const { error } = await rpcReemplazar(sb, borradorId, entradas);
+  if (error) throw new Error(error.message);
+}
+
+/** La llamada a `reemplazar_entradas`, devolviendo el error en vez de lanzarlo. */
+function rpcReemplazar(sb: SupabaseClient, borradorId: string, entradas: EntradaTop[]) {
+  return sb.rpc("reemplazar_entradas", {
     p_ranking: borradorId,
     p_entradas: entradas.map((e) => ({
       posicion: e.posicion, tipo: e.tipo, tmdb_id: e.tmdb_id, titulo: e.titulo,
     })),
   });
-  if (error) throw new Error(error.message);
 }
 
 /**
@@ -332,6 +338,99 @@ export async function reordenar(
   const nuevas = posicionesDeReordenar((data ?? []) as EntradaTop[], desde, hasta);
   await reemplazarEntradas(sb, borradorId, nuevas);
   return nuevas;
+}
+
+/**
+ * Un conflicto: lo que el panel creía que había en el bloque ya no está. La ruta
+ * lo responde como 409, y el panel ofrece recargar en vez de reintentar a ciegas.
+ */
+export class ConflictoTop extends Error {}
+
+const esConflictoUnico = (m: string) => /duplicate key|unique constraint|23505/i.test(m);
+
+/**
+ * Aplica un orden ABSOLUTO al borrador (dashboard nuevo, arrastrar y "Mover al
+ * puesto…").
+ *
+ * 🔴 SÓLO ACEPTA UNA PERMUTACIÓN DE LO QUE HAY EN LA BASE (`validarNuevoOrden`).
+ * El orden lo calcula el navegador; si su estado quedó viejo —otra pestaña, una
+ * respuesta perdida— y manda un conjunto distinto, se rechaza con conflicto en
+ * vez de borrar el título que no conoce. Los títulos se escriben con el nombre de
+ * la base, no el del pedido.
+ *
+ * La escritura es `reemplazar_entradas`: una transacción, así que un fallo deja
+ * las diez viejas o las diez nuevas, nunca una mezcla. Queda una ventana entre
+ * leer y escribir (dos pestañas del panel guardando a la vez en el mismo bloque);
+ * cerrarla del todo exige una función nueva en la base, que no se agregó.
+ */
+export async function ordenarEntradas(
+  sb: SupabaseClient, borradorId: string, propuestas: EntradaTop[],
+): Promise<void> {
+  const { data, error } = await sb.from("top_ranking_entries")
+    .select("posicion, tipo, tmdb_id, titulo").eq("ranking_id", borradorId);
+  if (error) throw new Error(error.message);
+  const actuales = (data ?? []) as EntradaTop[];
+  const motivo = validarNuevoOrden(actuales, propuestas);
+  if (motivo) throw new ConflictoTop(motivo);
+  const { error: alEscribir } = await rpcReemplazar(sb, borradorId, entradasDeOrden(actuales, propuestas));
+  if (alEscribir) {
+    // Dos órdenes del mismo bloque al mismo tiempo (dos pestañas): las dos
+    // transacciones borran, la segunda no ve las filas que insertó la primera y
+    // su insert choca con `unique (ranking_id, posicion)`. Se revierte entera
+    // (queda el orden de la otra) y es un conflicto, no una falla: medido en
+    // Supabase local, respondía 500 «duplicate key».
+    if (esConflictoUnico(alEscribir.message)) throw new ConflictoTop("otra pestaña guardó este bloque al mismo tiempo");
+    throw new Error(alEscribir.message);
+  }
+}
+
+/**
+ * Agrega un título en un puesto LIBRE.
+ *
+ * Es un `insert`, no un `upsert`: si el puesto ya está ocupado o el título ya
+ * está en el bloque, los `unique (ranking_id, posicion)` y
+ * `unique (ranking_id, tipo, tmdb_id)` lo rechazan en la misma sentencia. Así
+ * "agregar en el primer libre" no puede pisar un título cargado desde otra
+ * pestaña.
+ */
+export async function agregarEnPosicion(
+  sb: SupabaseClient, borradorId: string, entrada: EntradaTop,
+): Promise<void> {
+  const { error } = await sb.from("top_ranking_entries").insert({
+    ranking_id: borradorId, posicion: entrada.posicion,
+    tipo: entrada.tipo, tmdb_id: entrada.tmdb_id, titulo: entrada.titulo,
+  });
+  if (error) {
+    if (esConflictoUnico(error.message)) {
+      throw new ConflictoTop("ese puesto ya está ocupado o el título ya está en el bloque");
+    }
+    throw new Error(error.message);
+  }
+}
+
+/**
+ * Reemplaza el título de un puesto, SÓLO si ese puesto todavía tiene el título
+ * que el admin eligió reemplazar.
+ *
+ * Es un `update` condicionado en la misma sentencia (`where posicion = … and
+ * tipo = … and tmdb_id = …`): si el puesto cambió, no toca ninguna fila y se
+ * responde conflicto. El trigger de la base desmarca la revisión igual que con
+ * cualquier otro cambio.
+ */
+export async function reemplazarEnPosicion(
+  sb: SupabaseClient, borradorId: string, entrada: EntradaTop,
+  reemplaza: { tipo: MediaType; tmdb_id: number },
+): Promise<void> {
+  const { data, error } = await sb.from("top_ranking_entries")
+    .update({ tipo: entrada.tipo, tmdb_id: entrada.tmdb_id, titulo: entrada.titulo })
+    .eq("ranking_id", borradorId).eq("posicion", entrada.posicion)
+    .eq("tipo", reemplaza.tipo).eq("tmdb_id", reemplaza.tmdb_id)
+    .select("posicion");
+  if (error) {
+    if (esConflictoUnico(error.message)) throw new ConflictoTop("ese título ya está en el bloque");
+    throw new Error(error.message);
+  }
+  if (!data?.length) throw new ConflictoTop("ese puesto cambió desde que se cargó la pantalla");
 }
 
 /**
