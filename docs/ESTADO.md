@@ -87,8 +87,9 @@ concede SELECT de `profiles` a `authenticated` sólo durante la prueba (como en 
 migración no se cierran:** (1) un «agregar» que confirma entre la lectura y la escritura de
 un «ordenar» de la otra pestaña se borra aunque respondió 200: **1, 3, 5, 5 y 10 de 27**
 intentos con desfasajes de 0 a 78 ms; (2) una aprobación sobre contenido que esa pestaña no
-vio queda aprobada (confirmado). Cerrarlos exige una versión por bloque (migración, decisión
-del dueño). **Observación fuera de este PR:** `/admin/mfa` elige "el primer factor
+vio queda aprobada (confirmado). **Decisión del dueño (19/11): LIMITACIÓN DOCUMENTADA, sin
+migración** —no edita el ranking desde dos pestañas o sesiones a la vez—. Cerrarlos exigiría
+una versión por bloque; no reabrir sin que el dueño lo pida. **Observación fuera de este PR:** `/admin/mfa` elige "el primer factor
 verificado" en un orden que varía entre pedidos; con dos factores, a veces pide el de
 respaldo y rechaza el código de la app habitual (visto en local: alternó principal/respaldo).
 **No probado:** Producción o una Preview con la sesión real del dueño, iOS Safari con el dedo
