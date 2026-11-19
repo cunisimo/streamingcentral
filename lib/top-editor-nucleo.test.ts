@@ -282,3 +282,19 @@ test("el banco local sólo existe fuera de producción, con su variable, y no vi
   assert.ok(!readFileSync(new URL("../.env.local.example", import.meta.url), "utf8").includes("TOP_REVISION_LOCAL"));
   assert.equal(excluidaDeApp("revision-local/top/page.tsx"), true);
 });
+
+test("restaurar: un solo botón, con confirmación, y deshabilitado sin publicación", () => {
+  const ed = sinComentarios("../components/admin/top/TopEditor.tsx");
+  assert.doesNotMatch(ed, /Deshacer cambios del bloque|Corregir la publicación vigente/);
+  const tiene = (t: string, msg?: string) => assert.ok(ed.includes(t), msg ?? `falta: ${t}`);
+  tiene("Restaurar el último Top publicado");
+  tiene("Se perderán los cambios de este borrador y se recuperará el último Top publicado. La publicación que ven los usuarios seguirá igual.");
+  tiene(">Cancelar<");
+  tiene(">Restaurar borrador<");
+  tiene("Este bloque todavía no tiene un Top publicado para restaurar");
+  tiene("disabled={!tienePublicacion || deshabilitado}", "sin publicación el botón tiene que quedar deshabilitado");
+  tiene("tienePublicacion={publicados.includes(claveBloque(actual.plataforma, actual.tipo))}");
+  // La acción sólo corre desde "Restaurar borrador", nunca desde el botón principal.
+  tiene("onClick={() => ref.current?.showModal()}", "el botón principal sólo abre la confirmación");
+  tiene("onClick={() => { ref.current?.close(); onRestaurar(); }}>Restaurar borrador", "restaurar sólo desde la confirmación");
+});

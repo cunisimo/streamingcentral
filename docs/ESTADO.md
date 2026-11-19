@@ -30,7 +30,13 @@ desde 1000 px, una columna en pantallas angostas. Tirador por fila para arrastra
 o táctil (`touch-action: none` sólo en el tirador: el resto de la página scrollea), con las
 filas intermedias corriéndose, el número final y un casillero de destino a la vista;
 flechas/Inicio/Fin en el tirador y «Mover al puesto…» en cada fila. Botón «Aprobar» →
-«Aprobada» + «Deshacer aprobación», con estado de guardado. Resultados con póster de
+«Aprobada» + «Deshacer aprobación», con estado de guardado. «Deshacer cambios del bloque»
+y «Corregir la publicación vigente» quedaron en UN botón, «Restaurar el último Top
+publicado» (pedido del dueño, 18/11; acción `restaurar` → `copiarPublicado`, sin cambio
+de API): pide confirmación («Cancelar» / «Restaurar borrador») y, sin publicación del
+bloque, queda deshabilitado con «Este bloque todavía no tiene un Top publicado para
+restaurar». Verificado en el banco: cancelar no toca el borrador; restaurar lo deja igual
+al último publicado, sin aprobación y sin tocar la publicación. Resultados con póster de
 92×138 (ampliable en un `<dialog>` con póster grande, título original, sinopsis y
 plataformas), año, título original si difiere y «Agregar» / «Ya está en el puesto X»;
 agregar ocupa el primer puesto libre y resalta la fila; con los diez ocupados, o con

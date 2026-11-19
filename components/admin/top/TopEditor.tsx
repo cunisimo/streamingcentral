@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { MutableRefObject, PointerEvent as RPointerEvent, KeyboardEvent as RKeyboardEvent, ReactNode } from "react";
 import { PLATFORMS } from "@/lib/providers-ar";
-import { BLOQUES, TOP_PLATAFORMAS, preparacion, validarBloque } from "@/lib/top-manual-nucleo";
+import { BLOQUES, TOP_PLATAFORMAS, claveBloque, preparacion, validarBloque } from "@/lib/top-manual-nucleo";
 import {
   PUESTOS, SincronizadorTop, casilleros, moverEnCasilleros, originalDistinto, posterTam,
   primerLibre, puestoDe, type OpTop, type RankingFila,
@@ -269,14 +269,15 @@ export default function TopEditor({ transporte, aviso }: { transporte: Transport
 
             <Aprobacion bloque={actual} sync={sync} onAprobar={(v) => encolar({ k: "revisar", id: actual.id, revisado: v })} />
 
-            <div className="admin-acciones">
-              <button type="button" className="btn ghost" disabled={st.enVuelo} onClick={() => encolar({ k: "restaurar", id: actual.id })}>
-                Deshacer cambios del bloque
-              </button>
-              <button type="button" className="btn ghost" disabled={st.enVuelo} onClick={() => encolar({ k: "corregir", id: actual.id })}>
-                Corregir la publicación vigente
-              </button>
-            </div>
+            <RestaurarPublicado
+              tienePublicacion={publicados.includes(claveBloque(actual.plataforma, actual.tipo))}
+              deshabilitado={st.enVuelo}
+              onRestaurar={() => {
+                setReemplazo(null);
+                encolar({ k: "restaurar", id: actual.id });
+                setAnuncio("Se restauró el último Top publicado en el borrador.");
+              }}
+            />
           </section>
         </div>
       )}
@@ -338,6 +339,43 @@ function Aprobacion({ bloque, sync, onAprobar }: { bloque: RankingFila; sync: Si
             ? "Lista para publicar. La app la muestra cuando tocás «Publicar revisados»; cualquier cambio quita la aprobación."
             : "Aprobar no publica: marca el bloque como listo para «Publicar revisados». Cualquier cambio posterior quita la aprobación."}
       </p>
+    </div>
+  );
+}
+
+// --- Restaurar el último Top publicado ------------------------------------------
+
+/**
+ * Reemplaza el borrador por la última publicación del bloque (acción
+ * `restaurar` → `copiarPublicado`). No toca la publicación: la que ven los
+ * usuarios sigue igual. Pide confirmación porque descarta el borrador.
+ */
+function RestaurarPublicado({ tienePublicacion, deshabilitado, onRestaurar }: {
+  tienePublicacion: boolean; deshabilitado: boolean; onRestaurar: () => void;
+}) {
+  const ref = useRef<HTMLDialogElement>(null);
+  return (
+    <div className="admin-acciones">
+      <button type="button" className="btn ghost" disabled={!tienePublicacion || deshabilitado}
+        aria-describedby={tienePublicacion ? undefined : "tde-sin-publicacion"}
+        onClick={() => ref.current?.showModal()}>
+        Restaurar el último Top publicado
+      </button>
+      {!tienePublicacion && (
+        <p id="tde-sin-publicacion" className="admin-nota">Este bloque todavía no tiene un Top publicado para restaurar</p>
+      )}
+      <dialog ref={ref} className="tde-detalle tde-confirmar" aria-labelledby="tde-confirmar-texto"
+        onClick={(e) => { if (e.target === ref.current) ref.current?.close(); }}>
+        <div className="tde-confirmar-cuerpo">
+          <p id="tde-confirmar-texto">
+            Se perderán los cambios de este borrador y se recuperará el último Top publicado. La publicación que ven los usuarios seguirá igual.
+          </p>
+          <div className="tde-detalle-acciones">
+            <button type="button" className="btn ghost" autoFocus onClick={() => ref.current?.close()}>Cancelar</button>
+            <button type="button" className="btn" onClick={() => { ref.current?.close(); onRestaurar(); }}>Restaurar borrador</button>
+          </div>
+        </div>
+      </dialog>
     </div>
   );
 }
