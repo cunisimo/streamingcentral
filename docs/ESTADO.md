@@ -16,9 +16,16 @@ debajo de "Antecedentes anteriores al 09/09/2026" es histórico. Categorías de 
 pública de deployments de GitHub, estado `success`), **dueño** (informado por
 el dueño), **Producción** (comprobado contra `app.yump.ar`).
 
-**Editor del Top semanal (PR #6, rama `feat/top-dashboard-ux`, 18-19/11/2026; interfaz
-aprobada por el dueño y validada en Supabase local; LISTO PARA INTEGRAR, SIN integrar ni
-desplegar).** Pedido del dueño: mover con flechas era
+**Editor del Top semanal (PR #6, rama `feat/top-dashboard-ux`; interfaz aprobada por el
+dueño y validada en Supabase local; INTEGRADO Y DESPLEGADO el 19/11/2026, merge `7a288fb`,
+autorizado por el dueño).** **Deploy (19/11):** deployment de Producción de GitHub para
+`7a288fb` en `success`. **Producción, sólo lectura (sin iniciar sesión ni tocar rankings):**
+`/api/health`, `/api/top` y `/top` 200 (`degradado: false`); `/admin/top` 200 y su bundle
+trae el editor nuevo («Buscar y agregar», «Mover al puesto…», «Deshacer aprobación»,
+«Restaurar borrador») sin los botones viejos; `/api/admin/top` (POST `ordenar`) y
+`/api/admin-search` sin token → 401; `/revision-local/top` → 404. **No probado en
+Producción:** guardar con la sesión real del dueño (decisión del dueño: no modificar ni
+publicar sus rankings para probar); la primera edición real es la prueba. Pedido del dueño: mover con flechas era
 lento, aprobar con un checkbox era confuso y los pósters de la búsqueda eran chicos.
 **Qué es "aprobar" (Git, sin cambios):** es la marca «revisado» del BLOQUE
 (`revisado_por`, columna derivada `revisado`); aprobar NO publica: sólo hace que el bloque
