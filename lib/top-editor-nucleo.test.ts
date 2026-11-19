@@ -260,7 +260,11 @@ test("el servidor ordena con la regla de permutación y escribe en UNA transacci
   const f = /export async function ordenarEntradas[\s\S]*?\n}\n/.exec(m)![0];
   assert.match(f, /validarNuevoOrden\(actuales, propuestas\)/);
   assert.match(f, /throw new ConflictoTop/);
-  assert.match(f, /reemplazarEntradas\(sb, borradorId, entradasDeOrden\(actuales, propuestas\)\)/);
+  assert.match(f, /rpcReemplazar\(sb, borradorId, entradasDeOrden\(actuales, propuestas\)\)/);
+  // Dos órdenes simultáneos chocan con el unique: es conflicto (409), no 500
+  // (encontrado en Supabase local, scripts/top/pruebas-editor-local.mjs).
+  assert.match(f, /esConflictoUnico\(alEscribir\.message\)\) throw new ConflictoTop/);
+  assert.match(m, /function rpcReemplazar[\s\S]*?rpc\("reemplazar_entradas"/, "sigue siendo la función transaccional");
   const ag = /export async function agregarEnPosicion[\s\S]*?\n}\n/.exec(m)![0];
   assert.match(ag, /\.insert\(/, "agregar es un insert: el unique rechaza un puesto ocupado");
   assert.doesNotMatch(ag, /upsert/);

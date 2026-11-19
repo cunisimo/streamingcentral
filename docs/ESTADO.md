@@ -16,8 +16,9 @@ debajo de "Antecedentes anteriores al 09/09/2026" es histórico. Categorías de 
 pública de deployments de GitHub, estado `success`), **dueño** (informado por
 el dueño), **Producción** (comprobado contra `app.yump.ar`).
 
-**Editor del Top semanal (rama `feat/top-dashboard-ux`, 18/11/2026; lista para que la
-pruebe el dueño, SIN integrar ni desplegar).** Pedido del dueño: mover con flechas era
+**Editor del Top semanal (PR #6, rama `feat/top-dashboard-ux`, 18-19/11/2026; interfaz
+aprobada por el dueño y validada en Supabase local; LISTO PARA INTEGRAR, SIN integrar ni
+desplegar).** Pedido del dueño: mover con flechas era
 lento, aprobar con un checkbox era confuso y los pósters de la búsqueda eran chicos.
 **Qué es "aprobar" (Git, sin cambios):** es la marca «revisado» del BLOQUE
 (`revisado_por`, columna derivada `revisado`); aprobar NO publica: sólo hace que el bloque
@@ -64,13 +65,36 @@ arrastre y por «Mover al puesto…»; arrastre táctil con indicador; aprobar, 
 "mover quita la aprobación"; reemplazo con el bloque lleno y en uno a medias; 4
 movimientos rápidos con 1,5 s de demora = 2 escrituras; fallo simulado → reintentar y
 descartar; "otra pestaña" → 409 y recarga; recargar conserva orden y aprobación; teclado
-(el foco sigue al título) y 375 px sin scroll horizontal; modo claro y oscuro. **No
-probado:** el camino real con Supabase (RLS, triggers, MFA) —se prueba en una Preview con
-la sesión del admin—, iOS Safari con el dedo real y lectores de pantalla. **Limitaciones:**
-dos pestañas del panel guardando el MISMO bloque a la vez tienen una ventana mínima entre
-leer y escribir en `ordenar` (cerrarla exige una función nueva en la base); no hay forma
-de quitar un título (tampoco la había: se reemplaza); las filas del ranking no muestran
-póster (las entradas guardan sólo título e id).
+(el foco sigue al título) y 375 px sin scroll horizontal; modo claro y oscuro.
+**Supabase local (19/11, `supabase start` + `scripts/sala/db-local.mjs`, sin Producción;
+pedido del dueño):** batería `scripts/top/pruebas-editor-local.mjs` contra la ruta REAL de la
+app local, con Auth local, dos factores TOTP verificados, RLS y los triggers de 007; **30 de
+30** con el código final (y 4 corridas previas estables). Cubre: sin token 401, usuario 403,
+admin aal1 403, admin con UN factor 403, PostgREST directo sin MFA completo rechazado (RLS y
+`no autorizado`), anon sin borradores; agregar / ocupado / repetido (409), ordenar 8→2 con
+títulos de la base, órdenes inválidos 409 sin tocar nada, reemplazo condicionado, trigger de
+tipo; aprobar firma con el uid del token (no del cuerpo) y ordenar, reemplazar y cambiar la
+fecha la quitan; publicar exige aprobación y crea el borrador siguiente; lo publicado no se
+edita ni se borra; restaurar vuelve a la publicación sin aprobación y sin tocarla; y los
+casos de dos pestañas. **Defecto encontrado y corregido:** dos «ordenar» simultáneos del
+mismo bloque respondían **500** «duplicate key» (la base quedaba bien: la segunda
+transacción se revertía); ahora es **409** (`ordenarEntradas` → `ConflictoTop`). Además,
+recorrido en el navegador de `/admin/top` contra la base local con una cuenta admin de
+prueba (login + TOTP): arrastre 8→2, aprobar, «Publicar revisados», «Mover al puesto…» y
+«Restaurar borrador», cada paso comprobado en la base. Entorno local, no defectos: se
+concede SELECT de `profiles` a `authenticated` sólo durante la prueba (como en E4), y
+`user_items` da 403 en local. **Riesgos medidos (dos pestañas, mismo bloque), sin
+migración no se cierran:** (1) un «agregar» que confirma entre la lectura y la escritura de
+un «ordenar» de la otra pestaña se borra aunque respondió 200: **1, 3, 5, 5 y 10 de 27**
+intentos con desfasajes de 0 a 78 ms; (2) una aprobación sobre contenido que esa pestaña no
+vio queda aprobada (confirmado). Cerrarlos exige una versión por bloque (migración, decisión
+del dueño). **Observación fuera de este PR:** `/admin/mfa` elige "el primer factor
+verificado" en un orden que varía entre pedidos; con dos factores, a veces pide el de
+respaldo y rechaza el código de la app habitual (visto en local: alternó principal/respaldo).
+**No probado:** Producción o una Preview con la sesión real del dueño, iOS Safari con el dedo
+y lectores de pantalla. **Limitaciones:** las dos de arriba; no hay forma de quitar un título
+(tampoco la había: se reemplaza); las filas del ranking no muestran póster (las entradas
+guardan sólo título e id).
 
 **Terror fuera del riel Drama de películas (PR #4, rama `fix/drama-sin-terror`;
 INTEGRADO Y DESPLEGADO el 14/11/2026, merge `1aa7e03`).** Regla del dueño: una película de Terror no va en el riel Drama, aunque

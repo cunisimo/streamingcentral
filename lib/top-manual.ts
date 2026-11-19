@@ -289,13 +289,18 @@ export async function copiarPublicado(sb: SupabaseClient, borradorId: string): P
 export async function reemplazarEntradas(
   sb: SupabaseClient, borradorId: string, entradas: EntradaTop[],
 ): Promise<void> {
-  const { error } = await sb.rpc("reemplazar_entradas", {
+  const { error } = await rpcReemplazar(sb, borradorId, entradas);
+  if (error) throw new Error(error.message);
+}
+
+/** La llamada a `reemplazar_entradas`, devolviendo el error en vez de lanzarlo. */
+function rpcReemplazar(sb: SupabaseClient, borradorId: string, entradas: EntradaTop[]) {
+  return sb.rpc("reemplazar_entradas", {
     p_ranking: borradorId,
     p_entradas: entradas.map((e) => ({
       posicion: e.posicion, tipo: e.tipo, tmdb_id: e.tmdb_id, titulo: e.titulo,
     })),
   });
-  if (error) throw new Error(error.message);
 }
 
 /**
@@ -367,7 +372,16 @@ export async function ordenarEntradas(
   const actuales = (data ?? []) as EntradaTop[];
   const motivo = validarNuevoOrden(actuales, propuestas);
   if (motivo) throw new ConflictoTop(motivo);
-  await reemplazarEntradas(sb, borradorId, entradasDeOrden(actuales, propuestas));
+  const { error: alEscribir } = await rpcReemplazar(sb, borradorId, entradasDeOrden(actuales, propuestas));
+  if (alEscribir) {
+    // Dos órdenes del mismo bloque al mismo tiempo (dos pestañas): las dos
+    // transacciones borran, la segunda no ve las filas que insertó la primera y
+    // su insert choca con `unique (ranking_id, posicion)`. Se revierte entera
+    // (queda el orden de la otra) y es un conflicto, no una falla: medido en
+    // Supabase local, respondía 500 «duplicate key».
+    if (esConflictoUnico(alEscribir.message)) throw new ConflictoTop("otra pestaña guardó este bloque al mismo tiempo");
+    throw new Error(alEscribir.message);
+  }
 }
 
 /**
