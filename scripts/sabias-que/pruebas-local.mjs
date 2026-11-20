@@ -188,16 +188,18 @@ try {
   });
 
   console.log("\n— Validación al publicar (API y base)");
-  await prueba("publicar incompleto (sin URL): 400 con el campo, sin tocar la base", async () => {
+  await prueba("publicar incompleto (sin texto): 400 con el campo, sin tocar la base", async () => {
     const antes = fila(990001);
-    const r = await admin(adm2.aal2, { accion: "guardar", id: ID, publicar: true, campos: CAMPOS(1, { fuenteUrl: "" }) });
-    assert.equal(r.status, 400); assert.ok(r.j.errores.fuenteUrl);
+    const r = await admin(adm2.aal2, { accion: "guardar", id: ID, publicar: true, campos: CAMPOS(1, { texto: "" }) });
+    assert.equal(r.status, 400); assert.ok(r.j.errores.texto); assert.equal(r.j.errores.fuenteUrl, undefined);
     assert.equal(fila(990001), antes);
   });
-  await prueba("publicar con URL insegura (javascript:, data:, credenciales): 400", async () => {
+  await prueba("publicar con URL insegura (javascript:, data:, credenciales): 400, con o sin nombre", async () => {
     for (const u of ["javascript:alert(1)", "data:text/html,x", "https://u:p@example.com/"]) {
-      const r = await admin(adm2.aal2, { accion: "guardar", id: ID, publicar: true, campos: CAMPOS(1, { fuenteUrl: u }) });
-      assert.equal(r.status, 400, u); assert.ok(r.j.errores.fuenteUrl, u);
+      for (const fuenteNombre of ["Fuente de prueba", ""]) {
+        const r = await admin(adm2.aal2, { accion: "guardar", id: ID, publicar: true, campos: CAMPOS(1, { fuenteUrl: u, fuenteNombre }) });
+        assert.equal(r.status, 400, u); assert.ok(r.j.errores.fuenteUrl, u);
+      }
     }
     assert.match(fila(990001), /^borrador\|∅\|/);
   });
@@ -220,6 +222,10 @@ do $$ declare x text; begin
       insert into r values (x, true);
     exception when check_violation then insert into r values (x, false); end;
   end loop; end $$;
+do $$ begin
+  update curiosidades set pub_texto='t', pub_fuente_nombre='', pub_fuente_url='', pub_spoiler=false, publicada=true where tmdb_id=990090;
+  insert into r values ('<vacía>', true);
+exception when check_violation then insert into r values ('<vacía>', false); end $$;
 select string_agg(u || '=>' || ok, E'\\n') from r;
 rollback;`);
     const base = new Map(out.split("\n").filter((l) => l.includes("=>")).map((l) => { const i = l.lastIndexOf("=>"); return [l.slice(0, i), l.slice(i + 2) === "true"]; }));
@@ -227,6 +233,7 @@ rollback;`);
       assert.equal(urlFuenteValida(u), esperado, `app: ${u}`);
       assert.equal(base.get(u), esperado, `base: ${u}`);
     }
+    assert.equal(base.get("<vacía>"), true, "sin fuente (nombre y URL vacíos) la base acepta publicar");
   });
 
   console.log("\n— Publicar, editar como borrador, publicar cambios, retirar");
@@ -263,6 +270,41 @@ rollback;`);
     assert.equal((await publica("movie", 990001)).j.curiosidades.length, 1);
   });
 
+  console.log("\n— Fuente opcional (pedido del dueño, 20/11)");
+  await prueba("crear y publicar SIN fuente: 200 y la ficha recibe fuente null", async () => {
+    const r = await admin(adm2.aal2, ALTA("movie", 990010, { campos: CAMPOS(10, { fuenteNombre: "", fuenteUrl: "" }), publicar: true }));
+    assert.equal(r.status, 200, JSON.stringify(r.j)); assert.equal(r.j.curiosidad.estado, "publicada");
+    assert.deepEqual((await publica("movie", 990010)).j.curiosidades, [{ texto: "[PRUEBA] Curiosidad ficticia 10.", spoiler: false, fuente: null }]);
+  });
+  await prueba("guardar como borrador sin fuente y recargar: queda vacía, sin errores", async () => {
+    const r = await admin(adm2.aal2, ALTA("movie", 990011, { campos: CAMPOS(11, { fuenteNombre: "", fuenteUrl: "" }) }));
+    assert.equal(r.status, 200); assert.equal(r.j.curiosidad.estado, "borrador");
+    const g = await admin(adm2.aal2, null, "?tipo=movie&id=990011");
+    assert.equal(g.j.curiosidad.borrador.fuenteNombre, ""); assert.equal(g.j.curiosidad.borrador.fuenteUrl, "");
+  });
+  await prueba("sólo nombre: texto sin enlace; sólo URL: enlace con la URL", async () => {
+    const id = (await admin(adm2.aal2, null, "?tipo=movie&id=990011")).j.curiosidad.id;
+    await admin(adm2.aal2, { accion: "guardar", id, publicar: true, campos: CAMPOS(11, { fuenteUrl: "" }) });
+    assert.deepEqual((await publica("movie", 990011)).j.curiosidades[0].fuente, { nombre: "Fuente de prueba", url: null });
+    await admin(adm2.aal2, { accion: "guardar", id, publicar: true, campos: CAMPOS(11, { fuenteNombre: "" }) });
+    assert.deepEqual((await publica("movie", 990011)).j.curiosidades[0].fuente, { nombre: "", url: "https://es.wikipedia.org/wiki/Prueba_11" });
+  });
+  await prueba("quitar la fuente de una publicada: como borrador la pública la conserva; al publicar desaparece", async () => {
+    const r1 = await admin(adm2.aal2, { accion: "guardar", id: ID, publicar: false, campos: CAMPOS(2, { fuenteNombre: "", fuenteUrl: "" }) });
+    assert.equal(r1.j.curiosidad.estado, "cambios");
+    assert.deepEqual((await publica("movie", 990001)).j.curiosidades[0].fuente,
+      { nombre: "Fuente de prueba", url: "https://es.wikipedia.org/wiki/Prueba_2" }, "el borrador no toca la pública");
+    const r2 = await admin(adm2.aal2, { accion: "guardar", id: ID, publicar: true, campos: CAMPOS(2, { fuenteNombre: "", fuenteUrl: "" }) });
+    assert.equal(r2.j.curiosidad.estado, "publicada");
+    const p = (await publica("movie", 990001)).j.curiosidades[0];
+    assert.equal(p.fuente, null); assert.equal(p.texto, "[PRUEBA] Curiosidad ficticia 2.");
+    assert.equal(sqlOk("select pub_fuente_nombre || '|' || pub_fuente_url from curiosidades where tipo='movie' and tmdb_id=990001"), "|");
+  });
+  await prueba("volver a ponerle fuente a una publicada sin fuente", async () => {
+    await admin(adm2.aal2, { accion: "guardar", id: ID, publicar: true, campos: CAMPOS(2) });
+    assert.equal((await publica("movie", 990001)).j.curiosidades[0].fuente.nombre, "Fuente de prueba");
+  });
+
   console.log("\n— Duplicados, serie, spoiler y listado");
   await prueba("duplicado (mismo tipo e id): 409 con la existente para editarla; la base no suma filas", async () => {
     const r = await admin(adm2.aal2, ALTA("movie", 990001, { campos: CAMPOS(9) }));
@@ -283,9 +325,9 @@ rollback;`);
   });
   await prueba("listado: filtros por estado y búsqueda por título", async () => {
     const todas = (await admin(adm2.aal2, null, "?estado=todas")).j.curiosidades.filter((c) => c.tmdbId >= 990000);
-    assert.equal(todas.length, 3);
+    assert.equal(todas.length, 5);
     const pub = (await admin(adm2.aal2, null, "?estado=publicada")).j.curiosidades.filter((c) => c.tmdbId >= 990000);
-    assert.deepEqual(pub.map((c) => `${c.tipo}:${c.tmdbId}`).sort(), ["movie:990001", "tv:990001"]);
+    assert.deepEqual(pub.map((c) => `${c.tipo}:${c.tmdbId}`).sort(), ["movie:990001", "movie:990010", "movie:990011", "tv:990001"]);
     const borr = (await admin(adm2.aal2, null, "?estado=borrador")).j.curiosidades.filter((c) => c.tmdbId >= 990000);
     assert.deepEqual(borr.map((c) => c.tmdbId), [990099]);
     const busq = (await admin(adm2.aal2, null, `?estado=todas&q=${encodeURIComponent("tv 990001")}`)).j.curiosidades;

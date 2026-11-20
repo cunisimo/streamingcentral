@@ -1,6 +1,6 @@
 "use client";
 import { useId, useState } from "react";
-import { urlFuenteValida, type CuriosidadPublica } from "@/lib/curiosidades-nucleo";
+import { textoDeFuente, urlFuenteValida, type CuriosidadPublica } from "@/lib/curiosidades-nucleo";
 
 // La tarjeta de «¿Sabías que…?»: la MISMA en la ficha y en la vista previa del
 // panel, así lo que se previsualiza es lo que se publica.
@@ -18,6 +18,8 @@ import { urlFuenteValida, type CuriosidadPublica } from "@/lib/curiosidades-nucl
 export default function SabiasQueTarjeta({ c }: { c: CuriosidadPublica }) {
   const [revelada, setRevelada] = useState(!c.spoiler);
   const panel = useId();
+  const fuente = c.fuente;
+  const etiqueta = fuente ? textoDeFuente(fuente) : "";
   return (
     <article className="sq-card">
       {c.spoiler && (
@@ -35,15 +37,19 @@ export default function SabiasQueTarjeta({ c }: { c: CuriosidadPublica }) {
         {revelada && (
           <>
             <p className="sq-texto">{c.texto}</p>
-            <p className="sq-fuente">
-              Fuente:{" "}
-              {/* El enlace existe SÓLO con una URL http/https válida. La ficha ya
-                  recibe datos validados; esto cubre la vista previa del panel,
-                  que dibuja lo que se está tipeando (p. ej. `javascript:`). */}
-              {urlFuenteValida(c.fuente.url)
-                ? <a href={c.fuente.url} target="_blank" rel="noopener noreferrer nofollow">{c.fuente.nombre}</a>
-                : <span>{c.fuente.nombre}</span>}
-            </p>
+            {/* La fuente es OPCIONAL: sin fuente no se dibuja nada (ni rótulo
+                ni hueco). Con nombre solo, texto; con URL, enlace (y si no hay
+                nombre, el dominio). El enlace existe SÓLO con una URL http/https
+                válida: la ficha ya recibe datos validados; esto cubre además la
+                vista previa del panel, que dibuja lo que se está tipeando. */}
+            {fuente && etiqueta && (
+              <p className="sq-fuente">
+                Fuente:{" "}
+                {fuente.url && urlFuenteValida(fuente.url)
+                  ? <a href={fuente.url} target="_blank" rel="noopener noreferrer nofollow">{etiqueta}</a>
+                  : <span>{etiqueta}</span>}
+              </p>
+            )}
           </>
         )}
       </div>

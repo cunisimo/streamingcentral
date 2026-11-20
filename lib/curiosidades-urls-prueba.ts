@@ -2,6 +2,9 @@
 // (lib/curiosidades-nucleo.test.ts, contra `urlFuenteValida`) y la batería local
 // (scripts/sabias-que/pruebas-local.mjs, contra el CHECK de la migración 025):
 // así la regla de la app y la de la base no pueden divergir sin que falle algo.
+// La cadena VACÍA no está: desde el 20/11 la fuente es opcional y '' significa
+// "sin URL" (la base la acepta; `urlFuenteValida("")` sigue siendo false porque
+// no es una URL). Se prueba aparte.
 export const URLS: Array<[string, boolean]> = [
   ["https://es.wikipedia.org/wiki/Volver_al_futuro", true],
   ["http://example.com", true],
@@ -17,5 +20,4 @@ export const URLS: Array<[string, boolean]> = [
   ["https://example.com/ con espacio", false],
   ["//example.com", false],
   ["example.com", false],
-  ["", false],
 ];

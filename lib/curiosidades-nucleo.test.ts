@@ -6,7 +6,7 @@ import fs from "node:fs";
 import path from "node:path";
 import {
   LIMITES, accionesDisponibles, filaAAdmin, mismosCampos, normalizarCampos, normalizarTexto,
-  patronBusqueda, posterValido, publicasDeFilas, publicasDeRespuesta, sinGuardar, urlFuenteValida,
+  fuenteDe, patronBusqueda, posterValido, publicasDeFilas, textoDeFuente, publicasDeRespuesta, sinGuardar, urlFuenteValida,
   validarBorrador, validarPublicacion,
   type CamposCuriosidad, type CuriosidadAdmin, type FilaCuriosidad,
 } from "./curiosidades-nucleo.ts";
@@ -35,12 +35,16 @@ test("texto plano: controles fuera, saltos unificados, sin HTML interpretado", (
     "spoiler sólo con true booleano");
 });
 
-test("borrador incompleto se puede guardar; publicar exige texto, nombre y URL válida", () => {
+test("borrador incompleto se puede guardar; publicar exige SÓLO el texto (fuente opcional) y una URL válida si viene", () => {
   const vacio = { texto: "", fuenteNombre: "", fuenteUrl: "", spoiler: false };
   assert.deepEqual(validarBorrador(vacio), {});
-  const e = validarPublicacion(vacio);
-  assert.ok(e.texto && e.fuenteNombre && e.fuenteUrl);
+  assert.deepEqual(validarPublicacion(vacio), { texto: "Escribí la curiosidad." }, "sin fuente no hay error de fuente");
+  assert.deepEqual(validarPublicacion({ ...OK, fuenteNombre: "", fuenteUrl: "" }), {}, "sin fuente se publica");
+  assert.deepEqual(validarPublicacion({ ...OK, fuenteUrl: "" }), {}, "sólo nombre");
+  assert.deepEqual(validarPublicacion({ ...OK, fuenteNombre: "" }), {}, "sólo URL");
   assert.match(validarPublicacion({ ...OK, fuenteUrl: "javascript:alert(1)" }).fuenteUrl ?? "", /http/);
+  assert.match(validarPublicacion({ ...OK, fuenteNombre: "", fuenteUrl: "data:text/html,x" }).fuenteUrl ?? "", /http/,
+    "la URL se valida también sin nombre");
   assert.deepEqual(validarPublicacion(OK), {});
   assert.ok(validarBorrador({ ...OK, texto: "x".repeat(LIMITES.texto + 1) }).texto, "el tope rige también en borrador");
 });
@@ -72,13 +76,30 @@ test("cambios sin guardar", () => {
   assert.equal(mismosCampos(null, null), true);
 });
 
-test("lectura pública: se descarta lo que no cumple (URL insegura, sin texto) antes de llegar a un href", () => {
+test("lectura pública: fuente opcional; sin texto se descarta y una URL insegura nunca llega a un href", () => {
   const filas = [
     { texto: "Buena", fuente_nombre: "F", fuente_url: "https://a.b/c", spoiler: true },
-    { texto: "Mala", fuente_nombre: "F", fuente_url: "javascript:alert(1)", spoiler: false },
+    { texto: "URL mala", fuente_nombre: "F", fuente_url: "javascript:alert(1)", spoiler: false },
+    { texto: "URL mala sin nombre", fuente_nombre: "", fuente_url: "javascript:alert(1)", spoiler: false },
+    { texto: "Sin fuente", fuente_nombre: "", fuente_url: "", spoiler: false },
+    { texto: "Sólo nombre", fuente_nombre: "Libro X", fuente_url: "", spoiler: false },
+    { texto: "Sólo URL", fuente_nombre: "", fuente_url: "https://www.example.com/a", spoiler: false },
     { texto: "  ", fuente_nombre: "F", fuente_url: "https://a.b", spoiler: false },
   ];
-  assert.deepEqual(publicasDeFilas(filas), [{ texto: "Buena", spoiler: true, fuente: { nombre: "F", url: "https://a.b/c" } }]);
+  assert.deepEqual(publicasDeFilas(filas), [
+    { texto: "Buena", spoiler: true, fuente: { nombre: "F", url: "https://a.b/c" } },
+    { texto: "URL mala", spoiler: false, fuente: { nombre: "F", url: null } },
+    { texto: "URL mala sin nombre", spoiler: false, fuente: null },
+    { texto: "Sin fuente", spoiler: false, fuente: null },
+    { texto: "Sólo nombre", spoiler: false, fuente: { nombre: "Libro X", url: null } },
+    { texto: "Sólo URL", spoiler: false, fuente: { nombre: "", url: "https://www.example.com/a" } },
+  ]);
+  assert.equal(textoDeFuente({ nombre: "", url: "https://www.example.com/a" }), "example.com", "sin nombre, el dominio");
+  assert.equal(textoDeFuente({ nombre: "Libro X", url: null }), "Libro X");
+  assert.equal(fuenteDe("  ", ""), null);
+  assert.equal(urlFuenteValida(""), false, "'' no es una URL: es «sin URL»");
+  assert.deepEqual(publicasDeRespuesta({ curiosidades: [{ texto: "T", spoiler: false, fuente: null }] }),
+    [{ texto: "T", spoiler: false, fuente: null }]);
   assert.deepEqual(publicasDeFilas(null), []);
   assert.deepEqual(publicasDeRespuesta({ curiosidades: [{ texto: "T", spoiler: false, fuente: { nombre: "N", url: "https://x.y" } }] }),
     [{ texto: "T", spoiler: false, fuente: { nombre: "N", url: "https://x.y" } }]);
@@ -114,8 +135,14 @@ test("componente: pide con apiUrl (web y contenedor), descarta respuestas viejas
   assert.match(t, /aria-expanded=\{revelada\}/);
   assert.match(t, /\{revelada && \(/, "con spoiler, el texto no se renderiza hasta revelarlo");
   assert.match(t, /rel="noopener noreferrer nofollow"/);
-  assert.match(t, /\{urlFuenteValida\(c\.fuente\.url\)\s*\? <a href=\{c\.fuente\.url\}/,
+  assert.match(t, /\{fuente\.url && urlFuenteValida\(fuente\.url\)\s*\? <a href=\{fuente\.url\}/,
     "el enlace sólo existe con una URL válida (la vista previa dibuja lo que se tipea)");
+  assert.match(t, /\{fuente && etiqueta && \(\s*<p className="sq-fuente">/,
+    "sin fuente no se dibuja el apartado (ni rótulo ni hueco)");
+  assert.doesNotMatch(t, /["'>]\s*Sin fuente/i, "ningún rótulo «Sin fuente» visible");
+  const adm = leer("components/admin/sabias-que/SabiasQueAdmin.tsx");
+  assert.equal((adm.match(/fuente: fuenteDe\(/g) ?? []).length, 2,
+    "las dos vistas previas del panel arman la fuente con la misma regla que la ficha");
   assert.doesNotMatch(t, /dangerouslySetInnerHTML/);
 });
 

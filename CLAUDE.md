@@ -613,8 +613,9 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
 - **«¿Sabías que…?» (migración `025`, rama `feat/sabias-que`; estado en
   `docs/ESTADO.md`).** Una curiosidad editorial por título (`curiosidades`, `unique (tipo,
   tmdb_id)`) con DOS versiones en la misma fila: borrador y publicada (`pub_*`). Guardar un
-  borrador nunca toca lo publicado y retirar conserva el contenido; un CHECK exige texto, fuente
-  y URL http(s) segura en lo publicado. Panel `/admin/sabias-que` → `/api/admin/curiosidades`
+  borrador nunca toca lo publicado y retirar conserva el contenido; un CHECK exige texto en lo
+  publicado; la fuente es OPCIONAL (20/11) y una URL, si viene, tiene que ser http(s) segura.
+  Sin fuente, la ficha omite el apartado entero. Panel `/admin/sabias-que` → `/api/admin/curiosidades`
   (`adminDeToken` + RLS `is_admin_mfa()`); la ficha lee sólo lo publicado por la función
   `curiosidad_publicada` vía `/api/curiosidad/<tipo>/<id>`, **después** de dibujarse
   (`components/SabiasQue.tsx`, debajo de las reseñas, `key` por título), con `no-store`, sin
@@ -1249,7 +1250,7 @@ supabase/schema.sql   — editorial_reviews (en uso desde el 3/10/2026, a criter
 | `GET /api/genre-covers` | un póster representativo por género, cacheado 24h |
 | `GET /api/title/[tipo]/[id]` | ficha completa (TMDB+Supabase+relacionados) |
 | `GET /api/admin-search` | búsqueda TMDB sin filtro de plataforma, para el editor de reseñas |
-| `GET /api/curiosidad/[tipo]/[id]` | «¿Sabías que…?» de una ficha: SÓLO lo publicado (`{ curiosidades: [{ texto, spoiler, fuente: { nombre, url } }] }`), sin sesión, CORS, `no-store`; 503 si Supabase falla (la ficha no muestra la sección) |
+| `GET /api/curiosidad/[tipo]/[id]` | «¿Sabías que…?» de una ficha: SÓLO lo publicado (`{ curiosidades: [{ texto, spoiler, fuente: null | { nombre, url: string | null } }] }`), sin sesión, CORS, `no-store`; 503 si Supabase falla (la ficha no muestra la sección) |
 | `GET/POST /api/admin/curiosidades` | panel «¿Sabías que…?»: listado/búsqueda/filtro, alta, guardar (con o sin publicar) y retirar; admin + 2FA, bajo RLS |
 | `GET /api/cards` | enriquece una lista de ids (`items=movie:1,tv:2`) a cards, sin filtro de plataforma (listas del usuario) |
 

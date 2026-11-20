@@ -36,11 +36,44 @@ export interface CuriosidadAdmin {
   actualizadaEn: string;
 }
 
+/**
+ * La fuente es OPCIONAL (pedido del dueño, 20/11). `null` = sin fuente: la
+ * ficha y la vista previa omiten el apartado entero. Con fuente, puede venir
+ * sólo el nombre (texto sin enlace), sólo la URL (el enlace muestra el dominio)
+ * o los dos.
+ */
+export interface FuentePublica {
+  /** Puede ser "" si sólo hay URL. */
+  nombre: string;
+  /** `null` si sólo hay nombre. Si viene, es http/https válida. */
+  url: string | null;
+}
+
 /** Lo único que viaja a la ficha pública. */
 export interface CuriosidadPublica {
   texto: string;
   spoiler: boolean;
-  fuente: { nombre: string; url: string };
+  fuente: FuentePublica | null;
+}
+
+/**
+ * Nombre y URL → fuente pública, o `null` si no hay ninguna de las dos. Una URL
+ * inválida se descarta (no debería existir: la base la rechaza) en vez de llegar
+ * a un `href`; si además no hay nombre, no queda fuente.
+ */
+export function fuenteDe(nombre: unknown, url: unknown): FuentePublica | null {
+  const n = normalizarLinea(nombre);
+  const u = normalizarLinea(url);
+  const valida = u && urlFuenteValida(u) ? u : null;
+  if (!n && !valida) return null;
+  return { nombre: n, url: valida };
+}
+
+/** Lo que se lee en la ficha: el nombre o, si no hay, el dominio de la URL. */
+export function textoDeFuente(f: FuentePublica): string {
+  if (f.nombre) return f.nombre;
+  // `url` sólo llega validada (por `fuenteDe`), así que `new URL` no lanza.
+  return f.url ? new URL(f.url).hostname.replace(/^www\./, "") : "";
 }
 
 export const LIMITES = { texto: 700, fuenteNombre: 120, fuenteUrl: 500, titulo: 300 } as const;
@@ -147,14 +180,15 @@ export function validarBorrador(c: CamposCuriosidad): ErroresCampos {
   return e;
 }
 
-/** Lo que exige PUBLICAR: texto, nombre de la fuente y URL http/https válida. */
+/**
+ * Lo que exige PUBLICAR: el texto. La fuente es opcional; si hay URL, tiene que
+ * ser http/https válida (también si no hay nombre).
+ */
 export function validarPublicacion(c: CamposCuriosidad): ErroresCampos {
   const e = validarBorrador(c);
   if (!e.texto && !c.texto) e.texto = "Escribí la curiosidad.";
-  if (!e.fuenteNombre && !c.fuenteNombre) e.fuenteNombre = "Indicá el nombre de la fuente.";
-  if (!e.fuenteUrl) {
-    if (!c.fuenteUrl) e.fuenteUrl = "Indicá la URL de la fuente.";
-    else if (!urlFuenteValida(c.fuenteUrl)) e.fuenteUrl = "La URL tiene que empezar con http:// o https:// y apuntar a un sitio público.";
+  if (!e.fuenteUrl && c.fuenteUrl && !urlFuenteValida(c.fuenteUrl)) {
+    e.fuenteUrl = "La URL tiene que empezar con http:// o https:// y apuntar a un sitio público.";
   }
   return e;
 }
@@ -253,18 +287,16 @@ export function filaAAdmin(f: FilaCuriosidad): CuriosidadAdmin {
 
 /**
  * Filas de `curiosidad_publicada` → lo que viaja a la ficha. Vuelve a validar:
- * una fila que no cumpla (no debería existir, la base lo impide) se descarta en
- * vez de llegar a un `href`.
+ * sin texto la fila se descarta, y una URL que no cumpla (no debería existir, la
+ * base lo impide) nunca llega a un `href`.
  */
 export function publicasDeFilas(filas: unknown): CuriosidadPublica[] {
   if (!Array.isArray(filas)) return [];
   const out: CuriosidadPublica[] = [];
   for (const f of filas as Array<Record<string, unknown>>) {
     const texto = normalizarTexto(f?.texto);
-    const nombre = normalizarLinea(f?.fuente_nombre);
-    const url = normalizarLinea(f?.fuente_url);
-    if (!texto || !nombre || !urlFuenteValida(url)) continue;
-    out.push({ texto, spoiler: f.spoiler === true, fuente: { nombre, url } });
+    if (!texto) continue;
+    out.push({ texto, spoiler: f.spoiler === true, fuente: fuenteDe(f?.fuente_nombre, f?.fuente_url) });
   }
   return out;
 }
@@ -301,7 +333,7 @@ export function fechaCorta(iso: string | null): string {
 export function publicasDeRespuesta(body: unknown): CuriosidadPublica[] {
   const lista = (body as { curiosidades?: unknown } | null)?.curiosidades;
   if (!Array.isArray(lista)) return [];
-  return publicasDeFilas(lista.map((c: { texto?: unknown; spoiler?: unknown; fuente?: { nombre?: unknown; url?: unknown } }) => ({
+  return publicasDeFilas(lista.map((c: { texto?: unknown; spoiler?: unknown; fuente?: { nombre?: unknown; url?: unknown } | null }) => ({
     texto: c?.texto, spoiler: c?.spoiler, fuente_nombre: c?.fuente?.nombre, fuente_url: c?.fuente?.url,
   })));
 }

@@ -73,9 +73,12 @@ create table if not exists curiosidades (
 
   -- 🔴 LA VALIDACIÓN DE LO PUBLICADO VIVE ACÁ, no sólo en la API: una escritura
   -- directa contra PostgREST (con un token de admin+MFA) tampoco puede dejar
-  -- publicada una curiosidad sin texto, sin fuente o con una URL que no sea
-  -- http/https. La URL exige host con punto y SIN credenciales (`@` no entra en
-  -- la clase del host): `javascript:`, `data:`, `https://a@b` y `http://x` no pasan.
+  -- publicada una curiosidad sin texto o con una URL que no sea http/https.
+  -- 🔵 LA FUENTE ES OPCIONAL (pedido del dueño, 20/11): nombre y URL pueden ir
+  -- vacíos ('', nunca null una vez publicada) por separado o juntos; lo que NO
+  -- puede haber es una URL inválida. La URL, si viene, exige host con punto y
+  -- SIN credenciales (`@` no entra en la clase del host): `javascript:`,
+  -- `data:`, `https://a@b` y `http://x` no pasan.
   constraint curiosidades_publicacion_valida check (
     (pub_texto is null and pub_fuente_nombre is null and pub_fuente_url is null
        and pub_spoiler is null and not publicada and publicada_en is null)
@@ -84,10 +87,11 @@ create table if not exists curiosidades (
       and pub_fuente_url is not null and pub_spoiler is not null
       and char_length(btrim(pub_texto)) between 1 and 700
       and pub_texto !~ '[\u0001-\u0008\u000B\u000C\u000E-\u001F\u007F]'
-      and char_length(btrim(pub_fuente_nombre)) between 1 and 120
+      and char_length(pub_fuente_nombre) <= 120
       and pub_fuente_nombre !~ '[[:cntrl:]]'
       and char_length(pub_fuente_url) <= 500
-      and pub_fuente_url ~ '^https?://[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+(:[0-9]{1,5})?([/?#][^[:space:][:cntrl:]]*)?$'
+      and (pub_fuente_url = ''
+           or pub_fuente_url ~ '^https?://[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+(:[0-9]{1,5})?([/?#][^[:space:][:cntrl:]]*)?$')
       and publicada_en is not null
     )
   )
@@ -165,7 +169,9 @@ create policy "curiosidades las edita el admin con MFA" on curiosidades
 -- Lectura pública: sólo lo publicado, sólo los campos de la tarjeta
 -- ============================================================================
 -- `security definer` porque `anon` no puede leer la tabla. No expone borradores,
--- ids internos, autoría ni fechas: texto, fuente y la marca de spoiler.
+-- ids internos, autoría ni fechas: texto, fuente y la marca de spoiler. Sin
+-- fuente, `fuente_nombre` y `fuente_url` llegan como '' (la API lo traduce a
+-- `fuente: null` y la ficha omite el apartado).
 create or replace function curiosidad_publicada(p_tipo text, p_tmdb_id integer)
 returns table (texto text, fuente_nombre text, fuente_url text, spoiler boolean)
 as $$

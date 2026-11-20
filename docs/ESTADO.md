@@ -29,9 +29,9 @@ automatización podrá crear BORRADORES; no se construyó nada de eso).
   (`pub_*`, `publicada`, `publicada_en`). Guardar un borrador sólo toca las primeras, así que
   una publicada editada como borrador NO cambia lo que ven los usuarios; retirar apaga
   `publicada` y conserva todo. `estado` derivado (`borrador`/`publicada`/`cambios`/`retirada`).
-  CHECK en la base: lo publicado exige texto (≤ 700, sin controles), nombre de fuente y URL
-  `http(s)` con host con punto y sin credenciales (`javascript:`, `data:`, `https://u@h`,
-  `http://localhost` no pasan). Trigger: tipo+id inmutables, autoría y fechas las pone la base.
+  CHECK en la base: lo publicado exige texto (≤ 700, sin controles); la fuente es OPCIONAL
+  (ajuste del 20/11, abajo) y una URL, si viene, tiene que ser `http(s)` con host con punto y
+  sin credenciales (`javascript:`, `data:`, `https://u@h`, `http://localhost` no pasan). Trigger: tipo+id inmutables, autoría y fechas las pone la base.
   RLS con `is_admin_mfa()` para leer/crear/editar; `anon` SIN permisos sobre la tabla;
   `authenticated` sin DELETE. Lectura pública sólo por `curiosidad_publicada(tipo, id)`
   (`security definer`): devuelve texto, fuente y spoiler de lo publicado, nada más.
@@ -105,8 +105,31 @@ de producción la ficha hace UN pedido de curiosidad, que empieza cuando termin�
 enlace con `href="javascript:…"` mientras se tipeaba; la tarjeta ahora sólo crea el enlace con
 una URL válida (test estructural). **No probado:** lector de pantalla real (sólo atributos ARIA
 y teclado), dispositivo Android, Preview de Vercel y Producción.
+*(Las cifras de arriba son del 19/11, antes del ajuste; las vigentes están en el párrafo
+siguiente.)*
+**Ajuste del 20/11 — la fuente es OPCIONAL (pedido del dueño, con el dashboard aprobado; Git,
+commit local).** Se puede guardar y publicar sin nombre ni URL de fuente. Si hay URL, se valida
+igual que antes (también sin nombre). Presentación: sin fuente, la ficha y la vista previa
+omiten el apartado ENTERO (ni «Fuente:», ni «Sin fuente», ni hueco); con nombre solo, «Fuente:
+nombre» sin enlace; con URL sola, el enlace muestra el dominio; con los dos, como antes.
+Cambios: `validarPublicacion` exige sólo el texto; el contrato público pasa a `fuente: null` o
+`{ nombre, url | null }` (`fuenteDe`/`textoDeFuente` en `lib/curiosidades-nucleo.ts`; ningún
+cliente publicado usaba la forma anterior); el CHECK de la 025 (editada en el lugar: sigue sin
+aplicar en Producción) acepta `pub_fuente_nombre`/`pub_fuente_url` vacíos y rechaza una URL
+inválida; el panel marca los dos campos «(opcional)». **Verificado (20/11):** `tsc`; suite
+completa 2628 / 2628 (0 omitidos: con Docker arriba corren también los que el 19/11 se
+omitieron); `npm run build`; 025 reaplicada en local (down + up); **batería local 32 de 32,
+tres corridas** (cinco pruebas nuevas: crear y publicar sin fuente → `fuente: null`; borrador sin
+fuente y recarga; sólo nombre y sólo URL; QUITAR la fuente de una publicada —como borrador la
+pública la conserva, al publicar desaparece y la base guarda `''`—; volver a ponérsela; URL
+insegura rechazada con y sin nombre; la base acepta publicar sin fuente). **Chrome del dueño
+(app local, sesión de prueba):** ficha sin fuente sólo con el texto; en el panel, quitar nombre
+y URL de «Volver al futuro» → vista previa sin fuente y «Lo que ven hoy» con la anterior;
+guardar borrador (pública intacta) y «Guardar y publicar cambios» (`fuente: null`); sólo nombre
+→ texto sin enlace; URL `javascript:` → error y la pública no cambia; sólo URL → enlace con
+«example.com»; fuente restaurada y vuelta a publicar.
 **Entorno local que queda armado (sin Producción):** filas ficticias `[PRUEBA LOCAL]` (película
-105 y serie 1396 publicadas, 603 borrador, 238 retirada), una cuenta de administración local
+105 con fuente y serie 1396 con spoiler, publicadas; 238 publicada SIN fuente; 603 borrador), una cuenta de administración local
 con dos factores (datos y códigos en el scratchpad de la sesión, fuera del repo) y, sólo
 mientras dure la prueba, `grant select on public.profiles to authenticated` (peculiaridad del
 stack local; revocar al terminar). Configs `sabias-que-local` (3140, `next dev`) y

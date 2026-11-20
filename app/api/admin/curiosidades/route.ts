@@ -20,7 +20,8 @@ export const dynamic = "force-dynamic";
 //
 // Validación del lado del servidor: el texto llega normalizado a texto plano
 // (`normalizarCampos`), el borrador sólo respeta topes de largo y publicar exige
-// texto, nombre de fuente y URL http/https válida. La base vuelve a exigir lo
+// el texto; la fuente es opcional, pero una URL, si viene, tiene que ser
+// http/https válida. La base vuelve a exigir lo
 // mismo con un CHECK.
 const PRIVADO = { "Cache-Control": "private, no-store" };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;

@@ -3,7 +3,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import SabiasQueTarjeta from "@/components/SabiasQueTarjeta";
 import {
   ETIQUETA_ACCION, ETIQUETA_ESTADO, ETIQUETA_FILTRO, FILTROS_ESTADO, LIMITES,
-  accionesDisponibles, fechaCorta, mismosCampos, normalizarCampos, sinErrores, sinGuardar,
+  accionesDisponibles, fechaCorta, fuenteDe, mismosCampos, normalizarCampos, sinErrores, sinGuardar,
   validarPublicacion,
   type AccionPanel, type CamposCuriosidad, type CuriosidadAdmin, type ErroresCampos,
   type FiltroEstado, type TipoTitulo,
@@ -410,14 +410,14 @@ function Editor({ api, abierto, form, setForm, sucio, aviso, setAviso, onGuardad
       </div>
       <div className="sq-adm-dos">
         <div className="field">
-          <label htmlFor={ids.nombre}>Nombre de la fuente</label>
+          <label htmlFor={ids.nombre}>Nombre de la fuente <span className="faint">(opcional)</span></label>
           <input id={ids.nombre} value={form.fuenteNombre} maxLength={LIMITES.fuenteNombre + 20}
             aria-invalid={!!errores.fuenteNombre} aria-describedby={`${ids.nombre}-e`}
             onChange={(e) => cambia({ fuenteNombre: e.target.value })} placeholder="Ej.: Wikipedia" />
           <p id={`${ids.nombre}-e`} className="sq-adm-error">{errores.fuenteNombre ?? ""}</p>
         </div>
         <div className="field">
-          <label htmlFor={ids.url}>URL de la fuente</label>
+          <label htmlFor={ids.url}>URL de la fuente <span className="faint">(opcional)</span></label>
           <input id={ids.url} value={form.fuenteUrl} inputMode="url" autoComplete="off" spellCheck={false}
             maxLength={LIMITES.fuenteUrl + 20}
             aria-invalid={!!errores.fuenteUrl} aria-describedby={`${ids.url}-e`}
@@ -431,7 +431,7 @@ function Editor({ api, abierto, form, setForm, sucio, aviso, setAviso, onGuardad
       </label>
 
       {!puedePublicar && (
-        <p className="sq-adm-ayuda">Para publicar hacen falta el texto, el nombre de la fuente y una URL http:// o https:// válida. El borrador se puede guardar incompleto.</p>
+        <p className="sq-adm-ayuda">Para publicar hace falta el texto. La fuente es opcional; si ponés una URL, tiene que empezar con http:// o https://. El borrador se puede guardar incompleto.</p>
       )}
 
       {confirmarRetiro && (
@@ -472,7 +472,7 @@ function Editor({ api, abierto, form, setForm, sucio, aviso, setAviso, onGuardad
               <h2 className="dsec-h">¿Sabías que…?</h2>
               <SabiasQueTarjeta
                 key={`b:${norm.spoiler}`}
-                c={{ texto: norm.texto, spoiler: norm.spoiler, fuente: { nombre: norm.fuenteNombre || "(falta el nombre de la fuente)", url: norm.fuenteUrl } }}
+                c={{ texto: norm.texto, spoiler: norm.spoiler, fuente: fuenteDe(norm.fuenteNombre, norm.fuenteUrl) }}
               />
             </section>
           ) : <p className="sq-adm-vacio">La vista previa aparece cuando escribas el texto.</p>}
@@ -483,7 +483,7 @@ function Editor({ api, abierto, form, setForm, sucio, aviso, setAviso, onGuardad
             <div className="sq-adm-marco">
               <section className="sq">
                 <h2 className="dsec-h">¿Sabías que…?</h2>
-                <SabiasQueTarjeta key={`p:${pub.spoiler}`} c={{ texto: pub.texto, spoiler: pub.spoiler, fuente: { nombre: pub.fuenteNombre, url: pub.fuenteUrl } }} />
+                <SabiasQueTarjeta key={`p:${pub.spoiler}`} c={{ texto: pub.texto, spoiler: pub.spoiler, fuente: fuenteDe(pub.fuenteNombre, pub.fuenteUrl) }} />
               </section>
             </div>
           </>
