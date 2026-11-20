@@ -610,7 +610,7 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   supresiones); si lo ubica en otras, no se toca. Nació con "Moria"
   (`tv/322428`, agosto de 2026), #1 de Netflix pintada en gris porque TMDB no
   tenía proveedores en ninguna región.
-- **«¿Sabías que…?» (migración `025`, rama `feat/sabias-que`; estado en
+- **«¿Sabías que…?» (migración `025`, aplicada en Producción; merge `7f88d41`, 20/11; estado en
   `docs/ESTADO.md`).** Una curiosidad editorial por título (`curiosidades`, `unique (tipo,
   tmdb_id)`) con DOS versiones en la misma fila: borrador y publicada (`pub_*`). Guardar un
   borrador nunca toca lo publicado y retirar conserva el contenido; un CHECK exige texto en lo

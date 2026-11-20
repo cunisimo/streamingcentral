@@ -1,6 +1,6 @@
 # Estado de Yump
 
-> **Estado canónico. Actualizado el 19 de noviembre de 2026.**
+> **Estado canónico. Actualizado el 20 de noviembre de 2026.**
 > Leer este bloque antes de los antecedentes históricos. Arquitectura y reglas:
 > [`CLAUDE.md`](../CLAUDE.md). Problemas históricos: [`ISSUES.md`](ISSUES.md).
 > No duplicar este estado en otros manuales: enlazarlo.
@@ -16,13 +16,44 @@ debajo de "Antecedentes anteriores al 09/09/2026" es histórico. Categorías de 
 pública de deployments de GitHub, estado `success`), **dueño** (informado por
 el dueño), **Producción** (comprobado contra `app.yump.ar`).
 
-**«¿Sabías que…?» (19/11/2026; rama `feat/sabias-que`, worktree `wt-sabias-que`, desde
-`main` = `40f52d0`; SÓLO LOCAL: sin push, sin merge, sin deploy, migración 025 NO aplicada
-en Producción, ninguna curiosidad real cargada).** Pedido del dueño: curiosidades editoriales
+**«¿Sabías que…?» (19–20/11/2026; PR #8, rama `feat/sabias-que`; prueba manual APROBADA por el
+dueño el 20/11; INTEGRADO Y DESPLEGADO el 20/11/2026, merge `7f88d41`, autorizado por el
+dueño; migración 025 APLICADA en Producción; ninguna curiosidad real cargada; SIN AAB por
+decisión del dueño: sale en Android con los próximos cambios grandes).**
+**Producción (20/11, Claude, autorizado por el dueño):**
+- **Permisos de `profiles`, sólo lectura, antes de migrar** (`supabase db query --linked`, con
+  el login de la CLI renovado; una `SUPABASE_ACCESS_TOKEN` vieja en el entorno pisaba la
+  sesión y se ignoró sólo para esos comandos): `authenticated` tiene SELECT sobre `profiles`
+  (también `is_admin`), RLS activo con «lectura de perfil propio» (`auth.uid() = id`) y
+  «edición de perfil propio»; `factores_totp_verificados()` ejecutable y `is_admin_mfa()`
+  presente. **El panel funciona con los permisos normales**: la concesión temporal sólo hacía
+  falta en el stack local de `supabase start`, que no da los privilegios por defecto (se revocó
+  al terminar la prueba del dueño). Efecto lateral de la CLI, ya conocido del E0: inicializa su
+  rol de acceso `cli_login_postgres`.
+- **Migración 025 aplicada** (el archivo de `main`, envuelto en `begin … commit`, sin errores) y
+  comprobada por catálogo: tabla con RLS y 3 políticas; `anon` sin SELECT ni INSERT y con
+  EXECUTE en `curiosidad_publicada`; `authenticated` con SELECT y sin DELETE; CHECK
+  `curiosidades_publicacion_valida` y `unique (tipo, tmdb_id)`; 1 trigger; 0 filas.
+- **Git/deploy:** PR #8 con el build de Vercel del commit `3e071ff` en `success`; merge
+  `7f88d41` fijado a ese commit; deployment de Producción de GitHub para `7f88d41` en
+  `success` («Deployment has completed», 20:52 UTC).
+- **Comprobado contra `app.yump.ar`, sin escribir nada:** `/api/health`, `/titulo/movie/105` y
+  `/admin/sabias-que` → 200; `GET /api/curiosidad/movie/105` → 200 `{"curiosidades":[]}` con
+  `Cache-Control: no-store` y `Access-Control-Allow-Origin: https://localhost`; preflight 204;
+  tipo inválido → 400; `/api/admin/curiosidades` GET y POST sin sesión → 401 «sin sesión»;
+  `/api/title` sin cambios. En el navegador, la ficha de *Volver al futuro* pidió la curiosidad
+  UNA vez, con 200 y recién después de terminar `/api/title` (2561 ms contra 2550 ms), y sin
+  curiosidad publicada no mostró la sección; el bundle trae el componente (chunk con «Mostrar
+  curiosidad») y el del panel trae «Nueva curiosidad», «Guardar y publicar cambios» y su API;
+  el layout del dashboard trae el enlace `/admin/sabias-que`.
+- **No probado en Producción:** cargar, publicar o retirar con la sesión real del dueño (no se
+  cargó contenido ficticio allá); la primera curiosidad real es la prueba. Android: los AAB
+  publicados no la muestran; el próximo AAB la trae (versión MINOR, `versionCode` > 5).
+Pedido del dueño: curiosidades editoriales
 por título, cargadas a mano desde el dashboard y visibles en la ficha. Fuera de esta etapa,
 por pedido: automatización/búsqueda, IA, importadores, cron, trivia y mundiales (la futura
 automatización podrá crear BORRADORES; no se construyó nada de eso).
-**Qué se hizo (Git, commits locales):**
+**Qué se hizo (Git; antecedente del desarrollo local del 19–20/11):**
 - **Datos (migración `supabase/migrations/025_sabias_que.sql` + `_down`; 023/024 los usa la
   rama de música):** tabla `curiosidades`, UNA fila por título (`unique (tipo, tmdb_id)`) con
   DOS versiones: borrador (`texto`, `fuente_nombre`, `fuente_url`, `spoiler`) y publicada
@@ -145,19 +176,17 @@ acompañar a un título de sección. Ya no usa `--accent`: el color es el del em
 sistema, igual que en esos banners. Sigue con `aria-hidden="true"` y 8 px de separación.
 **Verificado:** en el Chrome del dueño (1536 px) y a 375 px: caja 22×22, 8 px, centrado con el
 texto, sin scroll horizontal; capturas; test estructural actualizado; `tsc` y `npm run build`.
-**Entorno local que queda armado (sin Producción):** filas ficticias `[PRUEBA LOCAL]` (película
-105 con fuente y serie 1396 con spoiler, publicadas; 238 publicada SIN fuente; 603 borrador), una cuenta de administración local
-con dos factores (datos y códigos en el scratchpad de la sesión, fuera del repo) y, sólo
-mientras dure la prueba, `grant select on public.profiles to authenticated` (peculiaridad del
-stack local; revocar al terminar). Configs `sabias-que-local` (3140, `next dev`) y
-`sabias-que-prod` (3141, `next start`) en `.claude/launch.json` del directorio padre.
-**Para llevarlo a Producción (no hecho, requiere autorización del dueño):** 1) revisar y abrir el
-PR; 2) aplicar `025_sabias_que.sql` en Supabase de Producción ANTES del deploy y comprobar que
-`anon` no tiene permisos sobre `curiosidades` y sí `execute` en `curiosidad_publicada` (la
-propia migración falla si no); 3) merge y deploy (sin variables nuevas); 4) verificar sólo
-lectura: `/api/curiosidad/movie/<id>` → 200 `{"curiosidades":[]}`, `/api/admin/curiosidades` sin
-token → 401, `/admin/sabias-que` carga; 5) el dueño carga la primera curiosidad real. Después,
-el próximo AAB. Pendiente aparte, sin tocar: el orden de factores de `/admin/mfa`.
+**Entorno local (sin Producción):** quedan filas ficticias `[PRUEBA LOCAL]` en el Supabase local
+(105 y 1396 publicadas, 238 publicada sin fuente, 603, y la 280 que cargó el dueño) y una cuenta
+de administración local con dos factores (datos en el scratchpad de la sesión, fuera del repo).
+El `grant select on public.profiles to authenticated` temporal **se revocó el 20/11** al
+terminar la prueba del dueño. Configs `sabias-que-local` (3140) y `sabias-que-prod` (3141) en
+`.claude/launch.json` del directorio padre.
+**Pasos de despliegue (HECHOS el 20/11, ver arriba):** permisos de `profiles` verificados →
+025 aplicada y comprobada → PR #8 con Vercel en verde → merge `7f88d41` → deploy `success` →
+verificación de sólo lectura en `app.yump.ar`. **Siguiente:** el dueño carga la primera
+curiosidad real; el próximo AAB la incluye. Pendiente aparte, sin tocar: el orden de factores
+de `/admin/mfa`.
 
 **Editor del Top semanal (PR #6, rama `feat/top-dashboard-ux`; interfaz aprobada por el
 dueño y validada en Supabase local; INTEGRADO Y DESPLEGADO el 19/11/2026, merge `7a288fb`,
