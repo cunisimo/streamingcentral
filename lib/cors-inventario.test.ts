@@ -103,6 +103,9 @@ const EXCLUIDAS = new Map([
   // E4, mismo motivo: la consume `app/admin/moderacion`, que no viaja en el APK.
   ["app/api/admin/moderacion/route.ts",
    "sólo la consume app/admin, que NO viaja en el artefacto nativo: habilitarla sería innecesario"],
+  // «¿Sabías que…?», mismo motivo: la consume `app/admin/sabias-que`.
+  ["app/api/admin/curiosidades/route.ts",
+   "sólo la consume app/admin, que NO viaja en el artefacto nativo: habilitarla sería innecesario"],
 ]);
 
 // ============================================================================
@@ -206,7 +209,7 @@ test("ningún OPTIONS puede ejecutar el handler real", () => {
   assert.deepEqual(malas, [], `OPTIONS que llegarían al handler:\n${malas.join("\n")}`);
 });
 
-test("el recuento cierra: 39 rutas = 36 integradas + 3 excluidas", () => {
+test("el recuento cierra: 41 rutas = 37 integradas + 4 excluidas", () => {
   // 25 -> 26 al integrar `main`: el Top manual sumó `app/api/admin/top`, que se
   // clasificó como excluida. Las 23 integradas de CP4 no se movieron.
   const todas = rutasDeApi();
@@ -230,9 +233,12 @@ test("el recuento cierra: 39 rutas = 36 integradas + 3 excluidas", () => {
   // contenedor.
   // 38 -> 39 con el Top Yumpers (E7): `comunidad/top-yumpers` integra CORS:
   // la usa /top, que viaja en el contenedor.
-  assert.equal(todas.length, 39, "cambió la cantidad de rutas: hay que reclasificar");
-  assert.equal(integradas.length, 36);
-  assert.equal(EXCLUIDAS.size, 3);
+  // 39 -> 41 con «¿Sabías que…?»: `curiosidad/[tipo]/[id]` integra CORS (la
+  // pide la ficha, que viaja en el contenedor) y `admin/curiosidades` queda
+  // EXCLUIDA, como las otras de app/admin.
+  assert.equal(todas.length, 41, "cambió la cantidad de rutas: hay que reclasificar");
+  assert.equal(integradas.length, 37);
+  assert.equal(EXCLUIDAS.size, 4);
   assert.equal(integradas.length + EXCLUIDAS.size, todas.length);
 });
 

@@ -1,6 +1,6 @@
 # Estado de Yump
 
-> **Estado canónico. Actualizado el 18 de noviembre de 2026.**
+> **Estado canónico. Actualizado el 19 de noviembre de 2026.**
 > Leer este bloque antes de los antecedentes históricos. Arquitectura y reglas:
 > [`CLAUDE.md`](../CLAUDE.md). Problemas históricos: [`ISSUES.md`](ISSUES.md).
 > No duplicar este estado en otros manuales: enlazarlo.
@@ -15,6 +15,109 @@ debajo de "Antecedentes anteriores al 09/09/2026" es histórico. Categorías de 
 **deploy** (deployment de Vercel *Production – streamingcentral* en la API
 pública de deployments de GitHub, estado `success`), **dueño** (informado por
 el dueño), **Producción** (comprobado contra `app.yump.ar`).
+
+**«¿Sabías que…?» (19/11/2026; rama `feat/sabias-que`, worktree `wt-sabias-que`, desde
+`main` = `40f52d0`; SÓLO LOCAL: sin push, sin merge, sin deploy, migración 025 NO aplicada
+en Producción, ninguna curiosidad real cargada).** Pedido del dueño: curiosidades editoriales
+por título, cargadas a mano desde el dashboard y visibles en la ficha. Fuera de esta etapa,
+por pedido: automatización/búsqueda, IA, importadores, cron, trivia y mundiales (la futura
+automatización podrá crear BORRADORES; no se construyó nada de eso).
+**Qué se hizo (Git, commits locales):**
+- **Datos (migración `supabase/migrations/025_sabias_que.sql` + `_down`; 023/024 los usa la
+  rama de música):** tabla `curiosidades`, UNA fila por título (`unique (tipo, tmdb_id)`) con
+  DOS versiones: borrador (`texto`, `fuente_nombre`, `fuente_url`, `spoiler`) y publicada
+  (`pub_*`, `publicada`, `publicada_en`). Guardar un borrador sólo toca las primeras, así que
+  una publicada editada como borrador NO cambia lo que ven los usuarios; retirar apaga
+  `publicada` y conserva todo. `estado` derivado (`borrador`/`publicada`/`cambios`/`retirada`).
+  CHECK en la base: lo publicado exige texto (≤ 700, sin controles), nombre de fuente y URL
+  `http(s)` con host con punto y sin credenciales (`javascript:`, `data:`, `https://u@h`,
+  `http://localhost` no pasan). Trigger: tipo+id inmutables, autoría y fechas las pone la base.
+  RLS con `is_admin_mfa()` para leer/crear/editar; `anon` SIN permisos sobre la tabla;
+  `authenticated` sin DELETE. Lectura pública sólo por `curiosidad_publicada(tipo, id)`
+  (`security definer`): devuelve texto, fuente y spoiler de lo publicado, nada más.
+- **Panel (`/admin/sabias-que`, enlace «¿Sabías que…?» en la navegación del dashboard):**
+  `components/admin/sabias-que/SabiasQueAdmin.tsx`. Búsqueda TMDB (`/api/admin-search`, sin
+  tipo) con póster 92×138, título, año, tipo y título original; si el título ya tiene
+  curiosidad, ofrece «Editar la existente» (y la base devuelve 409 a un duplicado). Listado con
+  búsqueda por título y filtro por estado. Editor con recuadro «Borrador / Publicación» (qué
+  está guardado y qué ven los usuarios), contador, «Contiene spoilers», botones según el
+  estado («Guardar borrador», «Publicar», «Guardar y publicar cambios», «Retirar de
+  publicación» con confirmación en la página), aviso de cambios sin guardar (también al cambiar
+  de título y al salir) y VISTA PREVIA con la misma tarjeta de la ficha (y, si difiere, «Lo
+  que ven hoy los usuarios»). API `app/api/admin/curiosidades/route.ts`: una sola ruta con
+  `accion`, puerta `adminDeToken` (admin + aal2 + dos factores), escribe con
+  `supabaseComoUsuario` (RLS), valida y normaliza a texto plano del lado del servidor
+  (`lib/curiosidades-nucleo.ts`). `/admin/mfa` NO se tocó.
+- **Ficha (`components/SabiasQue.tsx` + `SabiasQueTarjeta.tsx`, montada en `DetailView`
+  debajo de `ResenasAcordeon`, con `key` por título):** pide `GET /api/curiosidad/<tipo>/<id>`
+  recién al montarse, o sea después de dibujarse la ficha; sin curiosidad publicada, cargando
+  o con error no dibuja nada (ni título ni hueco). Con spoiler, el texto NO se renderiza hasta
+  «Mostrar curiosidad» (botón real con `aria-expanded`/`aria-controls`, región con nombre);
+  al cambiar de título no queda contenido ni spoiler revelado de la anterior. Enlace a la
+  fuente discreto (`noopener noreferrer nofollow`), y sólo si la URL es válida. Sin imágenes
+  nuevas (no hay ilustraciones de Don Tito para esto; el avatar de usuario no encaja).
+- **Consultas y caché:** UNA llamada RPC por apertura de ficha, por índice único; el Home, los
+  rieles y los listados NO la usan; `/api/title` y `lib/enrich.ts` no cambiaron. **Sin Redis
+  (0 operaciones de Upstash) y sin caché (`Cache-Control: no-store`)**: publicar, editar o
+  retirar se ve en la apertura siguiente de la ficha (comprobado en local). Se descartó
+  `s-maxage` porque su plazo sólo se puede verificar en un Preview; si el tráfico lo pidiera,
+  se agrega en la ruta y el plazo pasa a ser ese TTL. Un fallo de Supabase → 503 y la ficha
+  sigue sin la sección; nada se cachea.
+**Web y Android:** la ficha es el mismo `DetailView` en la web y en el contenedor (`/t`), y la
+ruta pública integra CORS (`https://localhost`). **Con el deploy web (y la migración 025
+aplicada)** se ven la sección en la ficha web/PWA y el panel. **Los AAB publicados (vc3, vc4,
+vc5 `1.3.0`) NO muestran la sección:** llevan su `DetailView` empaquetado; no llaman a la ruta
+nueva y `/api/title` no cambió, así que siguen igual. **El próximo AAB** (desde `main` con esto
+integrado; funcionalidad visible nueva → MINOR según la convención, `versionCode` > 5) la trae
+sola; debe salir DESPUÉS de la migración y el deploy (si la ruta no existiera, la sección
+simplemente no aparece). No se generó ni publicó ningún AAB.
+**Verificado (19/11):** `tsc` limpio; suite completa 2628 tests: 2612 pasan, 16 omitidos, 0
+fallas (incluye `lib/curiosidades-nucleo.test.ts`, 11 tests, y los inventarios de CORS,
+`apiUrl` y `catch` actualizados: 41 rutas = 37 con CORS + 4 excluidas); `npm run build` limpio;
+export de Capacitor (`build-capacitor.mjs --api-base=https://ejemplo.invalid`, con un
+`.env.local` TEMPORAL sólo con valores públicos del Supabase local, borrado al terminar; sin
+tocar `android/`) compila, trae la sección en el bundle y no trae nada del panel.
+**Supabase local (`supabase start`, 025 aplicada; batería `scripts/sabias-que/pruebas-local.mjs`
+contra las rutas REALES de la app local, Auth con dos factores TOTP, RLS, CHECK y trigger):
+27 de 27, tres corridas estables.** Cubre: panel sin token 401, usuario 403, admin aal1 403,
+admin con un factor 403; PostgREST directo sin MFA completo no crea, no lee y no edita; `anon`
+con la tabla cerrada; nadie borra; borrador incompleto se guarda; recargar conserva; borrador
+no se ve en la ficha; texto normalizado a plano; publicar incompleto o con URL insegura → 400
+sin tocar la base; la BASE rechaza una URL insegura aunque se saltee la API; la misma lista de
+15 URLs da el mismo veredicto en la app y en el CHECK; publicar → la ficha recibe sólo texto,
+spoiler y fuente; editar como borrador una publicada no cambia la pública; «Guardar y publicar
+cambios» se ve en el pedido siguiente; retirar la saca y conserva el contenido; volver a
+publicar; duplicado 409 con la existente; película y serie con el mismo id no chocan; serie con
+spoiler; filtros y búsqueda del listado; título sin curiosidad 200 vacío; parámetros inválidos
+400; `no-store` y CORS; Supabase fallando → 503 y recuperación. Datos: cuentas
+`sabias-que-*@banco.test` e ids 99xxxx, borrados al terminar.
+**Navegador (app local contra Supabase local, `next dev` y `next start`):** película publicada y
+serie con spoiler en sus fichas; borrador sin sección; spoiler revelado con Enter desde el
+teclado (foco en el botón, `aria-expanded`); pasar a un relacionado no muestra nada de la
+anterior y volver atrás la deja oculta otra vez; con la RPC revocada (503) la ficha carga
+completa sin la sección; panel: duplicado → «Editar la existente», alta de un borrador
+incompleto, recarga, «Publicar» bloqueado con los campos faltantes, URL `javascript:` rechazada,
+publicar, editar como borrador (pública intacta, estado «con cambios sin publicar», doble vista
+previa), «Guardar y publicar cambios», retirar con confirmación → la ficha recargada ya no la
+muestra; 375 px sin scroll horizontal en ficha y panel; dos columnas desde 1000 px. En el build
+de producción la ficha hace UN pedido de curiosidad, que empieza cuando terminó `/api/title`
+(~250 ms). **Defecto encontrado y corregido en la prueba:** la vista previa del panel armaba el
+enlace con `href="javascript:…"` mientras se tipeaba; la tarjeta ahora sólo crea el enlace con
+una URL válida (test estructural). **No probado:** lector de pantalla real (sólo atributos ARIA
+y teclado), dispositivo Android, Preview de Vercel y Producción.
+**Entorno local que queda armado (sin Producción):** filas ficticias `[PRUEBA LOCAL]` (película
+105 y serie 1396 publicadas, 603 borrador, 238 retirada), una cuenta de administración local
+con dos factores (datos y códigos en el scratchpad de la sesión, fuera del repo) y, sólo
+mientras dure la prueba, `grant select on public.profiles to authenticated` (peculiaridad del
+stack local; revocar al terminar). Configs `sabias-que-local` (3140, `next dev`) y
+`sabias-que-prod` (3141, `next start`) en `.claude/launch.json` del directorio padre.
+**Para llevarlo a Producción (no hecho, requiere autorización del dueño):** 1) revisar y abrir el
+PR; 2) aplicar `025_sabias_que.sql` en Supabase de Producción ANTES del deploy y comprobar que
+`anon` no tiene permisos sobre `curiosidades` y sí `execute` en `curiosidad_publicada` (la
+propia migración falla si no); 3) merge y deploy (sin variables nuevas); 4) verificar sólo
+lectura: `/api/curiosidad/movie/<id>` → 200 `{"curiosidades":[]}`, `/api/admin/curiosidades` sin
+token → 401, `/admin/sabias-que` carga; 5) el dueño carga la primera curiosidad real. Después,
+el próximo AAB. Pendiente aparte, sin tocar: el orden de factores de `/admin/mfa`.
 
 **Editor del Top semanal (PR #6, rama `feat/top-dashboard-ux`; interfaz aprobada por el
 dueño y validada en Supabase local; INTEGRADO Y DESPLEGADO el 19/11/2026, merge `7a288fb`,

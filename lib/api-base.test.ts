@@ -251,6 +251,11 @@ const EXCEPCIONES = new Map([
     motivo: "app/admin NO viaja en el artefacto nativo: el staging lo excluye",
     debeContener: "/api/admin/moderacion",
   }],
+  // «¿Sabías que…?»: otra pantalla de `app/admin`. Mismo criterio.
+  ["app/admin/sabias-que/page.tsx", {
+    motivo: "app/admin NO viaja en el artefacto nativo: el staging lo excluye",
+    debeContener: "/api/admin/curiosidades",
+  }],
 ]);
 
 // ---------------------------------------------------------------- canarios

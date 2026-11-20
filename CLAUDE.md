@@ -610,6 +610,17 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   supresiones); si lo ubica en otras, no se toca. Nació con "Moria"
   (`tv/322428`, agosto de 2026), #1 de Netflix pintada en gris porque TMDB no
   tenía proveedores en ninguna región.
+- **«¿Sabías que…?» (migración `025`, rama `feat/sabias-que`; estado en
+  `docs/ESTADO.md`).** Una curiosidad editorial por título (`curiosidades`, `unique (tipo,
+  tmdb_id)`) con DOS versiones en la misma fila: borrador y publicada (`pub_*`). Guardar un
+  borrador nunca toca lo publicado y retirar conserva el contenido; un CHECK exige texto, fuente
+  y URL http(s) segura en lo publicado. Panel `/admin/sabias-que` → `/api/admin/curiosidades`
+  (`adminDeToken` + RLS `is_admin_mfa()`); la ficha lee sólo lo publicado por la función
+  `curiosidad_publicada` vía `/api/curiosidad/<tipo>/<id>`, **después** de dibujarse
+  (`components/SabiasQue.tsx`, debajo de las reseñas, `key` por título), con `no-store`, sin
+  Redis y sin tocar `/api/title`. Reglas puras en `lib/curiosidades-nucleo.ts`; batería local
+  `scripts/sabias-que/pruebas-local.mjs`. Los AAB publicados no la muestran (bundle viejo); el
+  próximo AAB sí.
 - **El segundo factor del admin se comprueba en TRES lugares, y sólo dos son
   seguridad.** La sesión vive en `localStorage`, no en cookies, así que el
   servidor no la ve: el guard de `/admin/layout.tsx` es **experiencia de
@@ -1238,6 +1249,8 @@ supabase/schema.sql   — editorial_reviews (en uso desde el 3/10/2026, a criter
 | `GET /api/genre-covers` | un póster representativo por género, cacheado 24h |
 | `GET /api/title/[tipo]/[id]` | ficha completa (TMDB+Supabase+relacionados) |
 | `GET /api/admin-search` | búsqueda TMDB sin filtro de plataforma, para el editor de reseñas |
+| `GET /api/curiosidad/[tipo]/[id]` | «¿Sabías que…?» de una ficha: SÓLO lo publicado (`{ curiosidades: [{ texto, spoiler, fuente: { nombre, url } }] }`), sin sesión, CORS, `no-store`; 503 si Supabase falla (la ficha no muestra la sección) |
+| `GET/POST /api/admin/curiosidades` | panel «¿Sabías que…?»: listado/búsqueda/filtro, alta, guardar (con o sin publicar) y retirar; admin + 2FA, bajo RLS |
 | `GET /api/cards` | enriquece una lista de ids (`items=movie:1,tv:2`) a cards, sin filtro de plataforma (listas del usuario) |
 
 ## Estado actual (todo lo de arriba está construido y validado)

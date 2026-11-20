@@ -582,6 +582,12 @@ const INVENTARIO: Fila[] = [
   { archivo: "lib/enlaces-app.ts", ancla: "} catch {", clase: "no-tmdb", motivo: "plugin @capacitor/app ausente o fallido → el enlace no se abre adentro" },
   { archivo: "app/api/admin/top/route.ts", ancla: "catch { return NextResponse.json({ error: \"cuerpo inválido\" }", clase: "no-tmdb", motivo: "JSON del cliente" },
   { archivo: "app/api/admin/top/route.ts", ancla: "} catch (e) {", clase: "tmdb-propaga", motivo: "segundo handler de la ruta de admin (Supabase)" },
+  // «¿Sabías que…?»: sólo Supabase; ninguna de estas llamadas toca TMDB.
+  { archivo: "app/api/admin/curiosidades/route.ts", ancla: "} catch (e) {", clase: "no-tmdb", motivo: "GET del panel: un error de Supabase responde 500 con el mensaje" },
+  { archivo: "app/api/admin/curiosidades/route.ts", ancla: "} catch {", clase: "no-tmdb", motivo: "JSON del cliente inválido: 400" },
+  { archivo: "app/api/admin/curiosidades/route.ts", ancla: "} catch (e) {", clase: "no-tmdb", motivo: "POST del panel: duplicado 409, inexistente 404, resto de Supabase 500" },
+  { archivo: "app/api/curiosidad/[tipo]/[id]/route.ts", ancla: "} catch {", clase: "no-tmdb", motivo: "lectura pública (RPC de Supabase): 503 y la ficha no muestra la sección; nada se cachea" },
+  { archivo: "lib/curiosidades-nucleo.ts", ancla: "} catch {", clase: "no-tmdb", motivo: "new URL() de la fuente: una URL que no parsea es inválida" },
   // E4: moderación de reseñas. Sólo atrapa el JSON del cliente; lo demás lo clasifica lib/comunidad/admin-moderacion.ts (Supabase).
   { archivo: "app/api/admin/moderacion/route.ts", ancla: "catch { return NextResponse.json({ resultado: \"invalido\" }", clase: "no-tmdb", motivo: "JSON del cliente" },
   // Issue #25: la ruta de filmografía ya no atrapa nada; lo hace su módulo puro, con el mismo 500 de siempre para v1, v2 e items.

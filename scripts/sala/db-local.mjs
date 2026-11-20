@@ -87,6 +87,7 @@ export function archivosAAplicar({ conCatalogo, cargas }) {
     "supabase/migrations/020_comunidad_top.sql",
     "supabase/migrations/021_comunidad_purga.sql",
     "supabase/migrations/022_cerrar_user_reviews.sql",
+    "supabase/migrations/025_sabias_que.sql",
     "scripts/sala/fixtures-local.sql",
   ];
 }
