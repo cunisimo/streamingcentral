@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { apiUrl } from "@/lib/api-base";
 import { publicasDeRespuesta, type CuriosidadPublica, type TipoTitulo } from "@/lib/curiosidades-nucleo";
-import SabiasQueTarjeta from "./SabiasQueTarjeta";
+import SabiasQueTarjeta, { SabiasQueTitulo } from "./SabiasQueTarjeta";
 
 // Sección «¿Sabías que…?» de la ficha (web y contenedor Android: el mismo
 // componente, con `apiUrl` hacia la API remota en el contenedor).
@@ -30,7 +30,7 @@ export default function SabiasQue({ tipo, tmdbId }: { tipo: TipoTitulo; tmdbId: 
   if (!items.length) return null;
   return (
     <section className="sq" aria-labelledby={`sq-h-${tipo}-${tmdbId}`}>
-      <h2 className="dsec-h" id={`sq-h-${tipo}-${tmdbId}`}>¿Sabías que…?</h2>
+      <SabiasQueTitulo id={`sq-h-${tipo}-${tmdbId}`} />
       {items.map((c, i) => <SabiasQueTarjeta key={i} c={c} />)}
     </section>
   );

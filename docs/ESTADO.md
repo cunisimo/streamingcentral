@@ -128,6 +128,16 @@ y URL de «Volver al futuro» → vista previa sin fuente y «Lo que ven hoy» c
 guardar borrador (pública intacta) y «Guardar y publicar cambios» (`fuente: null`); sólo nombre
 → texto sin enlace; URL `javascript:` → error y la pública no cambia; sólo URL → enlace con
 «example.com»; fuente restaurada y vuelta a publicar.
+**Ajuste visual del 20/11 (pedido del dueño; resto aprobado):** bombita de luz delineada a la
+izquierda del título «¿Sabías que…?». La app no tiene librería de íconos (todos son SVG en
+línea, `viewBox` 24, trazo `currentColor` redondeado): se siguió esa convención, sin
+dependencias. Encabezado compartido `SabiasQueTitulo` (ficha y las dos vistas previas del
+panel); `.sq-ico` 22 px en `var(--accent)`, `.sq-h` flex centrado con 8 px; `aria-hidden` y
+sin foco. Texto, contenido y resto del diseño sin cambios. **Verificado:** medido en
+escritorio (1536 y 1024 px) y en celular (375 px): ícono 22×22, `rgb(245, 134, 52)` =
+`--accent`, 8 px hasta el texto, centro del ícono = centro del texto, título en una línea, sin
+scroll horizontal; capturas en 1024 y 375 px; vista previa del panel igual; test estructural;
+suite 2628 / 2628; `tsc` y `npm run build`.
 **Entorno local que queda armado (sin Producción):** filas ficticias `[PRUEBA LOCAL]` (película
 105 con fuente y serie 1396 con spoiler, publicadas; 238 publicada SIN fuente; 603 borrador), una cuenta de administración local
 con dos factores (datos y códigos en el scratchpad de la sesión, fuera del repo) y, sólo

@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import SabiasQueTarjeta from "@/components/SabiasQueTarjeta";
+import SabiasQueTarjeta, { SabiasQueTitulo } from "@/components/SabiasQueTarjeta";
 import {
   ETIQUETA_ACCION, ETIQUETA_ESTADO, ETIQUETA_FILTRO, FILTROS_ESTADO, LIMITES,
   accionesDisponibles, fechaCorta, fuenteDe, mismosCampos, normalizarCampos, sinErrores, sinGuardar,
@@ -469,7 +469,7 @@ function Editor({ api, abierto, form, setForm, sucio, aviso, setAviso, onGuardad
         <div className="sq-adm-marco">
           {norm.texto ? (
             <section className="sq">
-              <h2 className="dsec-h">¿Sabías que…?</h2>
+              <SabiasQueTitulo />
               <SabiasQueTarjeta
                 key={`b:${norm.spoiler}`}
                 c={{ texto: norm.texto, spoiler: norm.spoiler, fuente: fuenteDe(norm.fuenteNombre, norm.fuenteUrl) }}
@@ -482,7 +482,7 @@ function Editor({ api, abierto, form, setForm, sucio, aviso, setAviso, onGuardad
             <h3 className="sq-adm-h3">Lo que ven hoy los usuarios</h3>
             <div className="sq-adm-marco">
               <section className="sq">
-                <h2 className="dsec-h">¿Sabías que…?</h2>
+                <SabiasQueTitulo />
                 <SabiasQueTarjeta key={`p:${pub.spoiler}`} c={{ texto: pub.texto, spoiler: pub.spoiler, fuente: fuenteDe(pub.fuenteNombre, pub.fuenteUrl) }} />
               </section>
             </div>

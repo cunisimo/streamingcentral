@@ -474,6 +474,8 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
    Misma familia que .review, con el naranja de Yump en vez del rojo editorial. */
 .sq{margin-top:26px}
 .sq .dsec-h{margin-top:0}
+.sq-h{display:flex;align-items:center;gap:8px}
+.sq-ico{flex:none;width:22px;height:22px;color:var(--accent)}
 .sq-card{border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:var(--radius-sm);background:var(--surface-2);padding:14px 16px}
 .sq-card + .sq-card{margin-top:10px}
 .sq-texto{font-family:var(--display);font-size:15.5px;line-height:1.62;color:var(--text);white-space:pre-line;overflow-wrap:anywhere;max-width:68ch}

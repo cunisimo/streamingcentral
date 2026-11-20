@@ -144,6 +144,14 @@ test("componente: pide con apiUrl (web y contenedor), descarta respuestas viejas
   assert.equal((adm.match(/fuente: fuenteDe\(/g) ?? []).length, 2,
     "las dos vistas previas del panel arman la fuente con la misma regla que la ficha");
   assert.doesNotMatch(t, /dangerouslySetInnerHTML/);
+  // Encabezado con la bombita (pedido del dueño, 20/11): SVG en línea como el
+  // resto de la app, decorativo, naranja de Yump por CSS, ~22 px y 8 px de aire.
+  assert.match(t, /<svg\s+className="sq-ico"[^>]*stroke="currentColor"[^>]*aria-hidden="true"/);
+  assert.match(t, /<\/svg>\s*¿Sabías que…\?\s*<\/h2>/, "el texto del título no cambia");
+  const css = leer("app/globals.css");
+  assert.match(css, /\.sq-h\{display:flex;align-items:center;gap:8px\}/);
+  assert.match(css, /\.sq-ico\{flex:none;width:22px;height:22px;color:var\(--accent\)\}/);
+  assert.match(c, /<SabiasQueTitulo id=\{`sq-h-\$\{tipo\}-\$\{tmdbId\}`\} \/>/, "la ficha usa el encabezado compartido");
 });
 
 test("rutas: la pública integra CORS y no cachea; la del panel exige admin+MFA y escribe bajo RLS", () => {
