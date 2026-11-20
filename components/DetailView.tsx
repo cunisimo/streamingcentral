@@ -25,6 +25,7 @@ import type { UITitleDetail, MediaType, PlatformCode } from "@/lib/types";
 import AyudasBusqueda from "@/components/AyudasBusqueda";
 import ResenasAcordeon from "./ResenasAcordeon";
 import { resenasDeFicha } from "@/lib/resenas";
+import SabiasQue from "./SabiasQue";
 
 export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }) {
   const router = useRouter();
@@ -223,6 +224,13 @@ export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }
             leen sólo con sesión desde el cliente; sin sesión, la invitación.
             Con el módulo apagado, sólo la de Yump, como antes. */}
         <ResenasAcordeon key={`${t.type}:${t.id}`} resenas={resenas} titulo={{ tipo: t.type, tmdbId: t.id }} />
+
+        {/* «¿Sabías que…?»: debajo de las reseñas (y en ese mismo lugar del
+            recorrido si no hay ninguna). Pide su dato recién al montarse, así
+            que no demora la ficha; sin curiosidad publicada o con un fallo no
+            dibuja nada. `key` por título: no arrastra contenido ni el spoiler
+            revelado de la ficha anterior. */}
+        <SabiasQue key={`sq:${t.type}:${t.id}`} tipo={t.type} tmdbId={t.id} />
 
         {t.related.length > 0 && (
           <>

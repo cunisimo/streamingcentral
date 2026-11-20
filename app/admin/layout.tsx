@@ -76,6 +76,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <Link href="/admin/moderacion" aria-current={path.startsWith("/admin/moderacion") ? "page" : undefined}>
           Moderación
         </Link>
+        <Link href="/admin/sabias-que" aria-current={path.startsWith("/admin/sabias-que") ? "page" : undefined}>
+          ¿Sabías que…?
+        </Link>
         <Link href="/admin" aria-current={path === "/admin" ? "page" : undefined}>
           Reseñas editoriales
         </Link>
