@@ -138,6 +138,13 @@ escritorio (1536 y 1024 px) y en celular (375 px): ícono 22×22, `rgb(245, 134,
 `--accent`, 8 px hasta el texto, centro del ícono = centro del texto, título en una línea, sin
 scroll horizontal; capturas en 1024 y 375 px; vista previa del panel igual; test estructural;
 suite 2628 / 2628; `tsc` y `npm run build`.
+**Cambio de estilo del ícono (20/11, pedido del dueño: no le gustó el delineado):** ahora es el
+emoji 💡, con el mismo tratamiento que los banners del Home (🎲 Ruleta, 🍿 Yumpeá, 🍀
+Desempate: emoji del sistema con la sombra de `.dsmp-banner-ico`), a 22 px en vez de 30 para
+acompañar a un título de sección. Ya no usa `--accent`: el color es el del emoji, que depende del
+sistema, igual que en esos banners. Sigue con `aria-hidden="true"` y 8 px de separación.
+**Verificado:** en el Chrome del dueño (1536 px) y a 375 px: caja 22×22, 8 px, centrado con el
+texto, sin scroll horizontal; capturas; test estructural actualizado; `tsc` y `npm run build`.
 **Entorno local que queda armado (sin Producción):** filas ficticias `[PRUEBA LOCAL]` (película
 105 con fuente y serie 1396 con spoiler, publicadas; 238 publicada SIN fuente; 603 borrador), una cuenta de administración local
 con dos factores (datos y códigos en el scratchpad de la sesión, fuera del repo) y, sólo

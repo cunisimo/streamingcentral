@@ -19,22 +19,17 @@ import { textoDeFuente, urlFuenteValida, type CuriosidadPublica } from "@/lib/cu
  * El título de la sección, con la bombita a la izquierda. Lo usan la ficha y
  * las vistas previas del panel, así se ven iguales.
  *
- * La app no tiene librería de íconos: todos son SVG en línea con la misma
- * convención (viewBox 24, sin relleno, trazo `currentColor` redondeado). Éste
- * la sigue; el color sale de `--accent` por CSS (`.sq-ico`). Es decorativo:
- * `aria-hidden` y sin foco, así el nombre accesible del título es sólo el texto.
+ * El ícono es un EMOJI (💡), con el mismo tratamiento que los de los banners
+ * del Home (🎲 Ruleta, 🍿 Yumpeá, 🍀 Desempate: `.dsmp-banner-ico`, emoji del
+ * sistema con sombra suave). Pedido del dueño del 20/11: reemplazó al ícono
+ * delineado. Como todo emoji, el dibujo exacto depende del sistema (Android,
+ * Windows, iOS), igual que los de los banners. Es decorativo: `aria-hidden`,
+ * así el nombre accesible del título es sólo el texto.
  */
 export function SabiasQueTitulo({ id }: { id?: string }) {
   return (
     <h2 className="dsec-h sq-h" id={id}>
-      <svg
-        className="sq-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
-        strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"
-      >
-        <path d="M9 18h6" />
-        <path d="M10 21h4" />
-        <path d="M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.4 1.1 2.3V16h5v-.9c0-.9.4-1.7 1.1-2.3A6 6 0 0 0 12 3z" />
-      </svg>
+      <span className="sq-ico" aria-hidden="true">💡</span>
       ¿Sabías que…?
     </h2>
   );
